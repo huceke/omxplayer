@@ -1,0 +1,70 @@
+include Makefile.include
+
+CFLAGS=-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_HAVE_SBRK -D_LARGEFILE64_SOURCE -DHAVE_CMAKE_CONFIG -DHAVE_VMCS_CONFIG -D_REENTRANT -DUSE_VCHIQ_ARM -DVCHI_BULK_ALIGN=1 -DVCHI_BULK_GRANULARITY=1 -DEGL_SERVER_DISPMANX -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__VIDEOCORE4__ -DGRAPHICS_X_VG=1 -U_FORTIFY_SOURCE -Wall -DHAVE_OMXLIB -DUSE_EXTERNAL_FFMPEG  -DHAVE_LIBAVCODEC_AVCODEC_H -DHAVE_LIBAVUTIL_MEM_H -DHAVE_LIBAVUTIL_AVUTIL_H -DHAVE_LIBAVFORMAT_AVFORMAT_H -DHAVE_LIBAVFILTER_AVFILTER_H -DOMX -DOMX_SKIP64BIT
+
+WORK=$(PWD)
+
+all: checkout configure compile
+
+copy:
+	find ffmpeg -name '*.so*' -exec cp {} . \;
+	$(HOST)-strip *.so*
+
+compile: 
+	cd ffmpeg; \
+	make -j9
+
+configure: 
+	cd ffmpeg; \
+	CFLAGS="$(CFLAGS) ${INCLUDES}" \
+	LDFLAGS="" \
+  ./configure \
+			--extra-cflags="-mfpu=vfp -mfloat-abi=softfp -mno-apcs-stack-check -mstructure-size-boundary=32 -mno-sched-prolog" \
+			--enable-cross-compile \
+			--enable-shared \
+			--disable-static \
+			--arch=arm \
+			--cpu=arm1176jzf-s \
+			--target-os=linux \
+			--disable-muxers \
+			--enable-muxer=spdif \
+			--enable-muxer=adts \
+			--disable-encoders \
+			--enable-encoder=ac3 \
+			--enable-encoder=aac \
+			--disable-decoder=mpeg_xvmc \
+			--disable-devices \
+			--disable-ffprobe \
+			--disable-ffplay \
+			--disable-ffserver \
+			--disable-ffmpeg \
+			--enable-shared \
+			--disable-doc \
+			--enable-postproc \
+			--enable-gpl \
+			--enable-protocol=http \
+			--enable-pthreads \
+			--disable-runtime-cpudetect \
+			--enable-pic \
+			--disable-armv5te \
+			--disable-neon \
+			--enable-armv6t2 \
+			--enable-armv6 \
+			--enable-armvfp \
+			--enable-hardcoded-tables \
+			--disable-runtime-cpudetect \
+			--disable-debug \
+			--cross-prefix=$(HOST)-
+
+clean:
+	@rm -rf ffmpeg
+
+checkout: 
+	git clone git://git.videolan.org/ffmpeg.git ffmpeg; \
+	cd ffmpeg; git checkout master;	git checkout 67f5650a78de2567c58dbd7545434cc6d3ef9b7e
+	#cd ffmpeg; git checkout master;	git checkout ec09230c9a11fbac602380614b35a51ad3a8dc3a
+
+install:
+	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
+	$(HOST)-strip ffmpeg_compiled/usr/local/lib/*.so
+
