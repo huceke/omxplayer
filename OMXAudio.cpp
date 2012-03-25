@@ -625,7 +625,7 @@ void COMXAudio::Flush()
   if(!m_Passthrough)
     m_omx_tunnel_mixer.Flush();
   
-  m_setStartTime  = true;
+  //m_setStartTime  = true;
   m_last_pts      = DVD_NOPTS_VALUE;
   m_LostSync      = true;
   //m_first_frame   = true;
@@ -781,9 +781,12 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
     {
       pts += ((double)omx_buffer->nFilledLen * DVD_TIME_BASE) / m_SampleSize;
     }
+    printf("ADec : pts %f omx_buffer 0x%08x buffer 0x%08x number %d\n", 
+          (float)pts / AV_TIME_BASE, omx_buffer, omx_buffer->pBuffer, (int)omx_buffer->pAppPrivate);
     */
 
-    uint64_t val  = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;;
+    uint64_t val  = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;
+
     if(m_setStartTime)
     {
       omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;

@@ -68,7 +68,6 @@ OMXReader         m_omx_reader;
 int               m_audio_index_use     = -1;
 bool              m_buffer_empty        = true;
 bool              m_thread_player       = false;
-int64_t           m_audio_offset_ms     = 0;
 OMXClock          *m_av_clock           = NULL;
 COMXStreamInfo    m_hints_audio;
 COMXStreamInfo    m_hints_video;
@@ -115,6 +114,7 @@ void print_usage()
   printf("         -3 / --3d                      switch tv into 3d mode\n");
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
+  printf("         -r / --refresh                 adjust framerate/resolution to video\n");
 }
 
 void SetSpeed(int iSpeed)
@@ -135,10 +135,10 @@ void SetSpeed(int iSpeed)
   m_av_clock->OMXSpeed(iSpeed);
 }
 
-void FlushStreams()
+void FlushStreams(double pts)
 {
-  if(m_av_clock)
-    m_av_clock->OMXPause();
+//  if(m_av_clock)
+//    m_av_clock->OMXPause();
 
   if(m_has_video)
     m_player_video.Flush();
@@ -152,10 +152,105 @@ void FlushStreams()
     m_omx_pkt = NULL;
   }
 
-  if(m_av_clock)
+  if(pts != DVD_NOPTS_VALUE)
+    m_av_clock->OMXUpdateClock(pts);
+
+//  if(m_av_clock)
+//  {
+//    m_av_clock->OMXReset();
+//    m_av_clock->OMXResume();
+//  }
+}
+
+void SetVideoMode(int width, int height, uint32_t fps, bool is3d)
+{
+  int32_t num_modes;
+  HDMI_RES_GROUP_T prefer_group;
+  int i = 0;
+  uint32_t prefer_mode;
+  #define TV_MAX_SUPPORTED_MODES 60
+  TV_SUPPORTED_MODE_T supported_modes[TV_MAX_SUPPORTED_MODES];
+  uint32_t group = HDMI_RES_GROUP_CEA;
+
+  if(is3d)
+    group = HDMI_RES_GROUP_CEA_3D;
+  else
+    group = HDMI_RES_GROUP_CEA;
+
+  num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes((HDMI_RES_GROUP_T)group,
+                                          supported_modes, TV_MAX_SUPPORTED_MODES,
+                                          &prefer_group, &prefer_mode);
+
+  TV_SUPPORTED_MODE_T *tv_found = NULL;
+
+  //printf("num_modes %d, %d, %d\n", num_modes, prefer_group, prefer_mode);
+
+  if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID)
   {
-    m_av_clock->OMXReset();
-    m_av_clock->OMXResume();
+    TV_SUPPORTED_MODE_T *tv = supported_modes;
+    uint32_t best_score = 1<<30;
+    uint32_t isNative = tv->native ? 1:0;
+    uint32_t w = tv->width;
+    uint32_t h = tv->height;
+    uint32_t r = tv->frame_rate;
+    uint32_t match_flag = HDMI_MODE_MATCH_FRAMERATE | HDMI_MODE_MATCH_RESOLUTION;
+    uint32_t scan_mode = 0;
+    uint32_t score = 0;
+
+    for (i=0; i<num_modes; i++, tv++)
+    {
+      isNative = tv->native ? 1:0;
+      w = tv->width;
+      h = tv->height;
+      r = tv->frame_rate;
+
+      //printf("mode %dx%d@%d %s%s:%x\n", tv->width, tv->height, 
+      //       tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code);
+
+      /* Check if frame rate match (equal or exact multiple) */
+      if(fps) 
+      {
+        if(r == ((r/fps)*fps))
+          score += abs((int)(r/fps-1)) * (1<<8); // prefer exact framerate to multiples. Ideal is 1
+        else
+          score += ((match_flag & HDMI_MODE_MATCH_FRAMERATE) ? (1<<20):(1<<12))/r; // bad - but prefer higher framerate
+      }
+      /* Check size too, only choose, bigger resolutions */
+      if(width && height) 
+      {
+        /* cost of too small a resolution is high */
+        score += max((int)(width - w), 0) * (1<<16);
+        score += max((int)(height- h), 0) * (1<<16);
+        /* cost of too high a resolution is lower */
+        score += max((int)(w-width),   0) * ((match_flag & HDMI_MODE_MATCH_RESOLUTION) ? (1<<8):(1<<0));
+        score += max((int)(h-height),  0) * ((match_flag & HDMI_MODE_MATCH_RESOLUTION) ? (1<<8):(1<<0));
+      } 
+      else if (!isNative) 
+      {
+        // native is good
+        score += 1<<16;
+      }
+
+      if (scan_mode != tv->scan_mode) 
+        score += (match_flag & HDMI_MODE_MATCH_SCANMODE) ? (1<<20):(1<<8);
+
+      if (w*9 != h*16) // not 16:9 is a small negative
+        score += 1<<12;
+      if (score < best_score) 
+      {
+        tv_found = tv;
+       best_score = score;
+      }
+      /* reset score */
+      score = 0;
+    }
+  }
+
+  if(tv_found)
+  {
+    printf("Output mode %d: %dx%d@%d %s%s:%x\n", tv_found->code, tv_found->width, tv_found->height, 
+           tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
+    m_BcmHost.vc_tv_hdmi_power_on_explicit(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
   }
 }
 
@@ -182,6 +277,7 @@ int main(int argc, char *argv[])
   bool                  m_stats               = false;
   bool                  m_dump_format         = false;
   bool                  m_3d                  = false;
+  bool                  m_refresh             = false;
   double                startpts              = 0;
   TV_GET_STATE_RESP_T   tv_state;
 
@@ -196,15 +292,19 @@ int main(int argc, char *argv[])
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           no_argument,        NULL,          '3' },
     { "hdmiclocksync", no_argument,       NULL,          'y' },
+    { "refresh",      no_argument,        NULL,          'r' },
     { "sid",          required_argument,  NULL,          't' },
     { 0, 0, 0, 0 }
   };
 
   int c;
-  while ((c = getopt_long(argc, argv, "wihn:o:cslpd3yt:", longopts, NULL)) != -1)  
+  while ((c = getopt_long(argc, argv, "wihn:o:cslpd3yt:r", longopts, NULL)) != -1)  
   {
     switch (c) 
     {
+      case 'r':
+        m_refresh = true;
+        break;
       case 'y':
         m_hdmi_clock_sync = true;
         break;
@@ -301,123 +401,20 @@ int main(int argc, char *argv[])
     m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
           
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_has_audio, m_hdmi_clock_sync, m_thread_player))
+                                         m_hdmi_clock_sync, m_thread_player))
     goto do_exit;
 
-  if(m_has_video)
+  if(m_has_video && m_refresh)
   {
-    int width   = 1280;
-    int height  = 720;
-
-    if(m_hints_video.width <= 720)
-    {
-      width = 720; height = 576;
-    }
-    else if(m_hints_video.width <= 1280)
-    {
-      width = 1280; height = 720;
-    }
-    else
-    {
-      width = 1920; height = 1080;
-    }
-
     memset(&tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
     m_BcmHost.vc_tv_get_state(&tv_state);
-
-    int32_t num_modes;
-    HDMI_RES_GROUP_T prefer_group;
-    int i = 0;
-    uint32_t prefer_mode;
-    #define TV_MAX_SUPPORTED_MODES 60
-    TV_SUPPORTED_MODE_T supported_modes[TV_MAX_SUPPORTED_MODES];
-    uint32_t group = HDMI_RES_GROUP_CEA;
-    int mode = 1;
-
 
     if(m_filename.find("3DSBS") != string::npos)
       m_3d = true;
 
-    if(m_3d)
-    {
-      group = HDMI_RES_GROUP_CEA_3D;
-    }
-    else
-    {
-      group = HDMI_RES_GROUP_CEA;
-    }
-
-    num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes((HDMI_RES_GROUP_T)group,
-                                           supported_modes,
-                                           TV_MAX_SUPPORTED_MODES,
-                                           &prefer_group,
-                                           &prefer_mode);
-
-    float last_diff = (float)m_player_video.GetFPS();
-    if(m_3d)
-      last_diff *= 2;
-
-    TV_SUPPORTED_MODE_T *tv_found = NULL;
-    if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID)
-    {
-      TV_SUPPORTED_MODE_T *tv = supported_modes;
-      for (i=0; i<num_modes; i++, tv++)
-      {
-        float fps = ((group==HDMI_RES_GROUP_CEA_3D) ? (float)m_player_video.GetFPS() * 2.0f : (float)m_player_video.GetFPS());
-        
-        if(tv->width == width && tv->height == height && fps <= (float)tv->frame_rate)
-        {
-          float diff = (float)tv->frame_rate - fps;
-          if(diff < 0.0f)
-            diff *= -1.0f;
-
-          if(diff < last_diff)
-          {
-            last_diff = diff;
-            tv_found = tv;
-            mode = supported_modes[i].code;
-          }
-        } 
-        else if( fps <= (float)tv->frame_rate && tv->width >= width && tv->height >= height)
-        {
-          float diff = (float)tv->frame_rate - fps;
-          if(diff < 0.0f)
-            diff *= -1.0f;
-
-          if(diff < last_diff)
-          {
-            last_diff = diff;
-            tv_found = tv;
-            mode = supported_modes[i].code;
-          }
-        }
-      }
-
-      if(!tv_found)
-      {
-        tv = supported_modes;
-        for (i=0; i<num_modes; i++, tv++)
-        {
-          if(tv->width == width && tv->height == height)
-          {
-            tv_found = tv;
-            mode = supported_modes[i].code;
-            break;
-          }
-        }
-      }
-      if(tv_found)
-        printf("Output mode %d: %dx%d@%d %s%s:%x\n", i, tv_found->width, tv_found->height, 
-               tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
-    }
-
-    if(tv_found)
-      m_BcmHost.vc_tv_hdmi_power_on_explicit(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, mode);
+    SetVideoMode(m_hints_video.width, m_hints_video.height, m_player_video.GetFPS() + 0.2, m_3d);
 
   }
-
-  m_av_clock->OMXStateExecute();
-  m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
 
   if(m_has_subtitle && m_subtitle_index > (m_omx_reader.SubtitleStreamCount() - 1))
   {
@@ -436,9 +433,9 @@ int main(int argc, char *argv[])
                                          m_passthrough, m_use_hw_audio, m_thread_player))
     goto do_exit;
 
+  m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
   m_av_clock->OMXStateExecute();
-  m_av_clock->OMXReset();
-  m_av_clock->OMXResume();
+  m_av_clock->OMXStart();
 
   struct timespec starttime, endtime;
 
@@ -475,7 +472,7 @@ int main(int argc, char *argv[])
         if(m_omx_reader.GetChapterCount() > 0)
         {
           m_omx_reader.SeekChapter(m_omx_reader.GetChapter() - 1, &startpts);
-          FlushStreams();
+          FlushStreams(startpts);
         }
         else
         {
@@ -486,7 +483,7 @@ int main(int argc, char *argv[])
         if(m_omx_reader.GetChapterCount() > 0)
         {
           m_omx_reader.SeekChapter(m_omx_reader.GetChapter() + 1, &startpts);
-          FlushStreams();
+          FlushStreams(startpts);
         }
         else
         {
@@ -559,17 +556,19 @@ int main(int argc, char *argv[])
       pts = m_av_clock->GetPTS();
 
       seek_pos = (pts / DVD_TIME_BASE) + m_incr;
-      seek_flags = m_incr < 0 ? AVSEEK_FLAG_BACKWARD : 0;
+      seek_flags = m_incr < 0.0f ? AVSEEK_FLAG_BACKWARD : 0;
 
-      if(seek_pos < 0)
-        seek_pos = 0;
-
-      seek_pos *= 1000;
+      seek_pos *= 1000.0f;
 
       m_incr = 0;
 
       if(m_omx_reader.SeekTime(seek_pos, seek_flags, &startpts))
-        FlushStreams();
+        FlushStreams(startpts);
+
+      m_player_video.Close();
+      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
+                                         m_hdmi_clock_sync, m_thread_player))
+        goto do_exit;
     }
 
     /* when the audio buffer runs under 0.1 seconds we buffer up */
@@ -609,13 +608,8 @@ int main(int argc, char *argv[])
     if(!m_omx_pkt)
       m_omx_pkt = m_omx_reader.Read();
 
-    if(m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
+    if(m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {
-      if(m_omx_pkt->pts != DVD_NOPTS_VALUE)
-        m_omx_pkt->pts += (m_audio_offset_ms * 1000);
-      if(m_omx_pkt->dts != DVD_NOPTS_VALUE)
-        m_omx_pkt->dts += (m_audio_offset_ms * 1000);
-
       if(m_player_video.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
       else
@@ -631,7 +625,7 @@ int main(int argc, char *argv[])
                 (int)(100.0*m_player_audio.GetDelay()), 0, 0, 100*AUDIO_BUFFER_SECONDS);
       }
     }
-    else if(m_omx_pkt && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO)
+    else if(m_has_audio && m_omx_pkt && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO)
     {
       if(m_player_audio.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
@@ -703,8 +697,11 @@ do_exit:
       m_player_video.WaitCompletion();
   }
 
-  m_BcmHost.vc_tv_hdmi_power_on_best(tv_state.width, tv_state.height, tv_state.frame_rate, HDMI_NONINTERLACED,
-        (EDID_MODE_MATCH_FLAG_T)(HDMI_MODE_MATCH_FRAMERATE|HDMI_MODE_MATCH_RESOLUTION|HDMI_MODE_MATCH_SCANMODE));
+  if(m_refresh)
+  {
+    m_BcmHost.vc_tv_hdmi_power_on_best(tv_state.width, tv_state.height, tv_state.frame_rate, HDMI_NONINTERLACED,
+                                       (EDID_MODE_MATCH_FLAG_T)(HDMI_MODE_MATCH_FRAMERATE|HDMI_MODE_MATCH_RESOLUTION|HDMI_MODE_MATCH_SCANMODE));
+  }
 
   m_av_clock->OMXStop();
   m_av_clock->OMXStateIdle();

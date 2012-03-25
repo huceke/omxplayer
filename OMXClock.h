@@ -127,6 +127,7 @@ public:
   bool OMXStart();
   bool OMXPause();
   bool OMXResume();
+  bool OMXUpdateClock(double pts);
   bool OMXWaitStart(double pts);
   bool OMXSpeed(int speed);
   int  OMXPlaySpeed() { return m_play_speed; };

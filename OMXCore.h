@@ -179,7 +179,7 @@ private:
 
   // OMXCore output buffers (video frames)
   pthread_mutex_t   m_omx_output_mutex;
-  std::queue<OMX_BUFFERHEADERTYPE*> m_omx_output_avaliable;
+  std::queue<OMX_BUFFERHEADERTYPE*> m_omx_output_available;
   std::vector<OMX_BUFFERHEADERTYPE*> m_omx_output_buffers;
   unsigned int  m_output_alignment;
   unsigned int  m_output_buffer_size;

@@ -71,20 +71,19 @@
 
 COMXVideo::COMXVideo()
 {
-  m_is_open       = false;
-  m_Pause         = false;
-  m_setStartTime  = true;
-
-  m_extradata     = NULL;
-  m_extrasize     = 0;
-
-  m_converter     = NULL;
-  m_video_convert = false;
-  m_video_codec_name = "";
-  m_deinterlace   = false;
-  m_hdmi_clock_sync = false;
-  m_first_frame   = true;
-  m_first_text    = true;
+  m_is_open           = false;
+  m_Pause             = false;
+  m_setStartTime      = true;
+  m_setStartTimeText  = true;
+  m_extradata         = NULL;
+  m_extrasize         = 0;
+  m_converter         = NULL;
+  m_video_convert     = false;
+  m_video_codec_name  = "";
+  m_deinterlace       = false;
+  m_hdmi_clock_sync   = false;
+  m_first_frame       = true;
+  m_first_text        = true;
 }
 
 COMXVideo::~COMXVideo()
@@ -233,12 +232,6 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, bool deinterlace, b
     case CODEC_ID_VP8:
       // (role name) video_decoder.vp8
       // VP8
-      /*
-      if(hints.width > 720 || hints.height > 576)
-      {
-        return false;
-      }
-      */
       decoder_name = OMX_VP8_DECODER;
       m_codingType = OMX_VIDEO_CodingVP8;
       m_video_codec_name = "omx-vp8";
@@ -573,9 +566,10 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, bool deinterlace, b
   if(!SendDecoderConfig())
     return false;
 
-  m_is_open       = true;
-  m_drop_state    = false;
-  m_setStartTime  = true;
+  m_is_open           = true;
+  m_drop_state        = false;
+  m_setStartTime      = true;
+  m_setStartTimeText  = true;
 
   /*
   OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
@@ -687,6 +681,7 @@ void COMXVideo::Close()
   m_first_frame       = true;
   m_first_text        = true;
   m_setStartTime      = true;
+  m_setStartTimeText  = true;
 }
 
 void COMXVideo::SetDropState(bool bDrop)
@@ -752,16 +747,20 @@ int COMXVideo::DecodeText(uint8_t *pData, int iSize, double dts, double pts)
         return false;
       }
 
-      if(pts == DVD_NOPTS_VALUE)
+      omx_buffer->nFlags = 0;
+
+      uint64_t val = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;
+      if(m_setStartTimeText)
       {
-        omx_buffer->nFlags = OMX_BUFFERFLAG_TIME_UNKNOWN;
+        omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;
+        m_setStartTimeText = false;
       }
       else
       {
-        omx_buffer->nFlags = 0;
+        if(pts == DVD_NOPTS_VALUE)
+          omx_buffer->nFlags = OMX_BUFFERFLAG_TIME_UNKNOWN;
       }
 
-      uint64_t val = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;
       omx_buffer->nTimeStamp = ToOMXTime(val);
 
       omx_buffer->nFilledLen = (demuxer_bytes > (omx_buffer->nAllocLen - 1)) ? (omx_buffer->nAllocLen - 1) : demuxer_bytes;
@@ -841,18 +840,18 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
       /*
       CLog::Log(DEBUG, "COMXVideo::Video VDec : pts %lld omx_buffer 0x%08x buffer 0x%08x number %d\n", 
           pts, omx_buffer, omx_buffer->pBuffer, (int)omx_buffer->pAppPrivate);
-      printf("VDec : pts %lld omx_buffer 0x%08x buffer 0x%08x number %d\n", 
-          pts, omx_buffer, omx_buffer->pBuffer, (int)omx_buffer->pAppPrivate);
+      printf("VDec : pts %f omx_buffer 0x%08x buffer 0x%08x number %d\n", 
+          (float)pts / AV_TIME_BASE, omx_buffer, omx_buffer->pBuffer, (int)omx_buffer->pAppPrivate);
       */
 
       omx_buffer->nFlags = 0;
       omx_buffer->nOffset = 0;
 
       uint64_t val  = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;
+
       if(m_setStartTime)
       {
         omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;
-
         m_setStartTime = false;
       }
       else
@@ -976,7 +975,9 @@ void COMXVideo::Reset(void)
   m_omx_decoder.FlushInput();
   m_omx_tunnel_decoder.Flush();
 
-  m_setStartTime = true;
+  //m_setStartTime      = true;
+  //m_setStartTimeText  = true;
+
   //m_first_frame = true;
 }
 

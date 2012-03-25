@@ -114,7 +114,7 @@ void OMXPlayerVideo::UnLockSubtitles()
     pthread_mutex_unlock(&m_lock_subtitle);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, int has_audio, bool hdmi_clock_sync, bool use_thread)
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
@@ -131,7 +131,6 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinte
   m_Deinterlace = deinterlace;
   m_bMpeg       = mpeg;
   m_iCurrentPts = DVD_NOPTS_VALUE;
-  m_has_audio   = has_audio;
   m_bAbort      = false;
   m_use_thread  = use_thread;
   m_flush       = false;
@@ -242,6 +241,8 @@ void OMXPlayerVideo::Output(double pts)
     m_iCurrentPts = DVD_NOPTS_VALUE;
   else
     m_iCurrentPts = pts - max(0.0, iSleepTime);
+
+  m_av_clock->SetPTS(m_iCurrentPts);
 
   // timestamp when we think next picture should be displayed based on current duration
   m_FlipTimeStamp  = iCurrentClock;

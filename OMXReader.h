@@ -132,13 +132,8 @@ protected:
   OMXStream                 m_streams[MAX_STREAMS];
   int                       m_chapter_count;
   double                    m_iCurrentPts;
-  int64_t                   m_seek_ms;
-  int                       m_seek_req;
-  int                       m_seek_flags;
   int                       m_speed;
-  int64_t                   m_duration_ms;
   unsigned int              m_program;
-  void AddTimespecs(struct timespec &time, long millisecs);
 #ifdef STANDALONE
   void flush_packet_queue(AVFormatContext *s);
   void av_read_frame_flush(AVFormatContext *s);
@@ -147,6 +142,7 @@ protected:
   void Lock();
   void UnLock();
   bool SetActiveStreamInternal(OMXStreamType type, unsigned int index);
+  bool                      m_seek;
 private:
 public:
   OMXReader();
@@ -193,7 +189,6 @@ public:
   CStdString GetStreamCodecName(AVStream *stream);
   CStdString GetStreamLanguage(OMXStreamType type, unsigned int index);
   CStdString GetStreamName(OMXStreamType type, unsigned int index);
-  int64_t GetDuration() { return m_duration_ms; };
   CStdString GetStreamType(OMXStreamType type, unsigned int index);
 #ifndef STANDALONE
   int GetSourceBitrate();

@@ -89,6 +89,7 @@ protected:
 
   bool              m_Pause;
   bool              m_setStartTime;
+  bool              m_setStartTimeText;
 
   uint8_t           *m_extradata;
   int               m_extrasize;

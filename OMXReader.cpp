@@ -46,17 +46,6 @@
 
 static bool g_abort = false;
 
-void OMXReader::AddTimespecs(struct timespec &time, long millisecs)
-{
-   time.tv_sec  += millisecs / 1000;
-   time.tv_nsec += (millisecs % 1000) * 1000000;
-   if (time.tv_nsec > 1000000000)
-   {
-      time.tv_sec  += 1;
-      time.tv_nsec -= 1000000000;
-   }
-}
-
 #ifdef STANDALONE
 /* Taken from libavformat/utils.c */
 void OMXReader::flush_packet_queue(AVFormatContext *s)
@@ -132,8 +121,6 @@ OMXReader::OMXReader()
   m_eof           = false;
   m_chapter_count = 0;
   m_iCurrentPts   = DVD_NOPTS_VALUE;
-  m_seek_ms       = 0;
-  m_seek_req      = false;
 
   for(int i = 0; i < MAX_STREAMS; i++)
     m_streams[i].extradata = NULL;
@@ -295,7 +282,7 @@ bool OMXReader::Open(CStdString filename, bool dump_format)
   if(m_pFile)
   {
     int64_t len = m_pFile->GetLength();
-    int64_t tim = (int)(m_pFormatContext->duration / (AV_TIME_BASE / 1000));
+    int64_t tim = GetStreamLength();
 
     if(len > 0 && tim > 0)
     {
@@ -319,7 +306,6 @@ bool OMXReader::Open(CStdString filename, bool dump_format)
 
   m_open        = true;
 
-  m_duration_ms = (int)(m_pFormatContext->duration / (AV_TIME_BASE /  1000));
   return true;
 }
 
@@ -399,8 +385,6 @@ bool OMXReader::Close()
   m_eof             = false;
   m_chapter_count   = 0;
   m_iCurrentPts     = DVD_NOPTS_VALUE;
-  m_seek_ms         = 0;
-  m_seek_req        = false;
   m_speed           = DVD_PLAYSPEED_NORMAL;
 
   ClearStreams();
@@ -410,6 +394,8 @@ bool OMXReader::Close()
 
 void OMXReader::FlushRead()
 {
+  m_iCurrentPts = DVD_NOPTS_VALUE;
+
   if(!m_pFormatContext)
     return;
 
@@ -418,77 +404,47 @@ void OMXReader::FlushRead()
 #else
   m_dllAvFormat.av_read_frame_flush(m_pFormatContext);
 #endif
-  m_iCurrentPts = DVD_NOPTS_VALUE;
 }
 
 bool OMXReader::SeekTime(int64_t seek_ms, int seek_flags, double *startpts)
 {
+  if(seek_ms < 0)
+    seek_ms = 0;
+
+  if(!m_pFile || !m_pFormatContext)
+    return false;
+
+  if(!m_pFile->IoControl(IOCTRL_SEEK_POSSIBLE, NULL))
+    return false;
+
   Lock();
 
-  m_seek_flags = seek_flags;
-  if(m_pFile && m_pFile->IoControl(IOCTRL_SEEK_POSSIBLE, NULL))
+  FlushRead();
+
+  int64_t seek_pts = (int64_t)seek_ms * 1000;
+  if (m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
+    seek_pts += m_pFormatContext->start_time;
+
+  int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, -1, seek_pts, seek_flags ? AVSEEK_FLAG_BACKWARD : 0);
+
+  if(ret >= 0)
+    UpdateCurrentPTS();
+
+  if(m_iCurrentPts == DVD_NOPTS_VALUE)
   {
-    m_seek_ms = seek_ms;
-    m_seek_req = true;
+    CLog::Log(LOGDEBUG, "OMXReader::SeekTime - unknown position after seek");
+  }
+  else
+  {
+    CLog::Log(LOGDEBUG, "OMXReader::SeekTime - seek ended up on time %d",(int)(m_iCurrentPts / DVD_TIME_BASE * 1000));
   }
 
-  //printf("m_seek_ms %lld seek_ms %lld\n", m_seek_ms, seek_ms);
-  if(m_seek_req)
-  {
-    int64_t pos = m_seek_ms * 1000;
-    if(pos < 0)
-      pos = 0;
-
-    FlushRead();
-
-    /*
-    int stream_index = -1;
-    int64_t seek_target = pos;
-
-    if((m_video_index != -1) && m_streams[m_video_index].stream)
-      stream_index = m_streams[m_video_index].stream->index;
-    else if((m_audio_index != -1) && m_streams[m_audio_index].stream)
-      stream_index = m_streams[m_audio_index].stream->index;
-
-    if(stream_index >= 0)
-    {
-      seek_target = m_dllAvUtil.av_rescale_q(seek_target, AV_TIME_BASE_Q, m_pFormatContext->streams[stream_index]->time_base);
-    }
-    else
-    {
-      if(m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
-        seek_target += m_pFormatContext->start_time;
-    }
-
-    int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, stream_index, seek_target, m_seek_flags);
-    */
-
-    int64_t seek_pts = (int64_t)seek_ms * 1000;
-    if (m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
-      seek_pts += m_pFormatContext->start_time;
-
-    int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, -1, seek_pts, m_seek_flags);
-
-    if(ret < 0)
-    {
-      printf("error while seeking seek_flags %d pos %f\n", m_seek_flags, (double)pos / AV_TIME_BASE);
-      UnLock();  
-      return false;
-    }
-    else
-    {
-      UpdateCurrentPTS();
-    }
-
-    if(startpts)
-      *startpts = DVD_MSEC_TO_TIME(seek_ms);
-
-    m_seek_req = false;
-    m_seek_ms = 0;
-  }
+  if(startpts)
+    *startpts = DVD_MSEC_TO_TIME(seek_ms);
 
   UnLock();
-  return true;
+
+  return (ret >= 0);
 }
 
 AVMediaType OMXReader::PacketType(OMXPacket *pkt)
@@ -609,10 +565,10 @@ OMXPacket *OMXReader::Read()
   m_omx_pkt->stream_index = pkt.stream_index;
   GetHints(pStream, &m_omx_pkt->hints);
 
-  m_omx_pkt->dts = ConvertTimestamp(pkt.dts, pStream->time_base.den, pStream->time_base.num);
-  m_omx_pkt->pts = ConvertTimestamp(pkt.pts, pStream->time_base.den, pStream->time_base.num);
-  //m_omx_pkt->dts = ConvertTimestamp(pkt.dts, &pStream->time_base);
-  //m_omx_pkt->pts = ConvertTimestamp(pkt.pts, &pStream->time_base);
+  //m_omx_pkt->dts = ConvertTimestamp(pkt.dts, pStream->time_base.den, pStream->time_base.num);
+  //m_omx_pkt->pts = ConvertTimestamp(pkt.pts, pStream->time_base.den, pStream->time_base.num);
+  m_omx_pkt->dts = ConvertTimestamp(pkt.dts, &pStream->time_base);
+  m_omx_pkt->pts = ConvertTimestamp(pkt.pts, &pStream->time_base);
   m_omx_pkt->duration = DVD_SEC_TO_TIME((double)pkt.duration * pStream->time_base.num / pStream->time_base.den);
 
   // used to guess streamlength
@@ -721,8 +677,8 @@ bool OMXReader::GetStreams()
       if(!chapter)
         continue;
 
-      m_chapters[i].seekto_ms = ConvertTimestamp(chapter->start, chapter->time_base.den, chapter->time_base.num) / 1000;
-      //m_chapters[i].seekto_ms = ConvertTimestamp(chapter->start, &chapter->time_base) / 1000;
+      //m_chapters[i].seekto_ms = ConvertTimestamp(chapter->start, chapter->time_base.den, chapter->time_base.num) / 1000;
+      m_chapters[i].seekto_ms = ConvertTimestamp(chapter->start, &chapter->time_base) / 1000;
       m_chapters[i].ts        = m_chapters[i].seekto_ms / 1000;
 
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52,83,0)
@@ -1060,8 +1016,8 @@ bool OMXReader::SeekChapter(int chapter, double* startpts)
     return false;
 
   AVChapter *ch = m_pFormatContext->chapters[chapter-1];
-  double dts = ConvertTimestamp(ch->start, ch->time_base.den, ch->time_base.num);
-  //double dts = ConvertTimestamp(ch->start, &ch->time_base);
+  //double dts = ConvertTimestamp(ch->start, ch->time_base.den, ch->time_base.num);
+  double dts = ConvertTimestamp(ch->start, &ch->time_base);
   return SeekTime(DVD_TIME_TO_MSEC(dts), 0, startpts);
 #else
   return false;
@@ -1107,7 +1063,9 @@ double OMXReader::ConvertTimestamp(int64_t pts, AVRational *time_base)
 
   new_pts *= av_q2d(*time_base);
 
-  return (double)new_pts * DVD_TIME_BASE;
+  new_pts *= (double)DVD_TIME_BASE;
+
+  return new_pts;
 }
 
 int OMXReader::GetChapter()
@@ -1120,10 +1078,10 @@ int OMXReader::GetChapter()
   for(unsigned i = 0; i < m_pFormatContext->nb_chapters; i++)
   {
     AVChapter *chapter = m_pFormatContext->chapters[i];
-    if(m_iCurrentPts >= ConvertTimestamp(chapter->start, chapter->time_base.den, chapter->time_base.num)
-      && m_iCurrentPts <  ConvertTimestamp(chapter->end,   chapter->time_base.den, chapter->time_base.num))
-    //if(m_iCurrentPts >= ConvertTimestamp(chapter->start, &chapter->time_base)
-    //  && m_iCurrentPts <  ConvertTimestamp(chapter->end, &chapter->time_base))
+    //if(m_iCurrentPts >= ConvertTimestamp(chapter->start, chapter->time_base.den, chapter->time_base.num)
+    //  && m_iCurrentPts <  ConvertTimestamp(chapter->end,   chapter->time_base.den, chapter->time_base.num))
+    if(m_iCurrentPts >= ConvertTimestamp(chapter->start, &chapter->time_base)
+      && m_iCurrentPts <  ConvertTimestamp(chapter->end, &chapter->time_base))
       return i + 1;
   }
 #endif
@@ -1160,8 +1118,8 @@ void OMXReader::UpdateCurrentPTS()
     AVStream *stream = m_pFormatContext->streams[i];
     if(stream && stream->cur_dts != (int64_t)AV_NOPTS_VALUE)
     {
-      double ts = ConvertTimestamp(stream->cur_dts, stream->time_base.den, stream->time_base.num);
-      //double ts = ConvertTimestamp(stream->cur_dts, &stream->time_base);
+      //double ts = ConvertTimestamp(stream->cur_dts, stream->time_base.den, stream->time_base.num);
+      double ts = ConvertTimestamp(stream->cur_dts, &stream->time_base);
       if(m_iCurrentPts == DVD_NOPTS_VALUE || m_iCurrentPts > ts )
         m_iCurrentPts = ts;
     }

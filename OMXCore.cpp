@@ -439,7 +439,7 @@ unsigned int COMXCoreComponent::GetInputBufferSpace()
 
 unsigned int COMXCoreComponent::GetOutputBufferSpace()
 {
-  int free = m_omx_output_avaliable.size() * m_output_buffer_size;
+  int free = m_omx_output_available.size() * m_output_buffer_size;
   return free;
 }
 
@@ -520,10 +520,10 @@ OMX_BUFFERHEADERTYPE *COMXCoreComponent::GetOutputBuffer(long timeout)
   add_timespecs(endtime, timeout);
   //while (1 && !m_flush_output)
   //{
-    if(!m_omx_output_avaliable.empty())
+    if(!m_omx_output_available.empty())
     {
-      omx_output_buffer = m_omx_output_avaliable.front();
-      m_omx_output_avaliable.pop();
+      omx_output_buffer = m_omx_output_available.front();
+      m_omx_output_available.pop();
       //break;
     }
 
@@ -669,7 +669,7 @@ OMX_ERRORTYPE COMXCoreComponent::AllocOutputBuffers(void)
     buffer->nOffset          = 0;
     buffer->pAppPrivate      = (void*)i;
     m_omx_output_buffers.push_back(buffer);
-    m_omx_output_avaliable.push(buffer);
+    m_omx_output_available.push(buffer);
   }
 
   omx_err = WaitForCommand(OMX_CommandPortEnable, m_output_port);
@@ -746,7 +746,7 @@ OMX_ERRORTYPE COMXCoreComponent::FreeOutputBuffers(bool wait)
 
   omx_err = DisablePort(m_output_port, false);
 
-  assert(m_omx_output_buffers.size() == m_omx_output_avaliable.size());
+  assert(m_omx_output_buffers.size() == m_omx_output_available.size());
 
   for (size_t i = 0; i < m_omx_output_buffers.size(); i++)
   {
@@ -767,8 +767,8 @@ OMX_ERRORTYPE COMXCoreComponent::FreeOutputBuffers(bool wait)
 
   m_omx_output_buffers.clear();
 
-  while (!m_omx_output_avaliable.empty())
-    m_omx_output_avaliable.pop();
+  while (!m_omx_output_available.empty())
+    m_omx_output_available.pop();
 
   m_output_alignment    = 0;
   m_output_buffer_size  = 0;
@@ -1433,7 +1433,7 @@ OMX_ERRORTYPE COMXCoreComponent::DecoderFillBufferDone(OMX_HANDLETYPE hComponent
   COMXCoreComponent *ctx = static_cast<COMXCoreComponent*>(pAppData);
 
   pthread_mutex_lock(&ctx->m_omx_output_mutex);
-  ctx->m_omx_output_avaliable.push(pBuffer);
+  ctx->m_omx_output_available.push(pBuffer);
 
   // this allows (all) blocked tasks to be awoken
   pthread_cond_broadcast(&m_output_buffer_cond);

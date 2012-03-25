@@ -78,7 +78,6 @@ protected:
   double                    m_frametime;
   bool                      m_Deinterlace;
   bool                      m_bMpeg;
-  int                       m_has_audio;
   bool                      m_bAbort;
   bool                      m_use_thread;
   bool                      m_flush;
@@ -102,7 +101,7 @@ private:
 public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, int has_audio, bool hdmi_clock_sync, bool use_thread);
+  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread);
   bool Close();
   void Output(double pts);
   bool Decode(OMXPacket *pkt);
