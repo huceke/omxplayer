@@ -162,7 +162,7 @@ void FlushStreams(double pts)
 //  }
 }
 
-void SetVideoMode(int width, int height, uint32_t fps, bool is3d)
+void SetVideoMode(int width, int height, float fps, bool is3d)
 {
   int32_t num_modes;
   HDMI_RES_GROUP_T prefer_group;
@@ -182,7 +182,7 @@ void SetVideoMode(int width, int height, uint32_t fps, bool is3d)
                                           &prefer_group, &prefer_mode);
 
   TV_SUPPORTED_MODE_T *tv_found = NULL;
-
+  int ifps = (int)(fps+0.5f);
   //printf("num_modes %d, %d, %d\n", num_modes, prefer_group, prefer_mode);
 
   if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID)
@@ -208,12 +208,12 @@ void SetVideoMode(int width, int height, uint32_t fps, bool is3d)
       //       tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code);
 
       /* Check if frame rate match (equal or exact multiple) */
-      if(fps) 
+      if(ifps) 
       {
-        if(r == ((r/fps)*fps))
-          score += abs((int)(r/fps-1)) * (1<<8); // prefer exact framerate to multiples. Ideal is 1
+        if(r == ((r/ifps)*ifps))
+          score += abs((int)(r/ifps-1)) * (1<<8); // prefer exact framerate to multiples. Ideal is 1
         else
-          score += ((match_flag & HDMI_MODE_MATCH_FRAMERATE) ? (1<<20):(1<<12))/r; // bad - but prefer higher framerate
+          score += ((match_flag & HDMI_MODE_MATCH_FRAMERATE) ? (1<<28):(1<<12))/r; // bad - but prefer higher framerate
       }
       /* Check size too, only choose, bigger resolutions */
       if(width && height) 
@@ -236,10 +236,14 @@ void SetVideoMode(int width, int height, uint32_t fps, bool is3d)
 
       if (w*9 != h*16) // not 16:9 is a small negative
         score += 1<<12;
+
+      printf("mode %dx%d@%d %s%s:%x score=%d\n", tv->width, tv->height, 
+             tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code, score);
+
       if (score < best_score) 
       {
         tv_found = tv;
-       best_score = score;
+        best_score = score;
       }
       /* reset score */
       score = 0;
@@ -250,6 +254,12 @@ void SetVideoMode(int width, int height, uint32_t fps, bool is3d)
   {
     printf("Output mode %d: %dx%d@%d %s%s:%x\n", tv_found->code, tv_found->width, tv_found->height, 
            tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
+    // if we are closer to ntsc version of framerate, let gpu know
+    int ifps = (int)(fps+0.5f);
+    bool ntsc_freq = fabs(fps*1001.0f/1000.0f - ifps) < fabs(fps-ifps);
+    printf("ntsc_freq:%d\n", ntsc_freq);
+    char response[80];
+    vc_gencmd(response, sizeof response, "hdmi_ntsc_freqs %d", ntsc_freq);
     m_BcmHost.vc_tv_hdmi_power_on_explicit(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
   }
 }
@@ -412,7 +422,7 @@ int main(int argc, char *argv[])
     if(m_filename.find("3DSBS") != string::npos)
       m_3d = true;
 
-    SetVideoMode(m_hints_video.width, m_hints_video.height, m_player_video.GetFPS() + 0.2, m_3d);
+    SetVideoMode(m_hints_video.width, m_hints_video.height, m_player_video.GetFPS(), m_3d);
 
   }
 
