@@ -1,34 +1,12 @@
 #!/bin/sh
 
-#mount -t nfs -o rsize=32768,wsize=32768,intr 192.168.10.1:/data/video /media
+export LD_LIBRARY_PATH=/opt/vc/lib:$LD_LIBRARY_PATH
 
 OMXPLAYER="./omxplayer.bin"
-FBSET="/usr/sbin/fbset"
 
 if [ -e /usr/bin/omxplayer.bin ]; then
   OMXPLAYER="/usr/bin/omxplayer.bin"
 fi
 
-if [ -e /usr/lib/omxplayer ]; then
-  export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:$LD_LIBRARY_PATH 
-else
-  export LD_LIBRARY_PATH=$PWD/ffmpeg_compiled/usr/local/lib:/opt/vc/lib:$LD_LIBRARY_PATH
-fi
 
-XRES=1920
-YRES=1080
-
-XRES=1600
-YRES=900
-
-if [ -e $FBSET ]; then
-  echo 0 >  /sys/class/vtconsole/vtcon1/bind
-  fbset -xres 1 -yres 1
-fi
-
-./omxplayer.bin "$@"
-
-if [ -e $FBSET ]; then
-  fbset -xres ${XRES} -yres ${YRES}
-  echo 1 >  /sys/class/vtconsole/vtcon1/bind
-fi
+$OMXPLAYER "$@"

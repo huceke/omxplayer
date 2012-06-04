@@ -57,9 +57,9 @@ ffmpeg:
 
 dist: omxplayer.bin
 	mkdir -p omxplayer-dist/usr/lib/omxplayer
-	mkdir -p omxplayer-dist/usr/usr/bin
+	mkdir -p omxplayer-dist/usr/bin
 	mkdir -p omxplayer-dist/usr/share/doc
-	cp omxplayer omxplayer.bin omxplayer-dist/usr/usr/bin
+	cp omxplayer omxplayer.bin omxplayer-dist/usr/bin
 	cp README COPYING omxplayer-dist/usr/share/doc/
 	cp -a ffmpeg_compiled/usr/local/lib/*.so* omxplayer-dist/usr/lib/omxplayer/
 	tar -czf omxplayer-dist.tar.gz omxplayer-dist
