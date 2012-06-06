@@ -42,7 +42,6 @@ extern "C" {
 #include "DllAvFormat.h"
 #include "DllAvFilter.h"
 #include "DllAvCodec.h"
-#include "DllAvCore.h"
 #include "linux/RBP.h"
 
 #include "OMXVideo.h"
