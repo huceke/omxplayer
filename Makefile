@@ -39,7 +39,7 @@ list_test:
 	$(CXX) -O3 -o list_test list_test.cpp
 
 omxplayer.bin: $(OBJS)
-	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS) -lvchiq_arm -lvcos -lpthread -lavutil -lavcodec -lavformat -lswscale -lpcre
+	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS) -lvchiq_arm -lvcos -lrt -lpthread -lavutil -lavcodec -lavformat -lswscale -lpcre
 	#arm-unknown-linux-gnueabi-strip omxplayer.bin
 
 clean:
