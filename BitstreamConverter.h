@@ -27,7 +27,6 @@
 #include "DllAvFormat.h"
 #include "DllAvFilter.h"
 #include "DllAvCodec.h"
-#include "DllAvCore.h"
 
 typedef struct {
   uint8_t *buffer, *start;
@@ -133,9 +132,9 @@ protected:
   int nal_bs_read_ue(nal_bitstream *bs);
   const uint8_t *avc_find_startcode_internal(const uint8_t *p, const uint8_t *end);
   const uint8_t *avc_find_startcode(const uint8_t *p, const uint8_t *end);
-  const int avc_parse_nal_units(ByteIOContext *pb, const uint8_t *buf_in, int size);
+  const int avc_parse_nal_units(AVIOContext *pb, const uint8_t *buf_in, int size);
   const int avc_parse_nal_units_buf(const uint8_t *buf_in, uint8_t **buf, int *size);
-  const int isom_write_avcc(ByteIOContext *pb, const uint8_t *data, int len);
+  const int isom_write_avcc(AVIOContext *pb, const uint8_t *data, int len);
   // bitstream to bytestream (Annex B) conversion support.
   bool BitstreamConvertInit(void *in_extradata, int in_extrasize);
   bool BitstreamConvert(uint8_t* pData, int iSize, uint8_t **poutbuf, int *poutbuf_size);

@@ -29,10 +29,6 @@
 
 COMXAudioCodecOMX::COMXAudioCodecOMX()
 {
-  m_iBufferSize1 = 0;
-  m_pBuffer1     = (BYTE*)_aligned_malloc(MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, 16);
-  memset(m_pBuffer1, 0, MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE);
-
   m_iBufferSize2 = 0;
   m_pBuffer2     = (BYTE*)_aligned_malloc(MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, 16);
   memset(m_pBuffer2, 0, MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE);
@@ -45,13 +41,12 @@ COMXAudioCodecOMX::COMXAudioCodecOMX()
   m_channelMap[0] = PCM_INVALID;
   m_channels = 0;
   m_layout = 0;
+  m_pFrame1 = NULL;
 }
 
 COMXAudioCodecOMX::~COMXAudioCodecOMX()
 {
-  _aligned_free(m_pBuffer1);
   _aligned_free(m_pBuffer2);
-
   Dispose();
 }
 
@@ -60,12 +55,10 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints)
   AVCodec* pCodec;
   m_bOpenedCodec = false;
 
-  if (!m_dllAvCore.Load() || !m_dllAvUtil.Load() || !m_dllAvCodec.Load())
+  if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load())
     return false;
 
   m_dllAvCodec.avcodec_register_all();
-  m_pCodecContext = m_dllAvCodec.avcodec_alloc_context();
-  m_dllAvCodec.avcodec_get_context_defaults(m_pCodecContext);
 
   pCodec = m_dllAvCodec.avcodec_find_decoder(hints.codec);
   if (!pCodec)
@@ -74,6 +67,7 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints)
     return false;
   }
 
+  m_pCodecContext = m_dllAvCodec.avcodec_alloc_context3(pCodec);
   m_pCodecContext->debug_mv = 0;
   m_pCodecContext->debug = 0;
   m_pCodecContext->workaround_bugs = 1;
@@ -98,13 +92,14 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints)
     memcpy(m_pCodecContext->extradata, hints.extradata, hints.extrasize);
   }
 
-  if (m_dllAvCodec.avcodec_open(m_pCodecContext, pCodec) < 0)
+  if (m_dllAvCodec.avcodec_open2(m_pCodecContext, pCodec, NULL) < 0)
   {
     CLog::Log(LOGDEBUG,"COMXAudioCodecOMX::Open() Unable to open codec");
     Dispose();
     return false;
   }
 
+  m_pFrame1 = m_dllAvCodec.avcodec_alloc_frame();
   m_bOpenedCodec = true;
   m_iSampleFormat = AV_SAMPLE_FMT_NONE;
   return true;
@@ -112,11 +107,16 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints)
 
 void COMXAudioCodecOMX::Dispose()
 {
+  if (m_pFrame1)
+  {
+    m_dllAvUtil.av_free(m_pFrame1);
+    m_pFrame1 = NULL;
+  }
+
   if (m_pConvert)
   {
     m_dllAvCodec.av_audio_convert_free(m_pConvert);
     m_pConvert = NULL;
-
   }
 
   if (m_pCodecContext)
@@ -137,9 +137,8 @@ void COMXAudioCodecOMX::Dispose()
 
 int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize)
 {
-  int iBytesUsed;
+  int iBytesUsed, got_frame;
   if (!m_pCodecContext) return -1;
-  if (iSize < 1) return iSize;
 
   m_iBufferSize1 = AVCODEC_MAX_AUDIO_FRAME_SIZE;
   m_iBufferSize2 = 0;
@@ -148,10 +147,17 @@ int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize)
   m_dllAvCodec.av_init_packet(&avpkt);
   avpkt.data = pData;
   avpkt.size = iSize;
-  iBytesUsed = m_dllAvCodec.avcodec_decode_audio3( m_pCodecContext
-                                                 , (int16_t*)m_pBuffer1
-                                                 , &m_iBufferSize1
+  iBytesUsed = m_dllAvCodec.avcodec_decode_audio4( m_pCodecContext
+                                                 , m_pFrame1
+                                                 , &got_frame
                                                  , &avpkt);
+  if (iBytesUsed < 0 || !got_frame)
+  {
+    m_iBufferSize1 = 0;
+    m_iBufferSize2 = 0;
+    return iBytesUsed;
+  }
+  m_iBufferSize1 = m_dllAvUtil.av_samples_get_buffer_size(NULL, m_pCodecContext->channels, m_pFrame1->nb_samples, m_pCodecContext->sample_fmt, 1);
 
   /* some codecs will attempt to consume more data than what we gave */
   if (iBytesUsed > iSize)
@@ -187,9 +193,9 @@ int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize)
       return iBytesUsed;
     }
 
-    const void *ibuf[6] = { m_pBuffer1 };
+    const void *ibuf[6] = { m_pFrame1->data[0] };
     void       *obuf[6] = { m_pBuffer2 };
-    int         istr[6] = { m_dllAvCore.av_get_bits_per_sample_fmt(m_pCodecContext->sample_fmt)/8 };
+    int         istr[6] = { m_dllAvUtil.av_get_bytes_per_sample(m_pCodecContext->sample_fmt) };
     int         ostr[6] = { 2 };
     int         len     = m_iBufferSize1 / istr[0];
     if(m_dllAvCodec.av_audio_convert(m_pConvert, obuf, ostr, ibuf, istr, len) < 0)
@@ -213,7 +219,7 @@ int COMXAudioCodecOMX::GetData(BYTE** dst)
   if(m_pCodecContext->channels == 6 && m_iBufferSize1)
   {
     int16_t *pDst = (int16_t *)m_pBuffer2;
-    int16_t *pSrc = (int16_t *)m_pBuffer1;
+    const int16_t *pSrc = (const int16_t *)m_pFrame1->data[0];
 
     //printf("\ncopy_chunk_len %d, omx_chunk_len %d\n", copy_chunk_len, omx_chunk_len);
     memset(m_pBuffer2, 0, MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE);
@@ -242,7 +248,7 @@ int COMXAudioCodecOMX::GetData(BYTE** dst)
 
   if(m_iBufferSize1)
   {
-    *dst = m_pBuffer1;
+    *dst = m_pFrame1->data[0];
     return m_iBufferSize1;
   }
   if(m_iBufferSize2)
@@ -307,7 +313,7 @@ void COMXAudioCodecOMX::BuildChannelMap()
   else
   {
     CLog::Log(LOGINFO, "COMXAudioCodecOMX::GetChannelMap - FFmpeg reported %d channels, but the layout contains %d ignoring", m_pCodecContext->channels, bits);
-    layout = m_dllAvCodec.avcodec_guess_channel_layout(m_pCodecContext->channels, m_pCodecContext->codec_id, NULL);
+    layout = m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels);
   }
 
   int index = 0;

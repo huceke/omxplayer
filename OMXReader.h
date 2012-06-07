@@ -27,7 +27,6 @@
 #include "DllAvFormat.h"
 #include "DllAvFilter.h"
 #include "DllAvCodec.h"
-#include "DllAvCore.h"
 #include "OMXStreamInfo.h"
 #ifdef STANDALONE
 #include "OMXThread.h"
@@ -126,7 +125,7 @@ protected:
   bool                      m_bMpeg;
   XFILE::CFile              *m_pFile;
   AVFormatContext           *m_pFormatContext;
-  ByteIOContext             *m_ioContext;
+  AVIOContext               *m_ioContext;
   bool                      m_eof;
   OMXChapter                m_chapters[MAX_OMX_CHAPTERS];
   OMXStream                 m_streams[MAX_STREAMS];
@@ -134,10 +133,10 @@ protected:
   double                    m_iCurrentPts;
   int                       m_speed;
   unsigned int              m_program;
-#ifdef STANDALONE
-  void flush_packet_queue(AVFormatContext *s);
-  void av_read_frame_flush(AVFormatContext *s);
-#endif
+//#ifdef STANDALONE
+//  void flush_packet_queue(AVFormatContext *s);
+//  void av_read_frame_flush(AVFormatContext *s);
+//#endif
   pthread_mutex_t           m_lock;
   void Lock();
   void UnLock();
@@ -150,7 +149,7 @@ public:
   bool Open(CStdString filename, bool dump_format);
   void ClearStreams();
   bool Close();
-  void FlushRead();
+  //void FlushRead();
   bool SeekTime(int64_t seek_ms, int seek_flags, double *startpts);
   AVMediaType PacketType(OMXPacket *pkt);
   OMXPacket *Read();

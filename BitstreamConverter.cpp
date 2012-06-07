@@ -308,7 +308,7 @@ const uint8_t *CBitstreamConverter::avc_find_startcode(const uint8_t *p, const u
   return out;
 }
 
-const int CBitstreamConverter::avc_parse_nal_units(ByteIOContext *pb, const uint8_t *buf_in, int size)
+const int CBitstreamConverter::avc_parse_nal_units(AVIOContext *pb, const uint8_t *buf_in, int size)
 {
   const uint8_t *p = buf_in;
   const uint8_t *end = p + size;
@@ -323,8 +323,8 @@ const int CBitstreamConverter::avc_parse_nal_units(ByteIOContext *pb, const uint
       break;
 
     nal_end = avc_find_startcode(nal_start, end);
-    m_dllAvFormat->put_be32(pb, nal_end - nal_start);
-    m_dllAvFormat->put_buffer(pb, nal_start, nal_end - nal_start);
+    m_dllAvFormat->avio_wb32(pb, nal_end - nal_start);
+    m_dllAvFormat->avio_write(pb, nal_start, nal_end - nal_start);
     size += 4 + nal_end - nal_start;
     nal_start = nal_end;
   }
@@ -333,19 +333,19 @@ const int CBitstreamConverter::avc_parse_nal_units(ByteIOContext *pb, const uint
 
 const int CBitstreamConverter::avc_parse_nal_units_buf(const uint8_t *buf_in, uint8_t **buf, int *size)
 {
-  ByteIOContext *pb;
-  int ret = m_dllAvFormat->url_open_dyn_buf(&pb);
+  AVIOContext *pb;
+  int ret = m_dllAvFormat->avio_open_dyn_buf(&pb);
   if (ret < 0)
     return ret;
 
   avc_parse_nal_units(pb, buf_in, *size);
 
   m_dllAvUtil->av_freep(buf);
-  *size = m_dllAvFormat->url_close_dyn_buf(pb, buf);
+  *size = m_dllAvFormat->avio_close_dyn_buf(pb, buf);
   return 0;
 }
 
-const int CBitstreamConverter::isom_write_avcc(ByteIOContext *pb, const uint8_t *data, int len)
+const int CBitstreamConverter::isom_write_avcc(AVIOContext *pb, const uint8_t *data, int len)
 {
   // extradata from bytestream h264, convert to avcC atom data for bitstream
   if (len > 6)
@@ -386,26 +386,26 @@ const int CBitstreamConverter::isom_write_avcc(ByteIOContext *pb, const uint8_t 
       if (!sps || !pps || sps_size < 4 || sps_size > UINT16_MAX || pps_size > UINT16_MAX)
         assert(0);
 
-      m_dllAvFormat->put_byte(pb, 1); /* version */
-      m_dllAvFormat->put_byte(pb, sps[1]); /* profile */
-      m_dllAvFormat->put_byte(pb, sps[2]); /* profile compat */
-      m_dllAvFormat->put_byte(pb, sps[3]); /* level */
-      m_dllAvFormat->put_byte(pb, 0xff); /* 6 bits reserved (111111) + 2 bits nal size length - 1 (11) */
-      m_dllAvFormat->put_byte(pb, 0xe1); /* 3 bits reserved (111) + 5 bits number of sps (00001) */
+      m_dllAvFormat->avio_w8(pb, 1); /* version */
+      m_dllAvFormat->avio_w8(pb, sps[1]); /* profile */
+      m_dllAvFormat->avio_w8(pb, sps[2]); /* profile compat */
+      m_dllAvFormat->avio_w8(pb, sps[3]); /* level */
+      m_dllAvFormat->avio_w8(pb, 0xff); /* 6 bits reserved (111111) + 2 bits nal size length - 1 (11) */
+      m_dllAvFormat->avio_w8(pb, 0xe1); /* 3 bits reserved (111) + 5 bits number of sps (00001) */
 
-      m_dllAvFormat->put_be16(pb, sps_size);
-      m_dllAvFormat->put_buffer(pb, sps, sps_size);
+      m_dllAvFormat->avio_wb16(pb, sps_size);
+      m_dllAvFormat->avio_write(pb, sps, sps_size);
       if (pps)
       {
-        m_dllAvFormat->put_byte(pb, 1); /* number of pps */
-        m_dllAvFormat->put_be16(pb, pps_size);
-        m_dllAvFormat->put_buffer(pb, pps, pps_size);
+        m_dllAvFormat->avio_w8(pb, 1); /* number of pps */
+        m_dllAvFormat->avio_wb16(pb, pps_size);
+        m_dllAvFormat->avio_write(pb, pps, pps_size);
       }
       m_dllAvUtil->av_free(start);
     }
     else
     {
-      m_dllAvFormat->put_buffer(pb, data, len);
+      m_dllAvFormat->avio_write(pb, data, len);
     }
   }
   return 0;
@@ -484,8 +484,8 @@ bool CBitstreamConverter::Open(enum CodecID codec, uint8_t *in_extradata, int in
             if (!m_dllAvUtil->Load() || !m_dllAvFormat->Load())
               return false;
 
-            ByteIOContext *pb;
-            if (m_dllAvFormat->url_open_dyn_buf(&pb) < 0)
+            AVIOContext *pb;
+            if (m_dllAvFormat->avio_open_dyn_buf(&pb) < 0)
               return false;
             m_convert_bytestream = true;
             // create a valid avcC atom data from ffmpeg's extradata
@@ -493,7 +493,7 @@ bool CBitstreamConverter::Open(enum CodecID codec, uint8_t *in_extradata, int in
             // unhook from ffmpeg's extradata
             in_extradata = NULL;
             // extract the avcC atom data into extradata then write it into avcCData for VDADecoder
-            in_extrasize = m_dllAvFormat->url_close_dyn_buf(pb, &in_extradata);
+            in_extrasize = m_dllAvFormat->avio_close_dyn_buf(pb, &in_extradata);
             // make a copy of extradata contents
             m_extradata = (uint8_t *)malloc(in_extrasize);
             memcpy(m_extradata, in_extradata, in_extrasize);
@@ -648,14 +648,14 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
           m_convertSize = 0;
 
           // convert demuxer packet from bytestream (AnnexB) to bitstream
-          ByteIOContext *pb;
+          AVIOContext *pb;
   
-          if(m_dllAvFormat->url_open_dyn_buf(&pb) < 0)
+          if(m_dllAvFormat->avio_open_dyn_buf(&pb) < 0)
           {
             return false;
           }
           m_convertSize = avc_parse_nal_units(pb, pData, iSize);
-          m_convertSize = m_dllAvFormat->url_close_dyn_buf(pb, &m_convertBuffer);
+          m_convertSize = m_dllAvFormat->avio_close_dyn_buf(pb, &m_convertBuffer);
         }
         else if (m_convert_3byteTo4byteNALSize)
         {
@@ -667,8 +667,8 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
           m_convertSize = 0;
 
           // convert demuxer packet from 3 byte NAL sizes to 4 byte
-          ByteIOContext *pb;
-          if (m_dllAvFormat->url_open_dyn_buf(&pb) < 0)
+          AVIOContext *pb;
+          if (m_dllAvFormat->avio_open_dyn_buf(&pb) < 0)
             return false;
 
           uint32_t nal_size;
@@ -677,13 +677,13 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
           while (nal_start < end)
           {
             nal_size = OMX_RB24(nal_start);
-            m_dllAvFormat->put_be32(pb, nal_size);
+            m_dllAvFormat->avio_wb16(pb, nal_size);
             nal_start += 3;
-            m_dllAvFormat->put_buffer(pb, nal_start, nal_size);
+            m_dllAvFormat->avio_write(pb, nal_start, nal_size);
             nal_start += nal_size;
           }
   
-          m_convertSize = m_dllAvFormat->url_close_dyn_buf(pb, &m_convertBuffer);
+          m_convertSize = m_dllAvFormat->avio_close_dyn_buf(pb, &m_convertBuffer);
         }
         return true;
       }
@@ -706,16 +706,16 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
         }
         m_convertSize = 0;
 
-        ByteIOContext *pb;
-        if (m_dllAvFormat->url_open_dyn_buf(&pb) < 0)
+        AVIOContext *pb;
+        if (m_dllAvFormat->avio_open_dyn_buf(&pb) < 0)
           return false;
 
-        m_dllAvFormat->put_byte(pb, 0);
-        m_dllAvFormat->put_byte(pb, 0);
-        m_dllAvFormat->put_byte(pb, !m_convert_vc1 ? 0 : 1);
-        m_dllAvFormat->put_byte(pb, !m_convert_vc1 ? 0 : 0xd);
-        m_dllAvFormat->put_buffer(pb, pData, iSize);
-        m_convertSize = m_dllAvFormat->url_close_dyn_buf(pb, &m_convertBuffer);
+        m_dllAvFormat->avio_w8(pb, 0);
+        m_dllAvFormat->avio_w8(pb, 0);
+        m_dllAvFormat->avio_w8(pb, !m_convert_vc1 ? 0 : 1);
+        m_dllAvFormat->avio_w8(pb, !m_convert_vc1 ? 0 : 0xd);
+        m_dllAvFormat->avio_write(pb, pData, iSize);
+        m_convertSize = m_dllAvFormat->avio_close_dyn_buf(pb, &m_convertBuffer);
         return true;
       }
       else
