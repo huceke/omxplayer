@@ -151,7 +151,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
 
 bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, EEncoded bPassthrough)
 {
-  CStdString deviceuse;
+  std::string deviceuse;
   if(device == "hdmi") {
     deviceuse = "hdmi";
   } else {
@@ -294,10 +294,10 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   PrintPCM(&m_pcm_output);
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-  CStdString componentName = "";
+  std::string componentName = "";
 
   componentName = "OMX.broadcom.audio_render";
-  if(!m_omx_render.Initialize((const CStdString)componentName, OMX_IndexParamAudioInit))
+  if(!m_omx_render.Initialize(componentName, OMX_IndexParamAudioInit))
     return false;
 
   OMX_CONFIG_BRCMAUDIODESTINATIONTYPE audioDest;
@@ -309,13 +309,13 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     return false;
 
   componentName = "OMX.broadcom.audio_decode";
-  if(!m_omx_decoder.Initialize((const CStdString)componentName, OMX_IndexParamAudioInit))
+  if(!m_omx_decoder.Initialize(componentName, OMX_IndexParamAudioInit))
     return false;
 
   if(!m_Passthrough)
   {
     componentName = "OMX.broadcom.audio_mixer";
-    if(!m_omx_mixer.Initialize((const CStdString)componentName, OMX_IndexParamAudioInit))
+    if(!m_omx_mixer.Initialize(componentName, OMX_IndexParamAudioInit))
       return false;
   }
 

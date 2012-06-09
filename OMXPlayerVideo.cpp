@@ -303,7 +303,7 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
     int result = m_pSubtitleCodec->Decode(pkt->data, pkt->size, pkt->pts, pkt->duration);
     COMXOverlay* overlay;
 
-    CStdString strSubtitle = "";
+    std::string strSubtitle = "";
 
     double pts = pkt->dts != DVD_NOPTS_VALUE ? pkt->dts : pkt->pts;
     double duration = pkt->duration;
@@ -585,10 +585,10 @@ void OMXPlayerVideo::SetSpeed(int speed)
   m_speed = speed;
 }
 
-CStdString OMXPlayerVideo::GetText()
+std::string OMXPlayerVideo::GetText()
 {
   OMXPacket *pkt = NULL;
-  CStdString strSubtitle = "";
+  std::string strSubtitle = "";
 
   LockSubtitles();
   if (!m_subtitle_packets.empty())

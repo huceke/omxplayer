@@ -54,13 +54,15 @@ extern "C" {
 #include "OMXPlayerAudio.h"
 #include "DllOMX.h"
 
+#include <string>
+
 enum PCMChannels  *m_pChannelMap        = NULL;
 unsigned int      g_abort               = false;
 bool              m_bMpeg               = false;
 bool               m_passthrough        = false;
 bool              m_Deinterlace         = false;
 bool              m_HWDecode            = false;
-CStdString        deviceString          = "omx:local";
+std::string       deviceString          = "omx:local";
 int               m_use_hw_audio        = false;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
@@ -274,12 +276,12 @@ int main(int argc, char *argv[])
   new_termios.c_cflag     |= HUPCL;
   new_termios.c_cc[VMIN]  = 0;
 
-  CStdString last_sub = "";
+  std::string last_sub = "";
 
   tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
   on_exit(restore_termios, &orig_termios);
 
-  CStdString            m_filename;
+  std::string            m_filename;
   double                m_incr                = 0;
   CRBP                  g_RBP;
   COMXCore              g_OMX;
@@ -334,7 +336,7 @@ int main(int argc, char *argv[])
         break;
       case 'o':
         deviceString = optarg;
-        if(deviceString != CStdString("local") && deviceString != CStdString("hdmi"))
+        if(deviceString != "local" && deviceString != "hdmi")
         {
           print_usage();
           return 0;
@@ -673,7 +675,7 @@ int main(int argc, char *argv[])
       goto do_exit;
     }
 
-    CStdString strSubTitle = m_player_video.GetText();
+    std::string strSubTitle = m_player_video.GetText();
     if(strSubTitle.length() && m_show_subtitle)
     {
       if(last_sub != strSubTitle)

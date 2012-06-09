@@ -22,7 +22,6 @@
 #ifndef _OMX_PLAYERAUDIO_H_
 #define _OMX_PLAYERAUDIO_H_
 
-#include "utils/StdString.h"
 #include "DllAvUtil.h"
 #include "DllAvFormat.h"
 #include "DllAvFilter.h"
@@ -42,6 +41,7 @@
 #endif
 
 #include <deque>
+#include <string>
 #include <sys/types.h>
 
 using namespace std;
@@ -69,8 +69,8 @@ protected:
   OMXClock                  *m_av_clock;
   OMXReader                 *m_omx_reader;
   COMXAudio                 *m_decoder;
-  CStdString                m_codec_name;
-  CStdString                m_device;
+  std::string               m_codec_name;
+  std::string               m_device;
   bool                      m_use_passthrough;
   bool                      m_use_hw_decode;
   IAudioRenderer::EEncoded  m_passthrough;
@@ -107,8 +107,8 @@ private:
 public:
   OMXPlayerAudio();
   ~OMXPlayerAudio();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader, CStdString device,
-            bool passthrough, bool hw_decode, bool use_thread);
+  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
+            std::string device, bool passthrough, bool hw_decode, bool use_thread);
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();
