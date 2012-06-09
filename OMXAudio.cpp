@@ -737,14 +737,14 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
     m_visBufferLength = mylen;
   }
 
-  if(m_eEncoding == OMX_AUDIO_CodingDTS && m_LostSync && m_Passthrough)
+  if(m_eEncoding == OMX_AUDIO_CodingDTS && m_LostSync && (m_Passthrough || m_HWDecode))
   {
     int skip = SyncDTS((uint8_t *)data, len);
     if(skip > 0)
       return len;
   }
 
-  if(m_eEncoding == OMX_AUDIO_CodingDDP && m_LostSync && m_Passthrough)
+  if(m_eEncoding == OMX_AUDIO_CodingDDP && m_LostSync && (m_Passthrough || m_HWDecode))
   {
     int skip = SyncAC3((uint8_t *)data, len);
     if(skip > 0)

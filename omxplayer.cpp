@@ -427,9 +427,18 @@ int main(int argc, char *argv[])
 
   }
 
+  // This is an upper bound check on the subtitle limits. When we pulled the subtitle
+  // index from the user we check to make sure that the value is larger than zero, but
+  // we couldn't know without scanning the file if it was too high. If this is the case
+  // then we replace the subtitle index with the maximum value possible.
   if(m_has_subtitle && m_subtitle_index > (m_omx_reader.SubtitleStreamCount() - 1))
   {
     m_subtitle_index = m_omx_reader.SubtitleStreamCount() - 1;
+  }
+
+  // Here we actually enable the subtitle streams if we have one available.
+  if (m_has_subtitle && m_subtitle_index <= (m_omx_reader.SubtitleStreamCount() - 1))
+  {
     m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
     m_show_subtitle = true;
   }
