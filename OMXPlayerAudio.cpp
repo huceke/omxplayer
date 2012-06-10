@@ -714,6 +714,18 @@ void OMXPlayerAudio::SetCurrentVolume(long nVolume)
   if(m_decoder) m_decoder->SetCurrentVolume(nVolume);
 }
 
+long OMXPlayerAudio::GetCurrentVolume()
+{
+  if(m_decoder)
+  {
+    return m_decoder->GetCurrentVolume();
+  }
+  else
+  {
+    return 0;
+  }
+}
+
 void OMXPlayerAudio::SetSpeed(int speed)
 {
   m_speed = speed;
