@@ -128,6 +128,7 @@ public:
   void  UnRegisterAudioCallback();
   void  DoAudioWork();
   void SetCurrentVolume(long nVolume);
+  long GetCurrentVolume();
   void SetSpeed(int iSpeed);
   bool Error() { return !m_player_error; };
 };

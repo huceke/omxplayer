@@ -555,6 +555,14 @@ int main(int argc, char *argv[])
           m_av_clock->OMXResume();
         }
         break;
+      case '-':
+        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() - 50);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+        break;
+      case '=':
+        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 50);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+        break;
       default:
         break;
     }
