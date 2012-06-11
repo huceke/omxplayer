@@ -696,15 +696,15 @@ bool OMXReader::SetActiveStreamInternal(OMXStreamType type, unsigned int index)
   switch(type)
   {
     case OMXSTREAM_AUDIO:
-      if(index > (m_audio_count - 1))
+      if((int)index > (m_audio_count - 1))
         index = (m_audio_count - 1);
       break;
     case OMXSTREAM_VIDEO:
-      if(index > (m_video_count - 1))
+      if((int)index > (m_video_count - 1))
         index = (m_video_count - 1);
       break;
     case OMXSTREAM_SUBTITLE:
-      if(index > (m_subtitle_count - 1))
+      if((int)index > (m_subtitle_count - 1))
         index = (m_subtitle_count - 1);
       break;
     default:
@@ -1300,3 +1300,11 @@ int OMXReader::GetSourceBitrate()
   return ret;
 }
 #endif
+
+bool OMXReader::CanSeek()
+{
+  if(m_ioContext)
+    return m_ioContext->seekable;
+
+  return false;
+}
