@@ -189,6 +189,7 @@ public:
   std::string GetStreamLanguage(OMXStreamType type, unsigned int index);
   std::string GetStreamName(OMXStreamType type, unsigned int index);
   std::string GetStreamType(OMXStreamType type, unsigned int index);
+  bool CanSeek();
 #ifndef STANDALONE
   int GetSourceBitrate();
 #endif

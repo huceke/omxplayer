@@ -129,6 +129,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
 
   m_dllAvFormat.av_register_all();
   m_dllAvFormat.avformat_network_init();
+  m_dllAvUtil.av_log_set_level(AV_LOG_QUIET);
 
   int           result    = -1;
   AVInputFormat *iformat  = NULL;
@@ -389,9 +390,13 @@ bool OMXReader::SeekTime(int64_t seek_ms, int seek_flags, double *startpts)
     UpdateCurrentPTS();
 
   if(m_iCurrentPts == DVD_NOPTS_VALUE)
+  {
     CLog::Log(LOGDEBUG, "OMXReader::SeekTime - unknown position after seek");
+  }
   else
+  {
     CLog::Log(LOGDEBUG, "OMXReader::SeekTime - seek ended up on time %d",(int)(m_iCurrentPts / DVD_TIME_BASE * 1000));
+  }
 
   if(startpts)
     *startpts = DVD_MSEC_TO_TIME(seek_ms);
@@ -569,23 +574,21 @@ bool OMXReader::GetStreams()
     {
       if(m_program == UINT_MAX && m_pFormatContext->programs[i]->nb_stream_indexes > 0)
         m_program = i;
+
       if(i != m_program)
         m_pFormatContext->programs[i]->discard = AVDISCARD_ALL;
+    }
       if(m_program != UINT_MAX)
       {
-        // TODO: build stream array
         // add streams from selected program
         for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
           AddStream(m_pFormatContext->programs[m_program]->stream_index[i]);
       }
     }
-  }
 
-  // if there were no programs or they were all empty, add all streams
   // if there were no programs or they were all empty, add all streams
   if (m_program == UINT_MAX)
   {
-    // TODO: build stream array
     for (unsigned int i = 0; i < m_pFormatContext->nb_streams; i++)
       AddStream(i);
   }
@@ -714,15 +717,15 @@ bool OMXReader::SetActiveStreamInternal(OMXStreamType type, unsigned int index)
   switch(type)
   {
     case OMXSTREAM_AUDIO:
-      if(index > (m_audio_count - 1))
+      if((int)index > (m_audio_count - 1))
         index = (m_audio_count - 1);
       break;
     case OMXSTREAM_VIDEO:
-      if(index > (m_video_count - 1))
+      if((int)index > (m_video_count - 1))
         index = (m_video_count - 1);
       break;
     case OMXSTREAM_SUBTITLE:
-      if(index > (m_subtitle_count - 1))
+      if((int)index > (m_subtitle_count - 1))
         index = (m_subtitle_count - 1);
       break;
     default:
@@ -1317,3 +1320,11 @@ int OMXReader::GetSourceBitrate()
   return ret;
 }
 #endif
+
+bool OMXReader::CanSeek()
+{
+  if(m_ioContext)
+    return m_ioContext->seekable;
+
+  return false;
+}

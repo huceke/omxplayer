@@ -532,16 +532,16 @@ int main(int argc, char *argv[])
         goto do_exit;
         break;
       case 0x5b44: // key left
-        m_incr = -30.0;
+        if(m_omx_reader.CanSeek()) m_incr = -30.0;
         break;
       case 0x5b43: // key right
-        m_incr = 30.0;
+        if(m_omx_reader.CanSeek()) m_incr = 30.0;
         break;
       case 0x5b41: // key up
-        m_incr = 600.0;
+        if(m_omx_reader.CanSeek()) m_incr = 600.0;
         break;
       case 0x5b42: // key down
-        m_incr = -600.0;
+        if(m_omx_reader.CanSeek()) m_incr = -600.0;
         break;
       case ' ':
       case 'p':
@@ -556,6 +556,14 @@ int main(int argc, char *argv[])
           SetSpeed(OMX_PLAYSPEED_NORMAL);
           m_av_clock->OMXResume();
         }
+        break;
+      case '-':
+        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() - 50);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+        break;
+      case '+':
+        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 50);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
         break;
       default:
         break;
