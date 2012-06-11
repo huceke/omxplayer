@@ -128,6 +128,7 @@ bool OMXReader::Open(CStdString filename, bool dump_format)
   ClearStreams();
 
   m_dllAvFormat.av_register_all();
+  m_dllAvFormat.avformat_network_init();
 
   int           result    = -1;
   AVInputFormat *iformat  = NULL;
@@ -308,6 +309,8 @@ bool OMXReader::Close()
     delete m_pFile;
     m_pFile = NULL;
   }
+
+  m_dllAvFormat.avformat_network_deinit();
 
   m_dllAvUtil.Unload();
   m_dllAvCodec.Unload();
