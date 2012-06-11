@@ -129,6 +129,7 @@ bool OMXReader::Open(CStdString filename, bool dump_format)
 
   m_dllAvFormat.av_register_all();
   m_dllAvFormat.avformat_network_init();
+  m_dllAvUtil.av_log_set_level(AV_LOG_QUIET);
 
   int           result    = -1;
   AVInputFormat *iformat  = NULL;

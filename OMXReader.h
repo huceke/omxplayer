@@ -189,6 +189,7 @@ public:
   CStdString GetStreamLanguage(OMXStreamType type, unsigned int index);
   CStdString GetStreamName(OMXStreamType type, unsigned int index);
   CStdString GetStreamType(OMXStreamType type, unsigned int index);
+  bool CanSeek();
 #ifndef STANDALONE
   int GetSourceBitrate();
 #endif
