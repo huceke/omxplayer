@@ -553,23 +553,21 @@ bool OMXReader::GetStreams()
     {
       if(m_program == UINT_MAX && m_pFormatContext->programs[i]->nb_stream_indexes > 0)
         m_program = i;
+
       if(i != m_program)
         m_pFormatContext->programs[i]->discard = AVDISCARD_ALL;
-      if(m_program != UINT_MAX)
-      {
-        // TODO: build stream array
-        // add streams from selected program
-        for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
-          AddStream(m_pFormatContext->programs[m_program]->stream_index[i]);
-      }
+    }
+    if(m_program != UINT_MAX)
+    {
+      // add streams from selected program
+      for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
+        AddStream(m_pFormatContext->programs[m_program]->stream_index[i]);
     }
   }
 
   // if there were no programs or they were all empty, add all streams
-  // if there were no programs or they were all empty, add all streams
   if (m_program == UINT_MAX)
   {
-    // TODO: build stream array
     for (unsigned int i = 0; i < m_pFormatContext->nb_streams; i++)
       AddStream(i);
   }
