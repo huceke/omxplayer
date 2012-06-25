@@ -60,6 +60,7 @@ dist: omxplayer.bin
 	mkdir -p omxplayer-dist/usr/usr/bin
 	mkdir -p omxplayer-dist/usr/share/doc
 	cp omxplayer omxplayer.bin omxplayer-dist/usr/usr/bin
-	cp README COPYING omxplayer-dist/usr/share/doc/
+	cp COPYING omxplayer-dist/usr/share/doc/
+	cp README.md omxplayer-dist/usr/share/doc/README
 	cp -a ffmpeg_compiled/usr/local/lib/*.so* omxplayer-dist/usr/lib/omxplayer/
 	tar -czf omxplayer-dist.tar.gz omxplayer-dist
