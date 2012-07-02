@@ -27,6 +27,13 @@
 #include <sys/ioctl.h>
 #include <getopt.h> 
 
+#include "bcm_host.h"
+extern "C" {
+  #include "vgfont.h"  // does not support utf-8 now need to convert
+}
+#include <locale.h>
+#include <iconv.h> 
+
 #define AV_NOWARN_DEPRECATED
 
 extern "C" {
@@ -74,7 +81,7 @@ OMXPacket         *m_omx_pkt            = NULL;
 bool              m_hdmi_clock_sync     = false;
 bool              m_stop                = false;
 bool              m_show_subtitle       = false;
-bool              m_subtitle_index      = 0;
+int               m_subtitle_index      = 0;
 DllBcmHost        m_BcmHost;
 OMXPlayerVideo    m_player_video;
 OMXPlayerAudio    m_player_audio;
@@ -263,6 +270,58 @@ void SetVideoMode(int width, int height, float fps, bool is3d)
   }
 }
 
+
+iconv_t ua_convert = (iconv_t) -1;
+GRAPHICS_RESOURCE_HANDLE img;
+uint32_t img_w, img_h;
+
+uint32_t font_size = 40;	// maybe resized (keyborad shortcut?)
+uint32_t sub_move_up = 20;	// maybe moved from screen bottom (keyborad shortcut?)
+
+// return full height rendered of subtitles (last y_offset, used in recursive centering)
+
+int32_t render_subtitle(const char *text, const uint32_t y_offset)
+{
+   uint32_t width, height, y_all;
+   int32_t s;
+
+   char *begin = (char *)text;
+   while ((*begin) && ((*begin=='\n') || (*begin=='\r') || (*begin==' '))) begin++;	// skip newlines&spaces at begin
+   if (!*begin) return y_offset;
+
+   char *end = begin;
+   while ((*end) && (*end!='\n') && (*end!='\r')) end++;
+   end--;
+   while (*end==' ') end--; // skip spaces at end
+
+   while (true) {
+      s = graphics_resource_text_dimensions_ext(img, begin, end-begin+1, &width, &height, font_size);
+      if (s != 0) return 0; //error
+
+      if (width < img_w) break; // Ok, continue
+
+      char *tmp_end = end;
+      while ((end>begin) && (*end != ' ')) end--; // find ' ' back and try again
+      if (begin==end) end=tmp_end-1; // ' ' not found -> decrement by one and try again
+   };
+
+   if (y_offset+height>img_h) return 0;
+   if ((y_all = render_subtitle(end+1, y_offset+height)) == 0) return 0; // error
+
+//printf("SUB: _%*.*s_ len %d\n", end-begin+1, end-begin+1, begin, end-begin+1);
+//printf("POS: %d %d yall %d yoff %d\n",(img_w - width)/2,img_h-y_all+y_offset, y_all, y_offset);
+
+   s = graphics_resource_render_text_ext(img, (img_w - width)/2, img_h-y_all+y_offset,
+                                     GRAPHICS_RESOURCE_WIDTH,
+                                     GRAPHICS_RESOURCE_HEIGHT,
+                                     GRAPHICS_RGBA32(0xff,0xff,0xff,0xff), /* fg */
+                                     GRAPHICS_RGBA32(0,0,0,0x80), /* bg */
+                                     begin, end-begin+1, font_size);
+   if (s!=0) return 0; //error
+   return y_all;
+}
+
+
 int main(int argc, char *argv[])
 {
   struct termios new_termios;
@@ -381,6 +440,22 @@ int main(int argc, char *argv[])
 
   g_RBP.Initialize();
   g_OMX.Initialize();
+
+  uint32_t width, height;
+  int LAYER=1;
+  int s;
+  s = gx_graphics_init("/opt/vc/src/hello_pi/hello_font");
+  assert(s == 0);
+  s = graphics_get_display_size(0, &width, &height);
+  assert(s == 0);
+  s = gx_create_window(0, width, height/3, GRAPHICS_RESOURCE_RGBA32, &img); // larger blocks transparency (CPU/GPU memory split problem?)
+  assert(s == 0);
+  graphics_display_resource(img, 0, LAYER, 0, height*2/3-sub_move_up, GRAPHICS_RESOURCE_WIDTH, GRAPHICS_RESOURCE_HEIGHT, VC_DISPMAN_ROT0, 0); 
+  graphics_get_resource_size(img, &img_w, &img_h);
+
+  setlocale(LC_ALL,"en_GB.UTF-8");
+  ua_convert = iconv_open("ASCII//TRANSLIT","UTF-8");
+  assert(ua_convert != (iconv_t) -1);
 
   m_av_clock = new OMXClock();
 
@@ -691,12 +766,37 @@ int main(int argc, char *argv[])
     }
 
     CStdString strSubTitle = m_player_video.GetText();
-    if(strSubTitle.length() && m_show_subtitle)
+    if(m_show_subtitle)
     {
-      if(last_sub != strSubTitle)
+      if(last_sub != strSubTitle) 
       {
         last_sub = strSubTitle;
-        printf("Text : %s\n", strSubTitle.c_str());
+        if(strSubTitle.length()) 
+        {
+          printf("SubText : %s\n", strSubTitle.c_str());
+          char out_str[512];
+          char *in_p, *out_p;
+          size_t in_s, out_s;
+
+          in_s = strSubTitle.length();
+          in_p = (char *)strSubTitle.c_str();
+          out_s = sizeof(out_str);
+          out_p = out_str;
+          int ret = iconv(ua_convert, &in_p, &in_s, &out_p, &out_s); 
+          if ((ret != -1) && (in_s == 0))
+          {
+            *out_p=0;
+            graphics_resource_fill(img, 0, 0, img_w, img_h, GRAPHICS_RGBA32(0,0,0,0));
+            if (!render_subtitle(out_str,10)) 
+              printf("subtitle render ERROR\n");
+            graphics_display_resource(img, 0, LAYER, 0, height*2/3, GRAPHICS_RESOURCE_WIDTH, GRAPHICS_RESOURCE_HEIGHT, VC_DISPMAN_ROT0, 1);
+            graphics_update_displayed_resource(img, 0, 0, 0, 0); // update image
+          }
+          else printf("subtitle translate ERROR\n");
+        } else {
+          printf("SubClear\n");
+          graphics_display_resource(img, 0, LAYER, 0, height*2/3-sub_move_up, GRAPHICS_RESOURCE_WIDTH, GRAPHICS_RESOURCE_HEIGHT, VC_DISPMAN_ROT0, 0); 
+        }
       }
     }
 
@@ -744,6 +844,11 @@ do_exit:
   m_omx_reader.Close();
 
   vc_tv_show_info(0);
+
+  if (ua_convert != (iconv_t) -1) iconv_close(ua_convert);
+  graphics_display_resource(img, 0, LAYER, 0, height*2/3-sub_move_up, GRAPHICS_RESOURCE_WIDTH, GRAPHICS_RESOURCE_HEIGHT, VC_DISPMAN_ROT0, 0); 
+  graphics_delete_resource(img);
+
 
   g_OMX.Deinitialize();
   g_RBP.Deinitialize();
