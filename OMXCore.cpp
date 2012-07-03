@@ -1245,7 +1245,7 @@ OMX_ERRORTYPE COMXCoreComponent::UseEGLImage(OMX_BUFFERHEADERTYPE** ppBufferHdr,
   return omx_err;
 }
 
-bool COMXCoreComponent::Initialize( const CStdString &component_name, OMX_INDEXTYPE index)
+bool COMXCoreComponent::Initialize(const std::string &component_name, OMX_INDEXTYPE index)
 {
   OMX_ERRORTYPE omx_err;
 

@@ -311,13 +311,13 @@ bool OMXClock::OMXReset()
 bool OMXClock::OMXInitialize(bool has_video, bool has_audio)
 {
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-  CStdString componentName = "";
+  std::string componentName = "";
 
   m_has_video = has_video;
   m_has_audio = has_audio;
 
   componentName = "OMX.broadcom.clock";
-  if(!m_omx_clock.Initialize((const CStdString)componentName, OMX_IndexParamOtherInit))
+  if(!m_omx_clock.Initialize(componentName, OMX_IndexParamOtherInit))
     return false;
 
   OMX_TIME_CONFIG_CLOCKSTATETYPE clock;

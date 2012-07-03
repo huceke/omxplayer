@@ -114,7 +114,7 @@ static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
     return pFile->Seek(pos, whence & ~AVSEEK_FORCE);
 }
 
-bool OMXReader::Open(CStdString filename, bool dump_format)
+bool OMXReader::Open(std::string filename, bool dump_format)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load())
     return false;
@@ -145,6 +145,12 @@ bool OMXReader::Open(CStdString filename, bool dump_format)
 
   if(m_filename.substr(0,6) == "mms://" || m_filename.substr(0,7) == "http://" || m_filename.substr(0,7) == "rtmp://")
   {
+    // ffmpeg dislikes the useragent from AirPlay urls
+    //int idx = m_filename.Find("|User-Agent=AppleCoreMedia");
+    size_t idx = m_filename.find("|");
+    if(idx != string::npos)
+      m_filename = m_filename.substr(0, idx);
+
     result = m_dllAvFormat.avformat_open_input(&m_pFormatContext, m_filename.c_str(), iformat, NULL);
     if(result < 0)
     {
@@ -363,9 +369,20 @@ bool OMXReader::SeekTime(int64_t seek_ms, int seek_flags, double *startpts)
 
   //FlushRead();
 
-  int64_t seek_pts = (int64_t)seek_ms * 1000;
+  if(m_ioContext)
+    m_ioContext->buf_ptr = m_ioContext->buf_end;
+
+  int64_t seek_pts = (int64_t)seek_ms * (AV_TIME_BASE / 1000);
   if (m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
     seek_pts += m_pFormatContext->start_time;
+
+  /* seek behind eof */
+  if((seek_pts / AV_TIME_BASE) > (GetStreamLength()  / 1000))
+  {
+    m_eof = true;
+    UnLock();
+    return false;
+  }
 
   int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, -1, seek_pts, seek_flags ? AVSEEK_FLAG_BACKWARD : 0);
 
@@ -561,13 +578,13 @@ bool OMXReader::GetStreams()
       if(i != m_program)
         m_pFormatContext->programs[i]->discard = AVDISCARD_ALL;
     }
-    if(m_program != UINT_MAX)
-    {
-      // add streams from selected program
-      for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
-        AddStream(m_pFormatContext->programs[m_program]->stream_index[i]);
+      if(m_program != UINT_MAX)
+      {
+        // add streams from selected program
+        for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
+          AddStream(m_pFormatContext->programs[m_program]->stream_index[i]);
+      }
     }
-  }
 
   // if there were no programs or they were all empty, add all streams
   if (m_program == UINT_MAX)
@@ -1124,9 +1141,9 @@ double OMXReader::NormalizeFrameduration(double frameduration)
     return frameduration;
 }
 
-CStdString OMXReader::GetStreamCodecName(AVStream *stream)
+std::string OMXReader::GetStreamCodecName(AVStream *stream)
 {
-  CStdString strStreamName = "";
+  std::string strStreamName = "";
 
   if(!stream)
     return strStreamName;
@@ -1144,7 +1161,6 @@ CStdString OMXReader::GetStreamCodecName(AVStream *stream)
     if (strlen(fourcc) == 4)
     {
       strStreamName = fourcc;
-      strStreamName.MakeLower();
       return strStreamName;
     }
   }
@@ -1171,9 +1187,9 @@ CStdString OMXReader::GetStreamCodecName(AVStream *stream)
   return strStreamName;
 }
 
-CStdString OMXReader::GetCodecName(OMXStreamType type)
+std::string OMXReader::GetCodecName(OMXStreamType type)
 {
-  CStdString strStreamName;
+  std::string strStreamName;
 
   Lock();
   switch (type)
@@ -1198,9 +1214,9 @@ CStdString OMXReader::GetCodecName(OMXStreamType type)
   return strStreamName;
 }
 
-CStdString OMXReader::GetCodecName(OMXStreamType type, unsigned int index)
+std::string OMXReader::GetCodecName(OMXStreamType type, unsigned int index)
 {
-  CStdString strStreamName = "";
+  std::string strStreamName = "";
 
   for(int i = 0; i < MAX_STREAMS; i++)
   {
@@ -1214,9 +1230,9 @@ CStdString OMXReader::GetCodecName(OMXStreamType type, unsigned int index)
   return strStreamName;
 }
 
-CStdString OMXReader::GetStreamLanguage(OMXStreamType type, unsigned int index)
+std::string OMXReader::GetStreamLanguage(OMXStreamType type, unsigned int index)
 {
-  CStdString language = "";
+  std::string language = "";
 
   for(int i = 0; i < MAX_STREAMS; i++)
   {
@@ -1230,9 +1246,9 @@ CStdString OMXReader::GetStreamLanguage(OMXStreamType type, unsigned int index)
   return language;
 }
 
-CStdString OMXReader::GetStreamName(OMXStreamType type, unsigned int index)
+std::string OMXReader::GetStreamName(OMXStreamType type, unsigned int index)
 {
-  CStdString name = "";
+  std::string name = "";
 
   for(int i = 0; i < MAX_STREAMS; i++)
   {
@@ -1246,9 +1262,9 @@ CStdString OMXReader::GetStreamName(OMXStreamType type, unsigned int index)
   return name;
 }
 
-CStdString OMXReader::GetStreamType(OMXStreamType type, unsigned int index)
+std::string OMXReader::GetStreamType(OMXStreamType type, unsigned int index)
 {
-  CStdString strInfo;
+  std::string strInfo;
   char sInfo[64];
 
   for(int i = 0; i < MAX_STREAMS; i++)

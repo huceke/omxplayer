@@ -60,7 +60,7 @@ public:
   void SetDropState(bool bDrop);
   bool Pause();
   bool Resume();
-  CStdString GetDecoderName() { return m_video_codec_name; };
+  std::string GetDecoderName() { return m_video_codec_name; };
   void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
   int GetInputBufferSize();
   void WaitCompletion();
@@ -96,7 +96,7 @@ protected:
 
   CBitstreamConverter   *m_converter;
   bool              m_video_convert;
-  CStdString        m_video_codec_name;
+  std::string       m_video_codec_name;
 
   bool              m_deinterlace;
   bool              m_hdmi_clock_sync;

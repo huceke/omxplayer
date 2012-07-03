@@ -22,7 +22,6 @@
 #ifndef _OMX_PLAYERVIDEO_H_
 #define _OMX_PLAYERVIDEO_H_
 
-#include "utils/StdString.h"
 #include "DllAvUtil.h"
 #include "DllAvFormat.h"
 #include "DllAvFilter.h"
@@ -44,6 +43,8 @@
 #include "OMXOverlayCodec.h"
 #include "OMXOverlayText.h"
 #include "OMXOverlayCodecText.h"
+
+#include <string>
 
 using namespace std;
 
@@ -121,6 +122,6 @@ public:
   void SetSpeed(int iSpeed);
   double GetSubtitleDelay()                                { return m_iSubtitleDelay; }
   void SetSubtitleDelay(double delay)                      { m_iSubtitleDelay = delay; }
-  CStdString GetText();
+  std::string GetText();
 };
 #endif

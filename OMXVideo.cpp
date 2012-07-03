@@ -267,29 +267,29 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, bool deinterlace, b
     m_deinterlace = false;
   }
 
-  CStdString componentName = "";
+  std::string componentName = "";
 
   componentName = decoder_name;
-  if(!m_omx_decoder.Initialize((const CStdString)componentName, OMX_IndexParamVideoInit))
+  if(!m_omx_decoder.Initialize(componentName, OMX_IndexParamVideoInit))
     return false;
 
   componentName = "OMX.broadcom.video_render";
-  if(!m_omx_render.Initialize((const CStdString)componentName, OMX_IndexParamVideoInit))
+  if(!m_omx_render.Initialize(componentName, OMX_IndexParamVideoInit))
     return false;
 
   componentName = "OMX.broadcom.video_scheduler";
-  if(!m_omx_sched.Initialize((const CStdString)componentName, OMX_IndexParamVideoInit))
+  if(!m_omx_sched.Initialize(componentName, OMX_IndexParamVideoInit))
     return false;
 
   if(m_deinterlace)
   {
     componentName = "OMX.broadcom.image_fx";
-    if(!m_omx_image_fx.Initialize((const CStdString)componentName, OMX_IndexParamImageInit))
+    if(!m_omx_image_fx.Initialize(componentName, OMX_IndexParamImageInit))
       return false;
   }
 
   componentName = "OMX.broadcom.text_scheduler";
-  if(!m_omx_text.Initialize((const CStdString)componentName, OMX_IndexParamOtherInit))
+  if(!m_omx_text.Initialize(componentName, OMX_IndexParamOtherInit))
     return false;
 
   if(clock == NULL)
