@@ -74,7 +74,7 @@ OMXPacket         *m_omx_pkt            = NULL;
 bool              m_hdmi_clock_sync     = false;
 bool              m_stop                = false;
 bool              m_show_subtitle       = false;
-bool              m_subtitle_index      = 0;
+int               m_subtitle_index      = 0;
 DllBcmHost        m_BcmHost;
 OMXPlayerVideo    m_player_video;
 OMXPlayerAudio    m_player_audio;
