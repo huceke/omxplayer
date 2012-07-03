@@ -22,8 +22,7 @@
 
 #if defined(HAVE_OMXLIB)
 
-#include "utils/StdString.h"
-
+#include <string>
 #include <queue>
 
 // TODO: should this be in configure
@@ -95,7 +94,7 @@ public:
   OMX_HANDLETYPE    GetComponent()   { return m_handle;        };
   unsigned int      GetInputPort()   { return m_input_port;    };
   unsigned int      GetOutputPort()  { return m_output_port;   };
-  CStdString        GetName()        { return m_componentName; };
+  std::string       GetName()        { return m_componentName; };
 
   OMX_ERRORTYPE DisableAllPorts();
   void          Remove(OMX_EVENTTYPE eEvent, OMX_U32 nData1, OMX_U32 nData2);
@@ -114,7 +113,7 @@ public:
   OMX_ERRORTYPE DisablePort(unsigned int port, bool wait = true);
   OMX_ERRORTYPE UseEGLImage(OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, void* eglImage);
 
-  bool          Initialize( const CStdString &component_name, OMX_INDEXTYPE index);
+  bool          Initialize( const std::string &component_name, OMX_INDEXTYPE index);
   bool          Deinitialize();
 
   // OMXCore Decoder delegate callback routines.
@@ -163,7 +162,7 @@ private:
   unsigned int   m_input_port;
   unsigned int   m_output_port;
   int            m_ports_enabled[OMX_MAX_PORTS];
-  CStdString     m_componentName;
+  std::string    m_componentName;
   pthread_mutex_t   m_omx_event_mutex;
   std::vector<omx_event> m_omx_events;
 

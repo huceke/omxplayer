@@ -22,7 +22,6 @@
 #ifndef _OMX_READER_H_
 #define _OMX_READER_H_
 
-#include "utils/StdString.h"
 #include "DllAvUtil.h"
 #include "DllAvFormat.h"
 #include "DllAvFilter.h"
@@ -44,6 +43,7 @@
 #endif
 
 #include <sys/types.h>
+#include <string>
 
 using namespace XFILE;
 using namespace std;
@@ -119,7 +119,7 @@ protected:
   DllAvCodec                m_dllAvCodec;
   DllAvFormat               m_dllAvFormat;
   bool                      m_open;
-  CStdString                m_filename;
+  std::string               m_filename;
   bool                      m_bMatroska;
   bool                      m_bAVI;
   bool                      m_bMpeg;
@@ -146,7 +146,7 @@ private:
 public:
   OMXReader();
   ~OMXReader();
-  bool Open(CStdString filename, bool dump_format);
+  bool Open(std::string filename, bool dump_format);
   void ClearStreams();
   bool Close();
   //void FlushRead();
@@ -183,12 +183,12 @@ public:
   static double NormalizeFrameduration(double frameduration);
   bool IsMpegVideo() { return m_bMpeg; };
   bool IsMatroska() { return m_bMatroska; };
-  CStdString GetCodecName(OMXStreamType type);
-  CStdString GetCodecName(OMXStreamType type, unsigned int index);
-  CStdString GetStreamCodecName(AVStream *stream);
-  CStdString GetStreamLanguage(OMXStreamType type, unsigned int index);
-  CStdString GetStreamName(OMXStreamType type, unsigned int index);
-  CStdString GetStreamType(OMXStreamType type, unsigned int index);
+  std::string GetCodecName(OMXStreamType type);
+  std::string GetCodecName(OMXStreamType type, unsigned int index);
+  std::string GetStreamCodecName(AVStream *stream);
+  std::string GetStreamLanguage(OMXStreamType type, unsigned int index);
+  std::string GetStreamName(OMXStreamType type, unsigned int index);
+  std::string GetStreamType(OMXStreamType type, unsigned int index);
   bool CanSeek();
 #ifndef STANDALONE
   int GetSourceBitrate();
