@@ -7,6 +7,8 @@ FBSET="/usr/sbin/fbset"
 
 if [ -e /usr/bin/omxplayer.bin ]; then
   OMXPLAYER="/usr/bin/omxplayer.bin"
+else
+  OMXPLAYER="./omxplayer.bin"
 fi
 
 if [ -e /usr/lib/omxplayer ]; then
@@ -26,7 +28,7 @@ if [ -e $FBSET ]; then
   fbset -xres 1 -yres 1
 fi
 
-./omxplayer.bin "$@"
+$OMXPLAYER "$@"
 
 if [ -e $FBSET ]; then
   fbset -xres ${XRES} -yres ${YRES}
