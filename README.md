@@ -41,18 +41,23 @@ Using OMXPlayer
 
     Usage: omxplayer [OPTIONS] [FILE]
     Options :
-             -h / --help                    print this help
-             -a / --alang language          audio language        : e.g. ger
-             -n / --aidx  index             audio stream index    : e.g. 1
-             -o / --adev  device            audio out device      : e.g. hdmi/local
-             -i / --info                    dump stream format and exit
-             -s / --stats                   pts and buffer stats
-             -p / --passthrough             audio passthrough
-             -d / --deinterlace             deinterlacing
-             -w / --hw                      hw audio decoding
-             -3 / --3d                      switch tv into 3d mode
-             -y / --hdmiclocksync           adjust display refresh rate to match video
-             -t / --sid index               show subtitle with index
+    -h / --help                    print this help
+    -a / --alang language          audio language        : e.g. ger
+    -n / --aidx  index             audio stream index    : e.g. 1
+    -o / --adev  device            audio out device      : e.g. hdmi/local
+    -i / --info                    dump stream format and exit
+    -s / --stats                   pts and buffer stats
+    -p / --passthrough             audio passthrough
+    -d / --deinterlace             deinterlacing
+    -w / --hw                      hw audio decoding
+    -3 / --3d                      switch tv into 3d mode
+    -y / --hdmiclocksync           adjust display refresh rate to match video
+    -t / --sid index               show subtitle with index
+    -r / --refresh                 adjust framerate/resolution to video
+    -f / --font     path           font used for subtitles
+                                   (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
+    -g / --fontsize size           font size as thousands of screen height
+                                   (default: 55)
 
 For example:
 
