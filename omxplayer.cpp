@@ -123,7 +123,7 @@ void print_usage()
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -f / --font     path           font used for subtitles\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
-  printf("         -g / --fontsize size           font size as thousands of screen height\n");
+  printf("         -g / --fontsize size           font size as thousandths of screen height\n");
   printf("                                        (default: 55)\n");
 }
 

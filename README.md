@@ -56,7 +56,7 @@ Using OMXPlayer
     -r / --refresh                 adjust framerate/resolution to video
     -f / --font     path           font used for subtitles
                                    (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
-    -g / --fontsize size           font size as thousands of screen height
+    -g / --fontsize size           font size as thousandths of screen height
                                    (default: 55)
 
 For example:
