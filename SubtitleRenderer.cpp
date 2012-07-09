@@ -370,7 +370,8 @@ void SubtitleRenderer::initialize_window(int layer) {
     auto dispman_update = vc_dispmanx_update_start(0);
     ENFORCE(dispman_update);
     SCOPE_EXIT {
-      ENFORCE(!vc_dispmanx_update_submit_sync(dispman_update));
+      auto error = vc_dispmanx_update_submit_sync(dispman_update);
+      assert(!error);
     };
 
     dispman_element_ =
