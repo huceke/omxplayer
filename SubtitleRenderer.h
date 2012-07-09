@@ -24,6 +24,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include "folly/Workarounds.h"
 
 class SubtitleRenderer {
 public:
@@ -36,21 +37,21 @@ public:
                    float margin_bottom,
                    unsigned int white_level,
                    unsigned int box_opacity);
-  ~SubtitleRenderer();
+  ~SubtitleRenderer() noexcept;
 
-  void prepare(const std::vector<std::string>& text_lines);
+  void prepare(const std::vector<std::string>& text_lines) noexcept;
 
-  void unprepare() {
+  void unprepare() noexcept {
     prepared_ = false;
   }
 
-  void show_next() {
+  void show_next() noexcept {
     if (prepared_)
       draw();
     swap_buffers();
   }
 
-  void hide() {
+  void hide() noexcept {
     clear();
     swap_buffers();
     if (prepared_)

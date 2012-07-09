@@ -20,8 +20,6 @@
 #ifndef PRODUCER_CONSUMER_QUEUE_H_
 #define PRODUCER_CONSUMER_QUEUE_H_
 
-#include "folly/Workarounds.h"
-
 #include <atomic>
 #include <cassert>
 #include <cstdlib>
@@ -118,7 +116,7 @@ struct ProducerConsumerQueue {
     auto const currentRead = readIndex_.load(std::memory_order_relaxed);
     if (currentRead == writeIndex_.load(std::memory_order_acquire)) {
       // queue is empty
-      return nullptr;
+      return NULL;
     }
     return &records_[currentRead];
   }

@@ -23,7 +23,7 @@
 
 constexpr int RENDER_LOOP_SLEEP = 16;
 
-OMXPlayerSubtitles::OMXPlayerSubtitles():
+OMXPlayerSubtitles::OMXPlayerSubtitles() noexcept:
 #ifndef NDEBUG
 m_open(),
 #endif
@@ -32,13 +32,13 @@ m_abort(true),
 m_flush(false)
 {}
 
-OMXPlayerSubtitles::~OMXPlayerSubtitles()
+OMXPlayerSubtitles::~OMXPlayerSubtitles() noexcept
 {
   Close();
 }
 
 bool OMXPlayerSubtitles::
-Open(const std::string& font_path, float font_size, OMXClock* clock)
+Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept
 {
   assert(!m_open);
 
@@ -72,7 +72,7 @@ Open(const std::string& font_path, float font_size, OMXClock* clock)
   return true;
 }
 
-void OMXPlayerSubtitles::Close()
+void OMXPlayerSubtitles::Close() noexcept
 {
   if (m_rendering_thread.joinable())
   {
@@ -150,7 +150,7 @@ Process(const std::string& font_path, float font_size, OMXClock* clock)
   }
 }
 
-void OMXPlayerSubtitles::Flush()
+void OMXPlayerSubtitles::Flush() noexcept
 {
   assert(m_open);
 
@@ -183,7 +183,7 @@ std::vector<std::string> OMXPlayerSubtitles::GetTextLines(OMXPacket *pkt)
   return text_lines;
 }
 
-bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt)
+bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) noexcept
 {
   assert(m_open);
 

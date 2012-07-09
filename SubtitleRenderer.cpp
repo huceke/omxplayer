@@ -48,6 +48,9 @@ public:
     assert(!vgGetError());
   }
 
+  BoxRenderer(const BoxRenderer&) = delete;
+  BoxRenderer& operator=(const BoxRenderer&) = delete;
+
   void clear() {
     vgClearPath(path_, VG_PATH_CAPABILITY_ALL);
     assert(!vgGetError());
@@ -140,16 +143,12 @@ void SubtitleRenderer::load_glyph(char32_t codepoint) {
 
         image = softened_image;
 
-        glyph_origin = {
-            static_cast<VGfloat>(padding - bit_glyph->left),
-            static_cast<VGfloat>(padding + bitmap.rows - bit_glyph->top - 1)
-        };
+        glyph_origin[0] = static_cast<VGfloat>(padding - bit_glyph->left);
+        glyph_origin[1] = static_cast<VGfloat>(padding + bitmap.rows - bit_glyph->top - 1);
       }
 
-      escapement = {
-          static_cast<VGfloat>((ft_face->glyph->advance.x + 32) / 64),
-          0
-      };
+      escapement[0] = static_cast<VGfloat>((ft_face->glyph->advance.x + 32) / 64);
+      escapement[1] = 0;
 
       vgSetGlyphToImage(vg_font, codepoint, image, glyph_origin, escapement);
       assert(!vgGetError());
@@ -159,7 +158,8 @@ void SubtitleRenderer::load_glyph(char32_t codepoint) {
         assert(!vgGetError());
       }
     } catch(...) {
-      escapement = {0,0};
+      escapement[0] = 0;
+      escapement[1] = 0;
       vgSetGlyphToImage(vg_font, codepoint, VG_INVALID_HANDLE, escapement, escapement);
       assert(!vgGetError());
     }
@@ -236,7 +236,7 @@ draw_text(VGFont font, VGFont italic_font,
 }
 
 
-SubtitleRenderer::~SubtitleRenderer() {
+SubtitleRenderer::~SubtitleRenderer() noexcept {
   destroy();
 }
 
@@ -370,8 +370,7 @@ void SubtitleRenderer::initialize_window(int layer) {
     auto dispman_update = vc_dispmanx_update_start(0);
     ENFORCE(dispman_update);
     SCOPE_EXIT {
-      auto error = vc_dispmanx_update_submit_sync(dispman_update);
-      assert(!error);
+      ENFORCE(!vc_dispmanx_update_submit_sync(dispman_update));
     };
 
     dispman_element_ =
@@ -469,7 +468,7 @@ void SubtitleRenderer::destroy_egl() {
   }
 }
 
-void SubtitleRenderer::prepare(const std::vector<std::string>& text_lines) {
+void SubtitleRenderer::prepare(const std::vector<std::string>& text_lines) noexcept {
   const int n_lines = text_lines.size();
 
   internal_lines_.resize(n_lines);

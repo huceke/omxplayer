@@ -57,7 +57,7 @@ void CLog::Log(int loglevel, const char *format, ... )
 {
   pthread_mutex_lock(&m_log_mutex);
 
-  static const char* prefixFormat = "%02.2d:%02.2d:%02.2d T:%"PRIu64" %7s: ";
+  static const char* prefixFormat = "%02.2d:%02.2d:%02.2d T:%" PRIu64 " %7s: ";
 #if !(defined(_DEBUG) || defined(PROFILE))
   if (m_logLevel > LOG_LEVEL_NORMAL ||
      (m_logLevel > LOG_LEVEL_NONE && loglevel >= LOGNOTICE))

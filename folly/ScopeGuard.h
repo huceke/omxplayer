@@ -21,11 +21,11 @@
 #include <cstddef>
 #include <functional>
 #include <new>
+#include "utils/log.h"
 //#include <glog/logging.h>
 
+#include "folly/Workarounds.h"
 #include "folly/Preprocessor.h"
-
-#define noexcept
 
 namespace folly {
 
@@ -115,12 +115,19 @@ private:
     try {
       function_();
     } catch (const std::exception& ex) {
+      CLog::Log(LOGFATAL, "ScopeGuard cleanup function threw a %s exception: %s",
+                typeid(ex).name(), ex.what());
+#ifndef NDEBUG
+      printf("ScopeGuard cleanup function threw a %s exception: %s\n",
+             typeid(ex).name(), ex.what());
+#endif
       assert(0);
-      // LOG(FATAL) << "ScopeGuard cleanup function threw a " <<
-      //   typeid(ex).name() << "exception: " << ex.what();
     } catch (...) {
+      CLog::Log(LOGFATAL, "ScopeGuard cleanup function threw a non-exception object");
+#ifndef NDEBUG
+      printf("ScopeGuard cleanup function threw a non-exception object\n");
+#endif
       assert(0);
-      // LOG(FATAL) << "ScopeGuard cleanup function threw a non-exception object";
     }
   }
 

@@ -20,6 +20,7 @@
 #include "OMXClock.h"
 #include "OMXOverlayCodecText.h"
 #include "folly/ProducerConsumerQueue.h"
+#include "folly/Workarounds.h"
 
 #include <string>
 #include <thread>
@@ -30,12 +31,12 @@ class OMXPlayerSubtitles
 public:
   OMXPlayerSubtitles(const OMXPlayerSubtitles&) = delete;
   OMXPlayerSubtitles& operator=(const OMXPlayerSubtitles&) = delete;
-  OMXPlayerSubtitles();
-  ~OMXPlayerSubtitles();
-  bool Open(const std::string& font_path, float font_size, OMXClock* clock);
-  void Close();
-  void Flush();
-  bool AddPacket(OMXPacket *pkt);
+  OMXPlayerSubtitles() noexcept;
+  ~OMXPlayerSubtitles() noexcept;
+  bool Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept;
+  void Close() noexcept;
+  void Flush() noexcept;
+  bool AddPacket(OMXPacket *pkt) noexcept;
 
 private:
   struct Subtitle

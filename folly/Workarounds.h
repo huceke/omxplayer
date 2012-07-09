@@ -2,7 +2,9 @@
 
 #include <string>
 
-#define nullptr NULL
+#ifndef _GLIBCXX_USE_NOEXCEPT
+  #define noexcept
+#endif
 
 namespace folly {
   typedef std::string fbstring;
