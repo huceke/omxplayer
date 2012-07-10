@@ -16,6 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "OMXThread.h"
 #include "OMXReader.h"
 #include "OMXClock.h"
 #include "OMXOverlayCodecText.h"
@@ -23,10 +24,8 @@
 #include "folly/Workarounds.h"
 
 #include <string>
-#include <thread>
 
-
-class OMXPlayerSubtitles
+class OMXPlayerSubtitles : public OMXThread
 {
 public:
   OMXPlayerSubtitles(const OMXPlayerSubtitles&) = delete;
@@ -46,7 +45,8 @@ private:
     std::vector<std::string> text_lines;
   };
 
-  void Process(const std::string& font_path, float font_size, OMXClock* clock);
+  void Process();
+  void RenderLoop(const std::string& font_path, float font_size, OMXClock* clock);
   std::vector<std::string> GetTextLines(OMXPacket *pkt);
 
 #ifndef NDEBUG
@@ -54,8 +54,10 @@ private:
 #endif
 
   COMXOverlayCodecText                   m_subtitle_codec;
-  std::thread                            m_rendering_thread;
   folly::ProducerConsumerQueue<Subtitle> m_subtitle_queue;
-  std::atomic<bool>                      m_abort;
+  std::atomic<bool>                      m_thread_stopped;
   std::atomic<bool>                      m_flush;
+  std::string                            m_font_path;
+  float                                  m_font_size;
+  OMXClock*                              m_av_clock;
 };

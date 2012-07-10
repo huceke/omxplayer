@@ -28,8 +28,10 @@ OMXPlayerSubtitles::OMXPlayerSubtitles() noexcept:
 m_open(),
 #endif
 m_subtitle_queue(32),
-m_abort(true),
-m_flush(false)
+m_thread_stopped(true),
+m_flush(),
+m_font_size(),
+m_av_clock()
 {}
 
 OMXPlayerSubtitles::~OMXPlayerSubtitles() noexcept
@@ -42,28 +44,14 @@ Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept
 {
   assert(!m_open);
 
-  m_abort.store(false, std::memory_order_relaxed);
+  m_thread_stopped.store(false, std::memory_order_relaxed);
   m_flush.store(false, std::memory_order_relaxed);
+  m_font_path = font_path;
+  m_font_size = font_size;
+  m_av_clock  = clock;
 
-  try
-  {
-    m_rendering_thread = std::thread([=]
-    {
-      try
-      {
-        Process(font_path, font_size, clock);
-      }
-      catch(std::exception& e)
-      {
-        m_abort.store(true, std::memory_order_relaxed);
-        CLog::Log(LOGERROR, "OMXPlayerSubtitles::Process threw: %s", e.what());
-      }
-    });
-  }
-  catch (...)
-  {
+  if(!Create())
     return false;
-  }
 
 #ifndef NDEBUG
   m_open = true;
@@ -74,28 +62,29 @@ Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept
 
 void OMXPlayerSubtitles::Close() noexcept
 {
-  if (m_rendering_thread.joinable())
-  {
-    m_abort.store(true, std::memory_order_relaxed);
-    try
-    {
-      m_rendering_thread.join();
-    }
-    catch (std::exception& e)
-    {
-      CLog::Log(LOGERROR,
-                "OMXPlayerSubtitles rendering thread failed to join: %s",
-                e.what());
-    }
-  }
+  if (Running())
+    StopThread();
 
 #ifndef NDEBUG
   m_open = false;
 #endif
 }
 
+void OMXPlayerSubtitles::Process()
+{
+  try
+  {
+    RenderLoop(m_font_path, m_font_size, m_av_clock);
+  }
+  catch(std::exception& e)
+  {
+    CLog::Log(LOGERROR, "OMXPlayerSubtitles::Process threw: %s", e.what());
+  }
+  m_thread_stopped.store(true, std::memory_order_relaxed);
+}
+
 void OMXPlayerSubtitles::
-Process(const std::string& font_path, float font_size, OMXClock* clock)
+RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
 {
   SubtitleRenderer renderer(1, font_path, font_size, 0.01f, 0.06f, 0xDD, 0x80);
 
@@ -103,7 +92,7 @@ Process(const std::string& font_path, float font_size, OMXClock* clock)
   double current_stop{};
   bool showing{};
 
-  while (!m_abort.load(std::memory_order_relaxed))
+  while (!m_bStop)
   {
     if (m_flush.load(std::memory_order_relaxed))
     {
@@ -190,7 +179,7 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) noexcept
   if (!pkt)
     return false;
 
-  if (m_abort.load(std::memory_order_relaxed))
+  if (m_thread_stopped.load(std::memory_order_relaxed))
   {
     // Rendering thread has stopped, throw away the packet
     OMXReader::FreePacket(pkt);
@@ -200,13 +189,16 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) noexcept
   if (m_flush.load(std::memory_order_relaxed))
     return false;
 
+  if (m_subtitle_queue.isFull())
+    return false;
+
   // Center the presentation time on the requested timestamps
   const auto adjusted_start = pkt->pts - (RENDER_LOOP_SLEEP*1000/2);
 
-  auto result = m_subtitle_queue.write(
-    Subtitle{adjusted_start, adjusted_start+pkt->duration, GetTextLines(pkt)});
+  m_subtitle_queue.write(Subtitle{adjusted_start,
+                                  adjusted_start + pkt->duration,
+                                  GetTextLines(pkt)});
 
-  if (result)
-    OMXReader::FreePacket(pkt);
-  return result;
+  OMXReader::FreePacket(pkt);
+  return true;
 }
