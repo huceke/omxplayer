@@ -743,7 +743,7 @@ int main(int argc, char *argv[])
 do_exit:
   printf("\n");
 
-  if(!m_stop)
+  if(!m_stop && !g_abort)
   {
     if(m_has_audio)
       m_player_audio.WaitCompletion();
