@@ -62,7 +62,7 @@ Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept
 
 void OMXPlayerSubtitles::Close() noexcept
 {
-  if (Running())
+  if(Running())
     StopThread();
 
 #ifndef NDEBUG
@@ -92,11 +92,11 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
   double current_stop{};
   bool showing{};
 
-  while (!m_bStop)
+  while(!m_bStop)
   {
-    if (m_flush.load(std::memory_order_relaxed))
+    if(m_flush.load(std::memory_order_relaxed))
     {
-      if (showing)
+      if(showing)
       {
         renderer.unprepare();
         renderer.hide();
@@ -108,16 +108,16 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
       m_flush.store(false, std::memory_order_relaxed);
     }
 
-    if (!next_subtitle)
+    if(!next_subtitle)
     {
       next_subtitle = m_subtitle_queue.frontPtr();
-      if (next_subtitle)
+      if(next_subtitle)
         renderer.prepare(next_subtitle->text_lines);
     }
 
     auto const now = clock->OMXMediaTime();
 
-    if (next_subtitle && next_subtitle->start <= now)
+    if(next_subtitle && next_subtitle->start <= now)
     {
       renderer.show_next();
       showing = true;
@@ -128,7 +128,7 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
       continue;
     }
 
-    if (showing && current_stop <= now)
+    if(showing && current_stop <= now)
     {
       renderer.hide();
       showing = false;
@@ -161,7 +161,7 @@ std::vector<std::string> OMXPlayerSubtitles::GetTextLines(OMXPacket *pkt)
   std::vector<std::string> text_lines;
 
   auto e = ((COMXOverlayText*) overlay)->m_pHead;
-  if (e && e->IsElementType(COMXOverlayText::ELEMENT_TYPE_TEXT))
+  if(e && e->IsElementType(COMXOverlayText::ELEMENT_TYPE_TEXT))
   {
     boost::split(text_lines,
                  ((COMXOverlayText::CElementText*) e)->m_text,
@@ -176,20 +176,20 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) noexcept
 {
   assert(m_open);
 
-  if (!pkt)
+  if(!pkt)
     return false;
 
-  if (m_thread_stopped.load(std::memory_order_relaxed))
+  if(m_thread_stopped.load(std::memory_order_relaxed))
   {
     // Rendering thread has stopped, throw away the packet
     OMXReader::FreePacket(pkt);
     return true;
   }
 
-  if (m_flush.load(std::memory_order_relaxed))
+  if(m_flush.load(std::memory_order_relaxed))
     return false;
 
-  if (m_subtitle_queue.isFull())
+  if(m_subtitle_queue.isFull())
     return false;
 
   // Center the presentation time on the requested timestamps
