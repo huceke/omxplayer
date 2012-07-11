@@ -177,8 +177,8 @@ public:
   int GetChapter();
   void GetChapterName(std::string& strChapterName);
   bool SeekChapter(int chapter, double* startpts);
-  bool GetAudioIndex() { return m_audio_index; };
-  bool GetSubtitleIndex() { return m_subtitle_index; };
+  int GetAudioIndex() { return m_audio_count ? m_streams[m_audio_index].index : -1; };
+  int GetSubtitleIndex() { return m_subtitle_count ? m_streams[m_subtitle_index].index : -1; };
   int GetStreamLength();
   static double NormalizeFrameduration(double frameduration);
   bool IsMpegVideo() { return m_bMpeg; };

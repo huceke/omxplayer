@@ -515,10 +515,16 @@ int main(int argc, char *argv[])
         SetSpeed(m_av_clock->OMXPlaySpeed() + 1);
         break;
       case 'j':
-        m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() - 1);
+        if(m_has_audio)
+        {
+          int new_index = m_omx_reader.GetAudioIndex() - 1;
+          if (new_index >= 0)
+            m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, new_index);
+        }
         break;
       case 'k':
-        m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
+        if(m_has_audio)
+          m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
         break;
       case 'i':
         if(m_omx_reader.GetChapterCount() > 0)
@@ -543,14 +549,18 @@ int main(int argc, char *argv[])
         }
         break;
       case 'n':
-        if(m_omx_reader.GetSubtitleIndex() > 0)
+        if(m_has_subtitle)
         {
-          m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_omx_reader.GetSubtitleIndex() - 1);
-          m_player_subtitles.Flush();
+          int new_index = m_omx_reader.GetSubtitleIndex() - 1;
+          if (new_index >= 0)
+          {
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, new_index);
+            m_player_subtitles.Flush();
+          }
         }
         break;
       case 'm':
-        if(m_omx_reader.GetSubtitleIndex() > 0)
+        if(m_has_subtitle)
         {
           m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_omx_reader.GetSubtitleIndex() + 1);
           m_player_subtitles.Flush();
