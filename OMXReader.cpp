@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <algorithm>
 
 #ifndef STANDALONE
 #include "FileItem.h"
@@ -845,10 +846,8 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->fpsrate      = 0;
     }
 
-    if (stream->sample_aspect_ratio.num == 0)
-      hints->aspect = 0.0f;
-    else
-      hints->aspect = av_q2d(stream->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
+    hints->pixel_x = std::max(0, stream->sample_aspect_ratio.num);
+    hints->pixel_y = std::max(0, stream->sample_aspect_ratio.den);
   }
 
   return true;
