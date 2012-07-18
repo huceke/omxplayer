@@ -551,10 +551,12 @@ int main(int argc, char *argv[])
       case 'n':
         if(m_has_subtitle)
         {
-          int new_index = m_omx_reader.GetSubtitleIndex() - 1;
-          if (new_index >= 0)
+          int new_index = m_subtitle_index-1;
+          if(new_index >= 0)
           {
-            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, new_index);
+            m_subtitle_index = new_index;
+            printf("Subtitle index: %i\n", m_subtitle_index+1);
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_player_subtitles.Flush();
           }
         }
@@ -562,12 +564,33 @@ int main(int argc, char *argv[])
       case 'm':
         if(m_has_subtitle)
         {
-          m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_omx_reader.GetSubtitleIndex() + 1);
-          m_player_subtitles.Flush();
+          int new_index = m_subtitle_index+1;
+          if(new_index < m_omx_reader.SubtitleStreamCount())
+          {
+            m_subtitle_index = new_index;
+            printf("Subtitle index: %i\n", m_subtitle_index+1);
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+            m_player_subtitles.Flush();
+          }
         }
         break;
       case 's':
-        m_show_subtitle = !m_show_subtitle;
+        if(m_has_subtitle)
+        {
+          if(m_show_subtitle)
+          {
+            puts("Switching off subtitles");
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, -1);
+            m_player_subtitles.Flush();
+            m_show_subtitle = false;
+          }
+          else
+          {
+            printf("Switching on subtitle stream %i\n", m_subtitle_index+1);
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+            m_show_subtitle = true;
+          }
+        }
         break;
       case 'q':
         m_stop = true;
