@@ -21,7 +21,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-constexpr int RENDER_LOOP_SLEEP = 16;
+constexpr int RENDER_LOOP_SLEEP = 100;
 
 OMXPlayerSubtitles::OMXPlayerSubtitles() noexcept:
 #ifndef NDEBUG
