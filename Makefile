@@ -1,8 +1,8 @@
 include Makefile.include
 
-CFLAGS+=-DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -DHAVE_CMAKE_CONFIG -D__VIDEOCORE4__ -U_FORTIFY_SOURCE -Wall -DHAVE_OMXLIB -DUSE_EXTERNAL_FFMPEG  -DHAVE_LIBAVCODEC_AVCODEC_H -DHAVE_LIBAVUTIL_OPT_H -DHAVE_LIBAVUTIL_MEM_H -DHAVE_LIBAVUTIL_AVUTIL_H -DHAVE_LIBAVFORMAT_AVFORMAT_H -DHAVE_LIBAVFILTER_AVFILTER_H -DOMX -DOMX_SKIP64BIT -ftree-vectorize -pipe -DUSE_EXTERNAL_OMX -DTARGET_RASPBERRY_PI -DUSE_EXTERNAL_LIBBCM_HOST -Wno-psabi -I$(SDKSTAGE)/opt/vc/include/ 
+CFLAGS+=-std=c++0x -DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -D_LINUX -fPIC -DPIC -D_REENTRANT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -DHAVE_CMAKE_CONFIG -D__VIDEOCORE4__ -U_FORTIFY_SOURCE -Wall -DHAVE_OMXLIB -DUSE_EXTERNAL_FFMPEG  -DHAVE_LIBAVCODEC_AVCODEC_H -DHAVE_LIBAVUTIL_OPT_H -DHAVE_LIBAVUTIL_MEM_H -DHAVE_LIBAVUTIL_AVUTIL_H -DHAVE_LIBAVFORMAT_AVFORMAT_H -DHAVE_LIBAVFILTER_AVFILTER_H -DOMX -DOMX_SKIP64BIT -ftree-vectorize -DUSE_EXTERNAL_OMX -DTARGET_RASPBERRY_PI -DUSE_EXTERNAL_LIBBCM_HOST
 
-LDFLAGS+=-L./ -lc -lWFC -lGLESv2 -lEGL -lbcm_host -lopenmaxil -Lffmpeg_compiled/usr/local/lib/
+LDFLAGS+=-L./ -lc -lWFC -lGLESv2 -lEGL -lbcm_host -lopenmaxil -lfreetype -lz -Lffmpeg_compiled/usr/local/lib/
 INCLUDES+=-I./ -Ilinux -Iffmpeg_compiled/usr/local/include/
 
 SRC=linux/XMemUtils.cpp \
@@ -10,9 +10,11 @@ SRC=linux/XMemUtils.cpp \
 		DynamicDll.cpp \
 		utils/PCMRemap.cpp \
 		utils/RegExp.cpp \
+		folly/Unicode.cpp \
 		OMXSubtitleTagSami.cpp \
 		OMXOverlayCodecText.cpp \
 		BitstreamConverter.cpp \
+		SubtitleRenderer.cpp \
 		linux/RBP.cpp \
 		OMXThread.cpp \
 		OMXReader.cpp \
@@ -25,6 +27,7 @@ SRC=linux/XMemUtils.cpp \
 		File.cpp \
 		OMXPlayerVideo.cpp \
 		OMXPlayerAudio.cpp \
+		OMXPlayerSubtitles.cpp \
 		omxplayer.cpp \
 
 OBJS+=$(filter %.o,$(SRC:.cpp=.o))
