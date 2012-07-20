@@ -472,6 +472,8 @@ bool OMXClock::OMXReset(bool lock /* = true */)
   if(lock)
     Lock();
 
+  m_iCurrentPts = DVD_NOPTS_VALUE;
+
   m_video_clock = DVD_NOPTS_VALUE;
   m_audio_clock = DVD_NOPTS_VALUE;
 
@@ -481,7 +483,7 @@ bool OMXClock::OMXReset(bool lock /* = true */)
     OMX_TIME_CONFIG_CLOCKSTATETYPE clock;
     OMX_INIT_STRUCTURE(clock);
 
-    OMXStop();
+    OMXStop(false);
 
     clock.eState    = OMX_TIME_ClockStateWaitingForStartTime;
     if(m_has_audio)
@@ -503,7 +505,7 @@ bool OMXClock::OMXReset(bool lock /* = true */)
       return false;
     }
 
-    OMXStart();
+    OMXStart(false);
   }
 
   if(lock)
