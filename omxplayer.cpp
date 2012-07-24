@@ -599,6 +599,44 @@ int main(int argc, char *argv[])
         goto do_exit;
     }
 
+    /* player got in an error state */
+    if(m_player_audio.Error())
+    {
+      printf("audio player error. emergency exit!!!\n");
+      goto do_exit;
+    }
+
+    std::string strSubTitle = m_player_video.GetText();
+    if(strSubTitle.length() && m_show_subtitle)
+    {
+      if(last_sub != strSubTitle)
+      {
+        last_sub = strSubTitle;
+        printf("Text : %s\n", strSubTitle.c_str());
+      }
+    }
+
+    if(m_stats)
+    {
+      printf("V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \r",
+             m_player_video.GetCurrentPTS() / DVD_TIME_BASE, m_player_video.GetDecoderBufferSize(),
+             m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
+             m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
+    }
+
+    if(m_omx_reader.IsEof() && !m_omx_pkt)
+    {
+      if (!m_player_audio.GetCached() && !m_player_video.GetCached())
+        break;
+
+      // Abort audio buffering, now we're on our own
+      if (m_buffer_empty)
+        m_av_clock->OMXResume();
+
+      OMXClock::OMXSleep(10);
+      continue;
+    }
+
     /* when the audio buffer runs under 0.1 seconds we buffer up */
     if(m_has_audio)
     {
@@ -684,34 +722,6 @@ int main(int argc, char *argv[])
         m_omx_pkt = NULL;
       }
     }
-
-    /* player got in an error state */
-    if(m_player_audio.Error())
-    {
-      printf("audio player error. emergency exit!!!\n");
-      goto do_exit;
-    }
-
-    std::string strSubTitle = m_player_video.GetText();
-    if(strSubTitle.length() && m_show_subtitle)
-    {
-      if(last_sub != strSubTitle)
-      {
-        last_sub = strSubTitle;
-        printf("Text : %s\n", strSubTitle.c_str());
-      }
-    }
-
-    if(m_stats)
-    {
-      printf("V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \r",
-             m_player_video.GetCurrentPTS() / DVD_TIME_BASE, m_player_video.GetDecoderBufferSize(),
-             m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
-             m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
-    }
-    if(m_omx_reader.IsEof())
-        break;
-
   }
 
 do_exit:
