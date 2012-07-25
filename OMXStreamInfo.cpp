@@ -51,7 +51,8 @@ void COMXStreamInfo::Clear()
   fpsrate  = 0;
   height   = 0;
   width    = 0;
-  aspect   = 0.0;
+  pixel_x  = 0;
+  pixel_y  = 0;
   vfr      = false;
   stills   = false;
   level    = 0;

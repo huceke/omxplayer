@@ -570,11 +570,20 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, bool deinterlace, b
   m_drop_state        = false;
   m_setStartTime      = true;
   m_setStartTimeText  = true;
-
-  /*
+  
   OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
   OMX_INIT_STRUCTURE(configDisplay);
   configDisplay.nPortIndex = m_omx_render.GetInputPort();
+
+  configDisplay.set      = OMX_DISPLAY_SET_PIXEL;
+  configDisplay.pixel_x  = hints.pixel_x;
+  configDisplay.pixel_y  = hints.pixel_y;
+
+  omx_err = m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
+  if(omx_err != OMX_ErrorNone)
+    return false;
+
+  /*
 
   configDisplay.set     = OMX_DISPLAY_SET_LAYER;
   configDisplay.layer   = 2;
