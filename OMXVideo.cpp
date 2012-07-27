@@ -579,8 +579,9 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
     configDisplay.nPortIndex = m_omx_render.GetInputPort();
 
     AVRational aspect;
+    float fAspect = (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height;
 
-    aspect = av_d2q(hints.aspect, 100);
+    aspect = av_d2q(fAspect, 100);
 
     printf("Aspect : num %d den %d aspect %f display aspect %f\n", aspect.num, aspect.den, hints.aspect, display_aspect);
 
