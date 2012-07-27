@@ -452,7 +452,7 @@ void OMXPlayerAudio::Process()
       m_packets.pop_front();
     }
     UnLock();
-
+    
     LockDecoder();
     if(m_flush && omx_pkt)
     {
@@ -679,17 +679,8 @@ void OMXPlayerAudio::WaitCompletion()
   if(!m_decoder)
     return;
 
-  struct timespec starttime, endtime;
-
   while(true)
   {
-    clock_gettime(CLOCK_REALTIME, &endtime);
-    if((endtime.tv_sec - starttime.tv_sec) > 2)
-    {
-      CLog::Log(LOGERROR, "OMXPlayerAudio::WaitCompletion - wait for eos timed out\n");
-      break;
-    }
-
     Lock();
     if(m_packets.empty())
     {

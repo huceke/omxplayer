@@ -381,13 +381,16 @@ bool OMXReader::SeekTime(int64_t seek_ms, int seek_flags, double *startpts)
   {
     m_eof = true;
     UnLock();
-    return false;
+    return true;
   }
 
   int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, -1, seek_pts, seek_flags ? AVSEEK_FLAG_BACKWARD : 0);
 
   if(ret >= 0)
+  {
     UpdateCurrentPTS();
+    m_eof = false;
+  }
 
   if(m_iCurrentPts == DVD_NOPTS_VALUE)
   {
@@ -416,6 +419,8 @@ AVMediaType OMXReader::PacketType(OMXPacket *pkt)
 
 OMXPacket *OMXReader::Read()
 {
+  assert(!IsEof());
+  
   AVPacket  pkt;
   OMXPacket *m_omx_pkt = NULL;
   int       result = -1;
