@@ -129,7 +129,7 @@ bool COMXVideo::SendDecoderConfig()
   return true;
 }
 
-bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, bool deinterlace, bool hdmi_clock_sync)
+bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect, bool deinterlace, bool hdmi_clock_sync)
 {
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
   std::string decoder_name;
@@ -571,11 +571,28 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, bool deinterlace, b
   m_setStartTime      = true;
   m_setStartTimeText  = true;
 
-  /*
-  OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
-  OMX_INIT_STRUCTURE(configDisplay);
-  configDisplay.nPortIndex = m_omx_render.GetInputPort();
+  // only set aspect when we have a aspect and display doesn't match the aspect
+  if(display_aspect != 0.0f && (hints.aspect != display_aspect))
+  {
+    OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
+    OMX_INIT_STRUCTURE(configDisplay);
+    configDisplay.nPortIndex = m_omx_render.GetInputPort();
 
+    AVRational aspect;
+
+    aspect = av_d2q(hints.aspect, 100);
+
+    printf("Aspect : num %d den %d aspect %f display aspect %f\n", aspect.num, aspect.den, hints.aspect, display_aspect);
+
+    configDisplay.set      = OMX_DISPLAY_SET_PIXEL;
+    configDisplay.pixel_x  = aspect.num;
+    configDisplay.pixel_y  = aspect.den;
+    omx_err = m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
+    if(omx_err != OMX_ErrorNone)
+      return false;
+  }
+
+  /*
   configDisplay.set     = OMX_DISPLAY_SET_LAYER;
   configDisplay.layer   = 2;
 

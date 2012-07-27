@@ -84,6 +84,7 @@ int               m_tv_show_info        = 0;
 bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
+float             m_display_aspect      = 0.0f;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -411,10 +412,6 @@ int main(int argc, char *argv[])
   if(m_audio_index_use != -1)
     m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
           
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player))
-    goto do_exit;
-
   if(m_has_video && m_refresh)
   {
     memset(&tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
@@ -426,6 +423,18 @@ int main(int argc, char *argv[])
     SetVideoMode(m_hints_video.width, m_hints_video.height, m_player_video.GetFPS(), m_3d);
 
   }
+
+  // get display aspect
+  TV_GET_STATE_RESP_T current_tv_state;
+  memset(&current_tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
+  m_BcmHost.vc_tv_get_state(&current_tv_state);
+
+  if(current_tv_state.width && current_tv_state.height)
+    m_display_aspect = (float)current_tv_state.width / (float)current_tv_state.height;
+
+  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+    goto do_exit;
 
   // This is an upper bound check on the subtitle limits. When we pulled the subtitle
   // index from the user we check to make sure that the value is larger than zero, but
@@ -595,7 +604,7 @@ int main(int argc, char *argv[])
 
       m_player_video.Close();
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
         goto do_exit;
     }
 
