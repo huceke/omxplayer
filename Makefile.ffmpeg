@@ -19,7 +19,7 @@ configure:
 	CFLAGS="$(CFLAGS) ${INCLUDES}" \
 	LDFLAGS="" \
   ./configure \
-			--extra-cflags="-mfpu=vfp -mfloat-abi=softfp -mno-apcs-stack-check -mstructure-size-boundary=32 -mno-sched-prolog" \
+			--extra-cflags="-mfpu=vfp -mfloat-abi=$(FLOAT) -mno-apcs-stack-check -mstructure-size-boundary=32 -mno-sched-prolog" \
 			--enable-cross-compile \
 			--enable-shared \
 			--disable-static \
