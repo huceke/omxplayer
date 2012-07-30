@@ -97,6 +97,7 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
   double current_stop{};
   double next_start{};
   double next_stop{};
+  bool have_next{};
   bool showing{};
 
   while(!m_bStop)
@@ -109,19 +110,24 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
         renderer.hide();
         showing = false;
       }
-      next_subtitle = NULL;
+      have_next = false;
       m_subtitle_queue.clear(); // safe
       m_flush.store(false, std::memory_order_release);
     }
 
-    if(!next_subtitle)
+    if(!have_next)
     {
+      Subtitle* next_subtitle{};
+
       LOCK_BLOCK(m_subtitle_queue_lock)
       {
-        if (!m_subtitle_queue.empty())
+        while(!m_subtitle_queue.empty())
+        {
           next_subtitle = &m_subtitle_queue.front();
+          if (next_subtitle
+        }
       }
-      if (next_subtitle)
+      if(next_subtitle)
         renderer.prepare(next_subtitle->text_lines);
     }
 
