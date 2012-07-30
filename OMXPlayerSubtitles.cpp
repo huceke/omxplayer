@@ -1,4 +1,6 @@
 /*
+ * Author: Torarin Hals Bakke (2012)
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,13 +19,15 @@
 #include "OMXPlayerSubtitles.h"
 #include "OMXOverlayText.h"
 #include "SubtitleRenderer.h"
+#include "LockBlock.h"
 #include "utils/log.h"
 
 #include <boost/algorithm/string.hpp>
+#include <typeinfo>
 
-constexpr int RENDER_LOOP_SLEEP = 100;
+constexpr int RENDER_LOOP_SLEEP = 16;
 
-OMXPlayerSubtitles::OMXPlayerSubtitles() noexcept:
+OMXPlayerSubtitles::OMXPlayerSubtitles() BOOST_NOEXCEPT:
 #ifndef NDEBUG
 m_open(),
 #endif
@@ -34,13 +38,13 @@ m_font_size(),
 m_av_clock()
 {}
 
-OMXPlayerSubtitles::~OMXPlayerSubtitles() noexcept
+OMXPlayerSubtitles::~OMXPlayerSubtitles() BOOST_NOEXCEPT
 {
   Close();
 }
 
 bool OMXPlayerSubtitles::
-Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept
+Open(const std::string& font_path, float font_size, OMXClock* clock) BOOST_NOEXCEPT
 {
   assert(!m_open);
 
@@ -60,7 +64,7 @@ Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept
   return true;
 }
 
-void OMXPlayerSubtitles::Close() noexcept
+void OMXPlayerSubtitles::Close() BOOST_NOEXCEPT
 {
   if(Running())
     StopThread();
@@ -78,7 +82,8 @@ void OMXPlayerSubtitles::Process()
   }
   catch(std::exception& e)
   {
-    CLog::Log(LOGERROR, "OMXPlayerSubtitles::Process threw: %s", e.what());
+    CLog::Log(LOGERROR, "OMXPlayerSubtitles::Process threw %s (%s)",
+              typeid(e).name(), e.what());
   }
   m_thread_stopped.store(true, std::memory_order_relaxed);
 }
@@ -90,11 +95,13 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
 
   Subtitle* next_subtitle{};
   double current_stop{};
+  double next_start{};
+  double next_stop{};
   bool showing{};
 
   while(!m_bStop)
   {
-    if(m_flush.load(std::memory_order_relaxed))
+    if(m_flush.load(std::memory_order_acquire))
     {
       if(showing)
       {
@@ -103,28 +110,37 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
         showing = false;
       }
       next_subtitle = NULL;
-      while (!m_subtitle_queue.isEmpty())
-        m_subtitle_queue.popFront();
-      m_flush.store(false, std::memory_order_relaxed);
+      m_subtitle_queue.clear(); // safe
+      m_flush.store(false, std::memory_order_release);
     }
 
     if(!next_subtitle)
     {
-      next_subtitle = m_subtitle_queue.frontPtr();
-      if(next_subtitle)
+      LOCK_BLOCK(m_subtitle_queue_lock)
+      {
+        if (!m_subtitle_queue.empty())
+          next_subtitle = &m_subtitle_queue.front();
+      }
+      if (next_subtitle)
         renderer.prepare(next_subtitle->text_lines);
     }
 
     auto const now = clock->OMXMediaTime();
 
-    if(next_subtitle && next_subtitle->start <= now)
+    for(;;)
+    {
+      if(m_subtitle_queue.empty()) continue;
+      if(m_subtitle_queue.front().end > now) break;
+      m_subtitle_queue.pop_front();
+    }
+
+    if(m_subtitle_queue.front().start <= now)
     {
       renderer.show_next();
       showing = true;
 
       current_stop = next_subtitle->stop;
-      next_subtitle = NULL;
-      m_subtitle_queue.popFront();
+      m_subtitle_queue.pop_front();
       continue;
     }
 
@@ -139,11 +155,11 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
   }
 }
 
-void OMXPlayerSubtitles::Flush() noexcept
+void OMXPlayerSubtitles::Flush() BOOST_NOEXCEPT
 {
   assert(m_open);
 
-  m_flush.store(true, std::memory_order_relaxed);
+  m_flush.store(true, std::memory_order_release);
 }
 
 std::vector<std::string> OMXPlayerSubtitles::GetTextLines(OMXPacket *pkt)
@@ -172,7 +188,7 @@ std::vector<std::string> OMXPlayerSubtitles::GetTextLines(OMXPacket *pkt)
   return text_lines;
 }
 
-bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) noexcept
+bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT
 {
   assert(m_open);
 
@@ -186,18 +202,30 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) noexcept
     return true;
   }
 
-  if(m_flush.load(std::memory_order_relaxed))
+  if(m_flush.load(std::memory_order_acquire))
     return false;
 
-  if(m_subtitle_queue.isFull())
-    return false;
+  bool queue_full;
+  LOCK_BLOCK(m_subtitle_queue_lock)
+    queue_full = m_subtitle_queue.full();
+
+  if(queue_full) 
+  {
+    // Packets coming ridiculously early, throw them away
+    OMXReader::FreePacket(pkt);
+    return true;
+  }
 
   // Center the presentation time on the requested timestamps
-  const auto adjusted_start = pkt->pts - (RENDER_LOOP_SLEEP*1000/2);
+  auto adjusted_start = pkt->pts - RENDER_LOOP_SLEEP*1000/2;
 
-  m_subtitle_queue.write(Subtitle{adjusted_start,
-                                  adjusted_start + pkt->duration,
-                                  GetTextLines(pkt)});
+  LOCK_BLOCK(m_subtitle_queue_lock)
+  {
+    m_subtitle_queue.push_back(
+      Subtitle{adjusted_start,
+               adjusted_start + pkt->duration,
+               GetTextLines(pkt)});
+  }
 
   OMXReader::FreePacket(pkt);
   return true;

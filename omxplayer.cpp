@@ -58,7 +58,7 @@ extern "C" {
 #include <string>
 
 enum PCMChannels  *m_pChannelMap        = NULL;
-volatile bool     g_abort               = false;
+volatile sig_atomic_t g_abort           = false;
 bool              m_bMpeg               = false;
 bool               m_passthrough        = false;
 bool              m_Deinterlace         = false;

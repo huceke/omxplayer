@@ -1,6 +1,8 @@
 #pragma once
 
 /*
+ * Author: Torarin Hals Bakke (2012)
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -20,22 +22,24 @@
 #include "OMXReader.h"
 #include "OMXClock.h"
 #include "OMXOverlayCodecText.h"
-#include "folly/ProducerConsumerQueue.h"
-#include "folly/Workarounds.h"
 
+#include <boost/config.hpp>
+#include <boost/circular_buffer.hpp>
 #include <string>
+#include <deque>
+#include <mutex>
 
 class OMXPlayerSubtitles : public OMXThread
 {
 public:
   OMXPlayerSubtitles(const OMXPlayerSubtitles&) = delete;
   OMXPlayerSubtitles& operator=(const OMXPlayerSubtitles&) = delete;
-  OMXPlayerSubtitles() noexcept;
-  ~OMXPlayerSubtitles() noexcept;
-  bool Open(const std::string& font_path, float font_size, OMXClock* clock) noexcept;
-  void Close() noexcept;
-  void Flush() noexcept;
-  bool AddPacket(OMXPacket *pkt) noexcept;
+  OMXPlayerSubtitles() BOOST_NOEXCEPT;
+  ~OMXPlayerSubtitles() BOOST_NOEXCEPT;
+  bool Open(const std::string& font_path, float font_size, OMXClock* clock) BOOST_NOEXCEPT;
+  void Close() BOOST_NOEXCEPT;
+  void Flush() BOOST_NOEXCEPT;
+  bool AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT;
 
 private:
   struct Subtitle
@@ -54,7 +58,8 @@ private:
 #endif
 
   COMXOverlayCodecText                   m_subtitle_codec;
-  folly::ProducerConsumerQueue<Subtitle> m_subtitle_queue;
+  boost::circular_buffer<Subtitle>       m_subtitle_queue;
+  std::mutex                             m_subtitle_queue_lock;
   std::atomic<bool>                      m_thread_stopped;
   std::atomic<bool>                      m_flush;
   std::string                            m_font_path;
