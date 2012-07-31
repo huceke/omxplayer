@@ -25,7 +25,8 @@
 #include <sys/mman.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
-#include <getopt.h> 
+#include <getopt.h>
+#include <string.h>
 
 #define AV_NOWARN_DEPRECATED
 
@@ -67,6 +68,7 @@ std::string       deviceString          = "omx:local";
 int               m_use_hw_audio        = false;
 std::string       m_font_path           = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 float             m_font_size           = 0.055f;
+bool              m_centered            = false;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = -1;
@@ -121,10 +123,11 @@ void print_usage()
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
-  printf("         -f / --font     path           font used for subtitles\n");
+  printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
-  printf("         -g / --fontsize size           font size as thousandths of screen height\n");
+  printf("              --font-size size          font size as thousandths of screen height\n");
   printf("                                        (default: 55)\n");
+  printf("              --align left/center       subtitle alignment (default: left)\n");
 }
 
 void SetSpeed(int iSpeed)
@@ -319,13 +322,14 @@ int main(int argc, char *argv[])
     { "hdmiclocksync", no_argument,       NULL,          'y' },
     { "refresh",      no_argument,        NULL,          'r' },
     { "sid",          required_argument,  NULL,          't' },
-    { "font",         required_argument,  NULL,          'f' },
-    { "fontsize",     required_argument,  NULL,          'g' },
+    { "font",         required_argument,  NULL,          0x100 },
+    { "font-size",    required_argument,  NULL,          0x101 },
+    { "align",        required_argument,  NULL,          0x102 },
     { 0, 0, 0, 0 }
   };
 
   int c;
-  while ((c = getopt_long(argc, argv, "wihn:o:cslpd3yt:rf:g:", longopts, NULL)) != -1)  
+  while ((c = getopt_long(argc, argv, "wihn:o:cslpd3yt:r", longopts, NULL)) != -1)  
   {
     switch (c) 
     {
@@ -373,15 +377,21 @@ int main(int argc, char *argv[])
         if(m_audio_index_use < 0)
           m_audio_index_use = 0;
         break;
-      case 'f':
+      case 0x100:
         m_font_path = optarg;
         break;
-      case 'g':
+      case 0x101:
         {
           const int thousands = atoi(optarg);
           if (thousands > 0)
             m_font_size = thousands*0.001f;
         }
+        break;
+      case 0x102:
+        if (!strcmp(optarg, "center"))
+          m_centered = true;
+        else
+          m_centered = false;
         break;
       case 0:
         break;
@@ -454,7 +464,7 @@ int main(int argc, char *argv[])
   }
 
   if(m_has_subtitle &&
-     !m_player_subtitles.Open(m_font_path, m_font_size, m_av_clock))
+     !m_player_subtitles.Open(m_font_path, m_font_size, m_centered, m_av_clock))
   {
     goto do_exit;
   }
@@ -646,8 +656,6 @@ int main(int argc, char *argv[])
       double seek_pos     = 0;
       double pts          = 0;
 
-      m_av_clock->OMXStop();
-
       pts = m_av_clock->GetPTS();
 
       seek_pos = (pts / DVD_TIME_BASE) + m_incr;
@@ -664,8 +672,6 @@ int main(int argc, char *argv[])
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
                                          m_hdmi_clock_sync, m_thread_player))
         goto do_exit;
-
-      m_av_clock->OMXStart();
     }
 
     /* when the audio buffer runs under 0.1 seconds we buffer up */

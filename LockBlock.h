@@ -2,6 +2,14 @@
 
 // Author: Torarin Hals Bakke (2012)
 
+// Usage:
+//   LOCK_BLOCK(mutex) {
+//     ...
+//   }
+// or
+//   LOCK_BLOCK(mutex)
+//     ...;
+
 // Boost Software License - Version 1.0 - August 17th, 2003
 
 // Permission is hereby granted, free of charge, to any person or organization
@@ -26,45 +34,14 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#include <boost/config.hpp>
-#include <string>
-#include <utility>
-#include <type_traits>
-#include <exception>
+#include <mutex>
 
-class Enforce_error : public std::exception {
-  std::string what_;
-  std::string user_friendly_what_;
-public:
-  template<typename T, typename U>
-  explicit Enforce_error(T&& what_arg, U&& user_friendly_what_arg)
-  : what_(std::forward<T>(what_arg)),
-    user_friendly_what_(std::forward<U>(user_friendly_what_arg))
-  {}
-
-//////////////////////////////////
-  ~Enforce_error() throw() {}
-
-  const char* what() const throw() {
-    return what_.c_str();
-  }
-
-  const std::string& user_friendly_what() const BOOST_NOEXCEPT{
-    return user_friendly_what_;
-  }
+template <typename T>
+struct Lock_block {
+  Lock_block(T& mutex): lock(mutex) {}
+  operator bool() {return true;}
+  std::lock_guard<T> lock;
 };
 
-template <typename T, typename U>
-void enforce(bool condition, T&& msg, U&& user_friendly_msg) {
-  static_assert(std::is_convertible<T, std::string>::value,
-                "msg must be convertible to std::string");
-  static_assert(std::is_convertible<U, std::string>::value,
-                "user_friendly_msg must be convertible to std::string");
-  if (!condition)
-    throw Enforce_error(std::forward<T>(msg), std::forward<U>(user_friendly_msg));
-}
-
-#define ENFORCE_MESSAGE "Enforcement failed in " __FILE__ "(" BOOST_STRINGIZE(__LINE__) ")"
-
-#define ENFORCE(condition) enforce(condition, ENFORCE_MESSAGE, "")
-#define ENFORCE2(condition, user_friendly_msg) enforce(condition, ENFORCE_MESSAGE, user_friendly_msg)
+#define LOCK_BLOCK(mutex) \
+  if (Lock_block<decltype(mutex)> LOCK_BLOCK_cond{mutex})

@@ -25,6 +25,7 @@
 
 #include <boost/config.hpp>
 #include <boost/circular_buffer.hpp>
+#include <atomic>
 #include <string>
 #include <deque>
 #include <mutex>
@@ -36,7 +37,7 @@ public:
   OMXPlayerSubtitles& operator=(const OMXPlayerSubtitles&) = delete;
   OMXPlayerSubtitles() BOOST_NOEXCEPT;
   ~OMXPlayerSubtitles() BOOST_NOEXCEPT;
-  bool Open(const std::string& font_path, float font_size, OMXClock* clock) BOOST_NOEXCEPT;
+  bool Open(const std::string& font_path, float font_size, bool centered, OMXClock* clock) BOOST_NOEXCEPT;
   void Close() BOOST_NOEXCEPT;
   void Flush() BOOST_NOEXCEPT;
   bool AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT;
@@ -50,7 +51,7 @@ private:
   };
 
   void Process();
-  void RenderLoop(const std::string& font_path, float font_size, OMXClock* clock);
+  void RenderLoop(const std::string& font_path, float font_size, bool centered, OMXClock* clock);
   std::vector<std::string> GetTextLines(OMXPacket *pkt);
 
 #ifndef NDEBUG
@@ -64,5 +65,6 @@ private:
   std::atomic<bool>                      m_flush;
   std::string                            m_font_path;
   float                                  m_font_size;
+  bool                                   m_centered;
   OMXClock*                              m_av_clock;
 };

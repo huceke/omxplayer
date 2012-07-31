@@ -20,6 +20,7 @@
 #include "OMXOverlayText.h"
 #include "SubtitleRenderer.h"
 #include "LockBlock.h"
+#include "Enforce.h"
 #include "utils/log.h"
 
 #include <boost/algorithm/string.hpp>
@@ -27,15 +28,17 @@
 
 constexpr int RENDER_LOOP_SLEEP = 16;
 
-OMXPlayerSubtitles::OMXPlayerSubtitles() BOOST_NOEXCEPT:
+OMXPlayerSubtitles::OMXPlayerSubtitles() BOOST_NOEXCEPT
+:
 #ifndef NDEBUG
-m_open(),
+  m_open(),
 #endif
-m_subtitle_queue(32),
-m_thread_stopped(true),
-m_flush(),
-m_font_size(),
-m_av_clock()
+  m_subtitle_queue(32),
+  m_thread_stopped(true),
+  m_flush(),
+  m_font_size(),
+  m_centered(),
+  m_av_clock()
 {}
 
 OMXPlayerSubtitles::~OMXPlayerSubtitles() BOOST_NOEXCEPT
@@ -44,7 +47,7 @@ OMXPlayerSubtitles::~OMXPlayerSubtitles() BOOST_NOEXCEPT
 }
 
 bool OMXPlayerSubtitles::
-Open(const std::string& font_path, float font_size, OMXClock* clock) BOOST_NOEXCEPT
+Open(const std::string& font_path, float font_size, bool centered, OMXClock* clock) BOOST_NOEXCEPT
 {
   assert(!m_open);
 
@@ -52,6 +55,7 @@ Open(const std::string& font_path, float font_size, OMXClock* clock) BOOST_NOEXC
   m_flush.store(false, std::memory_order_relaxed);
   m_font_path = font_path;
   m_font_size = font_size;
+  m_centered = centered;
   m_av_clock  = clock;
 
   if(!Create())
@@ -78,26 +82,36 @@ void OMXPlayerSubtitles::Process()
 {
   try
   {
-    RenderLoop(m_font_path, m_font_size, m_av_clock);
+    RenderLoop(m_font_path, m_font_size, m_centered, m_av_clock);
+  }
+  catch(Enforce_error& e)
+  {
+    if(!e.user_friendly_what().empty())
+      printf("Error: %s\n", e.user_friendly_what().c_str());
+    CLog::Log(LOGERROR, "OMXPlayerSubtitles::RenderLoop threw %s (%s)",
+              typeid(e).name(), e.what());
   }
   catch(std::exception& e)
   {
-    CLog::Log(LOGERROR, "OMXPlayerSubtitles::Process threw %s (%s)",
+    CLog::Log(LOGERROR, "OMXPlayerSubtitles::RenderLoop threw %s (%s)",
               typeid(e).name(), e.what());
   }
   m_thread_stopped.store(true, std::memory_order_relaxed);
 }
 
 void OMXPlayerSubtitles::
-RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
+RenderLoop(const std::string& font_path, float font_size, bool centered, OMXClock* clock)
 {
-  SubtitleRenderer renderer(1, font_path, font_size, 0.01f, 0.06f, 0xDD, 0x80);
+  SubtitleRenderer renderer(1,
+                            font_path,
+                            font_size,
+                            0.01f, 0.06f,
+                            centered,
+                            0xDD,
+                            0x80);
 
   Subtitle* next_subtitle{};
   double current_stop{};
-  double next_start{};
-  double next_stop{};
-  bool have_next{};
   bool showing{};
 
   while(!m_bStop)
@@ -110,54 +124,60 @@ RenderLoop(const std::string& font_path, float font_size, OMXClock* clock)
         renderer.hide();
         showing = false;
       }
-      have_next = false;
+      next_subtitle = NULL;
       m_subtitle_queue.clear(); // safe
       m_flush.store(false, std::memory_order_release);
+
+      OMXClock::OMXSleep(RENDER_LOOP_SLEEP);
+      continue;
     }
 
-    if(!have_next)
-    {
-      Subtitle* next_subtitle{};
+    auto const now = clock->OMXMediaTime();
 
+    if(next_subtitle && next_subtitle->stop <= now)
+    {
+      renderer.unprepare();
+      next_subtitle = NULL;
+      LOCK_BLOCK(m_subtitle_queue_lock)
+        m_subtitle_queue.pop_front();     
+    }
+
+    if(!next_subtitle)
+    {
       LOCK_BLOCK(m_subtitle_queue_lock)
       {
-        while(!m_subtitle_queue.empty())
+        for(; !m_subtitle_queue.empty(); m_subtitle_queue.pop_front())
         {
-          next_subtitle = &m_subtitle_queue.front();
-          if (next_subtitle
+          if(m_subtitle_queue.front().stop > now)
+          {
+            next_subtitle = &m_subtitle_queue.front();
+            break;
+          }
         }
       }
       if(next_subtitle)
         renderer.prepare(next_subtitle->text_lines);
     }
 
-    auto const now = clock->OMXMediaTime();
-
-    for(;;)
-    {
-      if(m_subtitle_queue.empty()) continue;
-      if(m_subtitle_queue.front().end > now) break;
-      m_subtitle_queue.pop_front();
-    }
-
-    if(m_subtitle_queue.front().start <= now)
+    if(next_subtitle && next_subtitle->start <= now)
     {
       renderer.show_next();
       showing = true;
 
       current_stop = next_subtitle->stop;
-      m_subtitle_queue.pop_front();
-      continue;
+      next_subtitle = NULL;
+      LOCK_BLOCK(m_subtitle_queue_lock)
+        m_subtitle_queue.pop_front();
     }
-
-    if(showing && current_stop <= now)
+    else if(showing && current_stop <= now)
     {
-      renderer.hide();
-      showing = false;
-      continue;
+        renderer.hide();
+        showing = false;
     }
-
-    clock->OMXSleep(RENDER_LOOP_SLEEP);
+    else
+    {
+      OMXClock::OMXSleep(RENDER_LOOP_SLEEP);
+    }
   }
 }
 
@@ -204,6 +224,7 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT
   if(m_thread_stopped.load(std::memory_order_relaxed))
   {
     // Rendering thread has stopped, throw away the packet
+    CLog::Log(LOGWARNING, "Subtitle rendering thread has stopped, discarding packet");
     OMXReader::FreePacket(pkt);
     return true;
   }
@@ -218,6 +239,7 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT
   if(queue_full) 
   {
     // Packets coming ridiculously early, throw them away
+    CLog::Log(LOGWARNING, "Subtitle queue full, dropping packet");
     OMXReader::FreePacket(pkt);
     return true;
   }
@@ -227,10 +249,10 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT
 
   LOCK_BLOCK(m_subtitle_queue_lock)
   {
-    m_subtitle_queue.push_back(
-      Subtitle{adjusted_start,
-               adjusted_start + pkt->duration,
-               GetTextLines(pkt)});
+    m_subtitle_queue.push_back({adjusted_start,
+                                adjusted_start + pkt->duration,
+                                GetTextLines(pkt)});
+
   }
 
   OMXReader::FreePacket(pkt);

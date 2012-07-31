@@ -44,7 +44,6 @@ class Scope_guard {
   T fun_;
 
 public:
-  static log
   Scope_guard& operator=(const Scope_guard&) = delete;
 
   // This copy constructor cannot be deleted due to the SCOPE_EXIT macro,
@@ -54,7 +53,7 @@ public:
   explicit Scope_guard(const T& fun): fun_(fun) {}
   explicit Scope_guard(T&& fun): fun_(std::move(fun)) {}
 
-  ~Scope_guard() noexcept {
+  ~Scope_guard() BOOST_NOEXCEPT {
     try {
       fun_();
     } catch (std::exception& e) {

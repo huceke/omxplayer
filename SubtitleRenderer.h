@@ -45,6 +45,7 @@ public:
                    float font_size,
                    float margin_left,
                    float margin_bottom,
+                   bool centered,
                    unsigned int white_level,
                    unsigned int box_opacity);
   ~SubtitleRenderer() BOOST_NOEXCEPT;
@@ -122,6 +123,7 @@ private:
   int box_h_padding_;
   float margin_left_;
   float margin_bottom_;
+  bool centered_;
   unsigned int white_level_;
   unsigned int box_opacity_;
 };

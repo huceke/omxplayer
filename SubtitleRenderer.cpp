@@ -249,7 +249,7 @@ draw_text(VGFont font, VGFont italic_font,
 }
 
 
-SubtitleRenderer::~SubtitleRenderer() noexcept {
+SubtitleRenderer::~SubtitleRenderer() BOOST_NOEXCEPT {
   destroy();
 }
 
@@ -259,30 +259,33 @@ SubtitleRenderer(int layer,
                  float font_size,
                  float margin_left,
                  float margin_bottom,
+                 bool centered,
                  unsigned int white_level,
-                 unsigned int box_opacity):
-prepared_(),
-dispman_element_(),
-dispman_display_(),
-screen_width_(),
-screen_height_(),
-display_(),
-context_(),
-surface_(),
-vg_font_(),
-vg_font_border_(),
-vg_font_italic_(),
-vg_font_italic_border_(),
-ft_library_(),
-ft_face_(),
-ft_stroker_(),
-line_height_(),
-box_offset_(),
-box_h_padding_(),
-margin_left_(margin_left),
-margin_bottom_(margin_bottom),
-white_level_(white_level),
-box_opacity_(box_opacity) {
+                 unsigned int box_opacity)
+: prepared_(),
+  dispman_element_(),
+  dispman_display_(),
+  screen_width_(),
+  screen_height_(),
+  display_(),
+  context_(),
+  surface_(),
+  vg_font_(),
+  vg_font_border_(),
+  vg_font_italic_(),
+  vg_font_italic_border_(),
+  ft_library_(),
+  ft_face_(),
+  ft_stroker_(),
+  line_height_(),
+  box_offset_(),
+  box_h_padding_(),
+  margin_left_(margin_left),
+  margin_bottom_(margin_bottom),
+  centered_(centered),
+  white_level_(white_level),
+  box_opacity_(box_opacity)
+{
   try {
     initialize_window(layer);
     initialize_egl();
@@ -302,7 +305,8 @@ void SubtitleRenderer::destroy() {
 void SubtitleRenderer::
 initialize_fonts(const std::string& font_path, float font_size) {
   ENFORCE(!FT_Init_FreeType(&ft_library_));
-  ENFORCE(!FT_New_Face(ft_library_, font_path.c_str(), 0, &ft_face_));
+  ENFORCE2(!FT_New_Face(ft_library_, font_path.c_str(), 0, &ft_face_),
+           "Unable to open font");
   ENFORCE(!FT_Set_Pixel_Sizes(ft_face_, 0, font_size*screen_height_));
 
   auto get_bbox = [this](char32_t cp) {
@@ -481,24 +485,25 @@ void SubtitleRenderer::destroy_egl() {
   }
 }
 
-void SubtitleRenderer::prepare(const std::vector<std::string>& text_lines) noexcept {
+void SubtitleRenderer::
+prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT {
   const int n_lines = text_lines.size();
-
-  internal_lines_.resize(n_lines);
-  line_widths_.resize(n_lines);
-  for (int i = 0; i < n_lines; ++i) {
-    internal_lines_[i] = get_internal_chars(text_lines[i]);
-    prepare_glyphs(internal_lines_[i]);
-    line_widths_[i] = get_text_width(internal_lines_[i]);
-  }
-
   const int x = (screen_width_-screen_height_) / 2 +
                 static_cast<int>(margin_left_*screen_height_ + 0.5f);
   const int y = margin_bottom_*screen_height_ + 0.5f;
 
+  internal_lines_.resize(n_lines);
+  line_widths_.resize(n_lines);
   line_positions_.resize(n_lines);
-  for (int i = n_lines-1, line_y = y; i >= 0; --i, line_y += line_height_) {
-    line_positions_[i] = {x, line_y};
+  for (int i = 0; i < n_lines; ++i) {
+    internal_lines_[i] = get_internal_chars(text_lines[i]);
+    prepare_glyphs(internal_lines_[i]);
+    line_widths_[i] = get_text_width(internal_lines_[i]);
+    line_positions_[i].second = y + (n_lines-i-1)*line_height_;
+    if (centered_)
+      line_positions_[i].first = screen_width_/2 - line_widths_[i]/2;
+    else
+      line_positions_[i].first = x;
   }
 
   prepared_ = true;

@@ -27,6 +27,7 @@
 
 
 #include <stdexcept>
+#include <cassert>
 #include "Unicode.h"
 
 /***************
@@ -37,7 +38,7 @@
 
 char32_t decodeUtf8(const char* s, size_t len, size_t& idx)
 {
-  assert(idx < s.length);
+  assert(idx < len);
 
   char32_t V;
   size_t i = idx;
