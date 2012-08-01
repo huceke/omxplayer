@@ -25,7 +25,8 @@
 #include <sys/mman.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
-#include <getopt.h> 
+#include <getopt.h>
+#include <string.h>
 
 #define AV_NOWARN_DEPRECATED
 
@@ -52,18 +53,22 @@ extern "C" {
 #include "OMXReader.h"
 #include "OMXPlayerVideo.h"
 #include "OMXPlayerAudio.h"
+#include "OMXPlayerSubtitles.h"
 #include "DllOMX.h"
 
 #include <string>
 
 enum PCMChannels  *m_pChannelMap        = NULL;
-unsigned int      g_abort               = false;
+volatile sig_atomic_t g_abort           = false;
 bool              m_bMpeg               = false;
 bool               m_passthrough        = false;
 bool              m_Deinterlace         = false;
 bool              m_HWDecode            = false;
 std::string       deviceString          = "omx:local";
 int               m_use_hw_audio        = false;
+std::string       m_font_path           = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
+float             m_font_size           = 0.055f;
+bool              m_centered            = false;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = -1;
@@ -80,6 +85,7 @@ int               m_subtitle_index      = 0;
 DllBcmHost        m_BcmHost;
 OMXPlayerVideo    m_player_video;
 OMXPlayerAudio    m_player_audio;
+OMXPlayerSubtitles  m_player_subtitles;
 int               m_tv_show_info        = 0;
 bool              m_has_video           = false;
 bool              m_has_audio           = false;
@@ -97,6 +103,7 @@ static void restore_termios (int status, void * arg)
 void sig_handler(int s)
 {
   printf("strg-c catched\n");
+  signal(SIGINT, SIG_DFL);
   g_abort = true;
 }
 
@@ -117,6 +124,11 @@ void print_usage()
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
+  printf("              --font path               subtitle font\n");
+  printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
+  printf("              --font-size size          font size as thousandths of screen height\n");
+  printf("                                        (default: 55)\n");
+  printf("              --align left/center       subtitle alignment (default: left)\n");
 }
 
 void SetSpeed(int iSpeed)
@@ -147,6 +159,9 @@ void FlushStreams(double pts)
 
   if(m_has_audio)
     m_player_audio.Flush();
+
+  if(m_has_subtitle)
+    m_player_subtitles.Flush();
 
   if(m_omx_pkt)
   {
@@ -268,6 +283,8 @@ void SetVideoMode(int width, int height, float fps, bool is3d)
 
 int main(int argc, char *argv[])
 {
+  signal(SIGINT, sig_handler);
+
   struct termios new_termios;
 
   tcgetattr(STDIN_FILENO, &orig_termios);
@@ -306,6 +323,9 @@ int main(int argc, char *argv[])
     { "hdmiclocksync", no_argument,       NULL,          'y' },
     { "refresh",      no_argument,        NULL,          'r' },
     { "sid",          required_argument,  NULL,          't' },
+    { "font",         required_argument,  NULL,          0x100 },
+    { "font-size",    required_argument,  NULL,          0x101 },
+    { "align",        required_argument,  NULL,          0x102 },
     { 0, 0, 0, 0 }
   };
 
@@ -357,6 +377,22 @@ int main(int argc, char *argv[])
         m_audio_index_use = atoi(optarg) - 1;
         if(m_audio_index_use < 0)
           m_audio_index_use = 0;
+        break;
+      case 0x100:
+        m_font_path = optarg;
+        break;
+      case 0x101:
+        {
+          const int thousands = atoi(optarg);
+          if (thousands > 0)
+            m_font_size = thousands*0.001f;
+        }
+        break;
+      case 0x102:
+        if (!strcmp(optarg, "center"))
+          m_centered = true;
+        else
+          m_centered = false;
         break;
       case 0:
         break;
@@ -436,6 +472,10 @@ int main(int argc, char *argv[])
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect))
     goto do_exit;
 
+  if(m_has_subtitle &&
+     !m_player_subtitles.Open(m_font_path, m_font_size, m_centered, m_av_clock))
+    goto do_exit;
+
   // This is an upper bound check on the subtitle limits. When we pulled the subtitle
   // index from the user we check to make sure that the value is larger than zero, but
   // we couldn't know without scanning the file if it was too high. If this is the case
@@ -492,10 +532,16 @@ int main(int argc, char *argv[])
         SetSpeed(m_av_clock->OMXPlaySpeed() + 1);
         break;
       case 'j':
-        m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() - 1);
+        if(m_has_audio)
+        {
+          int new_index = m_omx_reader.GetAudioIndex() - 1;
+          if (new_index >= 0)
+            m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, new_index);
+        }
         break;
       case 'k':
-        m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
+        if(m_has_audio)
+          m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
         break;
       case 'i':
         if(m_omx_reader.GetChapterCount() > 0)
@@ -520,21 +566,48 @@ int main(int argc, char *argv[])
         }
         break;
       case 'n':
-        if(m_omx_reader.GetSubtitleIndex() > 0)
+        if(m_has_subtitle)
         {
-          m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_omx_reader.GetSubtitleIndex() - 1);
-          m_player_video.FlushSubtitles();
+          int new_index = m_subtitle_index-1;
+          if(new_index >= 0)
+          {
+            m_subtitle_index = new_index;
+            printf("Subtitle index: %i\n", m_subtitle_index+1);
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+            m_player_subtitles.Flush();
+          }
         }
         break;
       case 'm':
-        if(m_omx_reader.GetSubtitleIndex() > 0)
+        if(m_has_subtitle)
         {
-          m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_omx_reader.GetSubtitleIndex() + 1);
-          m_player_video.FlushSubtitles();
+          int new_index = m_subtitle_index+1;
+          if(new_index < m_omx_reader.SubtitleStreamCount())
+          {
+            m_subtitle_index = new_index;
+            printf("Subtitle index: %i\n", m_subtitle_index+1);
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+            m_player_subtitles.Flush();
+          }
         }
         break;
       case 's':
-        m_show_subtitle = !m_show_subtitle;
+        if(m_has_subtitle)
+        {
+          if(m_show_subtitle)
+          {
+            puts("Switching off subtitles");
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, -1);
+            m_player_subtitles.Flush();
+            m_show_subtitle = false;
+          }
+          else
+          {
+            printf("Switching on subtitle stream %i\n", m_subtitle_index+1);
+            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+            m_show_subtitle = true;
+          }
+        }
         break;
       case 'q':
         m_stop = true;
@@ -613,16 +686,6 @@ int main(int argc, char *argv[])
     {
       printf("audio player error. emergency exit!!!\n");
       goto do_exit;
-    }
-
-    std::string strSubTitle = m_player_video.GetText();
-    if(strSubTitle.length() && m_show_subtitle)
-    {
-      if(last_sub != strSubTitle)
-      {
-        last_sub = strSubTitle;
-        printf("Text : %s\n", strSubTitle.c_str());
-      }
     }
 
     if(m_stats)
@@ -712,7 +775,7 @@ int main(int argc, char *argv[])
       if(m_omx_pkt->size && (m_omx_pkt->hints.codec == CODEC_ID_TEXT || 
                              m_omx_pkt->hints.codec == CODEC_ID_SSA))
       {
-        if(m_player_video.AddPacket(m_omx_pkt))
+        if(m_player_subtitles.AddPacket(m_omx_pkt))
           m_omx_pkt = NULL;
         else
           OMXClock::OMXSleep(10);
@@ -736,7 +799,7 @@ int main(int argc, char *argv[])
 do_exit:
   printf("\n");
 
-  if(!m_stop)
+  if(!m_stop && !g_abort)
   {
     if(m_has_audio)
       m_player_audio.WaitCompletion();
@@ -753,6 +816,7 @@ do_exit:
   m_av_clock->OMXStop();
   m_av_clock->OMXStateIdle();
 
+  m_player_subtitles.Close();
   m_player_video.Close();
   m_player_audio.Close();
 

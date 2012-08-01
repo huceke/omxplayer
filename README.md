@@ -34,7 +34,8 @@ Running OMXPlayer
 Installing OMXPlayer
 --------------------
 
-Copy over `omxplayer-dist/*` to the Pi `/`.
+Copy over `omxplayer-dist/*` to the Pi `/`. You may want to specify a valid font
+path inside the `omxplayer` shell script.
 
 Using OMXPlayer
 ---------------
@@ -53,6 +54,12 @@ Using OMXPlayer
              -3 / --3d                      switch tv into 3d mode
              -y / --hdmiclocksync           adjust display refresh rate to match video
              -t / --sid index               show subtitle with index
+             -r / --refresh                 adjust framerate/resolution to video
+                  --font path               subtitle font
+                                            (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
+                  --font-size size          font size as thousandths of screen height
+                                            (default: 55)
+                  --align left/center       subtitle alignment (default: left)
 
 For example:
 
