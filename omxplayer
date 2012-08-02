@@ -4,6 +4,13 @@
 
 OMXPLAYER="./omxplayer.bin"
 FBSET="/usr/sbin/fbset"
+FONT="fonts/FreeSans.ttf"
+
+if [ -e /usr/share/fonts/truetype/freefont/FreeSans.ttf ]; then
+  FONT="/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+else
+  FONT="fonts/FreeSans.ttf"
+fi
 
 if [ -e /usr/bin/omxplayer.bin ]; then
   OMXPLAYER="/usr/bin/omxplayer.bin"
@@ -28,7 +35,7 @@ if [ -e $FBSET ]; then
   fbset -xres 1 -yres 1
 fi
 
-$OMXPLAYER "$@"
+$OMXPLAYER --font $FONT "$@"
 
 if [ -e $FBSET ]; then
   fbset -xres ${XRES} -yres ${YRES}
