@@ -486,15 +486,8 @@ int main(int argc, char *argv[])
   }
 
   // Here we actually enable the subtitle streams if we have one available.
-  if (m_has_subtitle && m_subtitle_index <= (m_omx_reader.SubtitleStreamCount() - 1))
-  {
+  if (m_show_subtitle && m_has_subtitle && m_subtitle_index <= (m_omx_reader.SubtitleStreamCount() - 1))
     m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
-    m_show_subtitle = true;
-  }
-  else
-  {
-    m_show_subtitle = false;
-  }
 
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
 
@@ -507,6 +500,10 @@ int main(int argc, char *argv[])
   m_av_clock->OMXStart();
 
   struct timespec starttime, endtime;
+
+  printf("Subtitle count : %d state %s : index %d\n", 
+      m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+      (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
 
   while(!m_stop)
   {
@@ -572,7 +569,9 @@ int main(int argc, char *argv[])
           if(new_index >= 0)
           {
             m_subtitle_index = new_index;
-            printf("Subtitle index: %i\n", m_subtitle_index+1);
+            printf("Subtitle count : %d state %s : index %d\n", 
+              m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+              (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
             m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_player_subtitles.Flush();
           }
@@ -585,7 +584,9 @@ int main(int argc, char *argv[])
           if(new_index < m_omx_reader.SubtitleStreamCount())
           {
             m_subtitle_index = new_index;
-            printf("Subtitle index: %i\n", m_subtitle_index+1);
+            printf("Subtitle count : %d state %s : index %d\n", 
+              m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+              (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
             m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_player_subtitles.Flush();
           }
@@ -596,17 +597,18 @@ int main(int argc, char *argv[])
         {
           if(m_show_subtitle)
           {
-            puts("Switching off subtitles");
             m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, -1);
             m_player_subtitles.Flush();
             m_show_subtitle = false;
           }
           else
           {
-            printf("Switching on subtitle stream %i\n", m_subtitle_index+1);
             m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_show_subtitle = true;
           }
+          printf("Subtitle count : %d state %s : index %d\n", 
+            m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+            (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
         }
         break;
       case 'q':
@@ -772,8 +774,9 @@ int main(int argc, char *argv[])
     }
     else if(m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_SUBTITLE, m_omx_pkt->stream_index))
     {
-      if(m_omx_pkt->size && (m_omx_pkt->hints.codec == CODEC_ID_TEXT || 
-                             m_omx_pkt->hints.codec == CODEC_ID_SSA))
+      if(m_omx_pkt->size && m_show_subtitle &&
+          (m_omx_pkt->hints.codec == CODEC_ID_TEXT || 
+           m_omx_pkt->hints.codec == CODEC_ID_SSA))
       {
         if(m_player_subtitles.AddPacket(m_omx_pkt))
           m_omx_pkt = NULL;
