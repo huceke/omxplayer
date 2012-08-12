@@ -106,7 +106,8 @@ COMXAudio::COMXAudio() :
   m_extradata       (NULL   ),
   m_extrasize       (0      ),
   m_visBufferLength (0      ),
-  m_last_pts        (DVD_NOPTS_VALUE)
+  m_last_pts        (DVD_NOPTS_VALUE),
+  m_boost_on_downmix(true   )
 {
 }
 
@@ -231,6 +232,8 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     m_OutputChannels = chan;
 
     /* setup input channel map */
+    for (chan=0; chan<OMX_MAX_CHANNELS; chan++)
+      m_pcm_input.eChannelMapping[chan] = OMX_AUDIO_ChannelNone;
     ch = 0;
     map = 0;
     chan = 0;
@@ -858,14 +861,6 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
 
       if(!m_Passthrough)
       {
-        OMX_INIT_STRUCTURE(m_pcm_input);
-        m_pcm_input.nPortIndex      = m_omx_decoder.GetOutputPort();
-        omx_err = m_omx_decoder.GetParameter(OMX_IndexParamAudioPcm, &m_pcm_input);
-        if(omx_err != OMX_ErrorNone)
-        {
-          CLog::Log(LOGERROR, "COMXAudio::AddPackets error GetParameter 1 omx_err(0x%08x)\n", omx_err);
-        }
-
         //printf("m_omx_mixer.GetInputPort() %d m_omx_mixer.GetPutputPort() %d\n", m_omx_mixer.GetInputPort(), m_omx_mixer.GetOutputPort());
 
         /* setup mixer input */
@@ -892,6 +887,16 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
         if(omx_err != OMX_ErrorNone)
         {
           CLog::Log(LOGERROR, "COMXAudio::AddPackets error GetParameter 2  omx_err(0x%08x)\n", omx_err);
+        }
+
+        if (m_boost_on_downmix)
+        {
+          OMX_AUDIO_CONFIG_VOLUMETYPE volume;
+          OMX_INIT_STRUCTURE(volume);
+          volume.nPortIndex = m_omx_mixer.GetInputPort();
+          volume.bLinear    = OMX_FALSE;
+          volume.sVolume.nValue = (int)(12.0f*100.0f+0.5f);
+          m_omx_mixer.SetConfig(OMX_IndexConfigAudioVolume, &volume);
         }
 
         m_pcm_output.nPortIndex      = m_omx_render.GetInputPort();

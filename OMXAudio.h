@@ -124,6 +124,7 @@ private:
   // stuff for visualisation
   unsigned int  m_visBufferLength;
   double        m_last_pts;
+  bool		m_boost_on_downmix;
   short            m_visBuffer[VIS_PACKET_SIZE+2];
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;

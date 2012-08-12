@@ -229,15 +229,15 @@ int COMXAudioCodecOMX::GetData(BYTE** dst)
     int gap = 8 - m_pCodecContext->channels;
     int samples = 0;
 
-    for(int i = 0; i < size; pDst++, pSrc++, i++, samples++)
+    for(int i = 0, j = 0; i < size; pDst++, pSrc++, i++, samples++)
     {
-      if( (i%m_pCodecContext->channels) == 0)
+      *pDst = *pSrc;
+      if (++j == m_pCodecContext->channels)
       {
         pDst    +=  gap;
         samples +=  gap;
+	j = 0;
       }
-
-      *pDst = *pSrc;
     }
 
     m_iBufferSize2 = samples * 2;
