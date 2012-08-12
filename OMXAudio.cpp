@@ -898,7 +898,7 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
           CLog::Log(LOGERROR, "COMXAudio::AddPackets error GetParameter 2  omx_err(0x%08x)\n", omx_err);
         }
 
-        if (m_boost_on_downmix)
+        if (m_pcm_input.nChannels > m_pcm_output.nChannels && m_boost_on_downmix)
         {
           OMX_AUDIO_CONFIG_VOLUMETYPE volume;
           OMX_INIT_STRUCTURE(volume);
