@@ -500,7 +500,7 @@ OMXPacket *OMXReader::Read()
       pkt.pts = AV_NOPTS_VALUE;
   }
   // we need to get duration slightly different for matroska embedded text subtitels
-  if(m_bMatroska && pStream->codec->codec_id == CODEC_ID_TEXT && pkt.convergence_duration != 0)
+  if(m_bMatroska && pStream->codec->codec_id == AV_CODEC_ID_SUBRIP && pkt.convergence_duration != 0)
     pkt.duration = pkt.convergence_duration;
 
   if(m_bAVI && pStream->codec && pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO)

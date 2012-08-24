@@ -76,13 +76,13 @@ void COMXSubtitleTagSami::ConvertLine(COMXOverlayText* pOverlay, const char* lin
     else if (fullTag == "<i>" || fullTag == "{\\i1}")
     {
       m_flag[FLAG_ITALIC] = true;
-      strUTF8.insert(pos, "[I]");
+      // strUTF8.insert(pos, "[I]");
       pos += 3;
     }
     else if ((fullTag == "</i>" || fullTag == "{\\i0}") && m_flag[FLAG_ITALIC])
     {
       m_flag[FLAG_ITALIC] = false;
-      strUTF8.insert(pos, "[/I]");
+      // strUTF8.insert(pos, "[/I]");
       pos += 4;
     }
     else if ((fullTag == "</font>" || fullTag == "{\\c}") && m_flag[FLAG_COLOR])
@@ -196,6 +196,9 @@ void COMXSubtitleTagSami::ConvertLine(COMXOverlayText* pOverlay, const char* lin
 
   if( strUTF8[strUTF8.size()-1] == '\n' )
     strUTF8.erase(strUTF8.size()-1, 1);
+
+  boost::algorithm::replace_all(strUTF8, "\\n", "\n");
+  boost::algorithm::replace_all(strUTF8, "\\N", "\n");
 
   // add a new text element to our container
   pOverlay->AddElement(new COMXOverlayText::CElementText(strUTF8.c_str()));
