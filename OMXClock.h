@@ -123,7 +123,7 @@ public:
   void Deinitialize();
   bool OMXIsPaused() { return m_pause; };
   bool OMXStop(bool lock = true);
-  bool OMXStart(bool lock = true);
+  bool OMXStart(double pts, bool lock = true);
   bool OMXReset(bool lock = true);
   double OMXWallTime(bool lock = true);
   double OMXMediaTime(bool lock = true);
