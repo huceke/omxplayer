@@ -5,6 +5,8 @@ CFLAGS+=-std=c++0x -DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -
 LDFLAGS+=-L./ -lc -lWFC -lGLESv2 -lEGL -lbcm_host -lopenmaxil -lfreetype -lz -Lffmpeg_compiled/usr/local/lib/
 INCLUDES+=-I./ -Ilinux -Iffmpeg_compiled/usr/local/include/
 
+DIST ?= omxplayer-dist
+
 SRC=linux/XMemUtils.cpp \
 		utils/log.cpp \
 		DynamicDll.cpp \
@@ -49,7 +51,7 @@ clean:
 	for i in $(OBJS); do (if test -e "$$i"; then ( rm $$i ); fi ); done
 	@rm -f omxplayer.old.log omxplayer.log
 	@rm -f omxplayer.bin
-	@rm -rf omxplayer-dist
+	@rm -rf $(DIST)
 	@rm -f omxplayer-dist.tar.gz
 	make -f Makefile.ffmpeg clean
 
@@ -59,11 +61,11 @@ ffmpeg:
 	make -f Makefile.ffmpeg install
 
 dist: omxplayer.bin
-	mkdir -p omxplayer-dist/usr/lib/omxplayer
-	mkdir -p omxplayer-dist/usr/usr/bin
-	mkdir -p omxplayer-dist/usr/share/doc
-	cp omxplayer omxplayer.bin omxplayer-dist/usr/usr/bin
-	cp COPYING omxplayer-dist/usr/share/doc/
-	cp README.md omxplayer-dist/usr/share/doc/README
-	cp -a ffmpeg_compiled/usr/local/lib/*.so* omxplayer-dist/usr/lib/omxplayer/
-	tar -czf omxplayer-dist.tar.gz omxplayer-dist
+	mkdir -p $(DIST)/usr/lib/omxplayer
+	mkdir -p $(DIST)/usr/usr/bin
+	mkdir -p $(DIST)/usr/share/doc
+	cp omxplayer omxplayer.bin $(DIST)/usr/usr/bin
+	cp COPYING $(DIST)/usr/share/doc/
+	cp README.md $(DIST)/usr/share/doc/README
+	cp -a ffmpeg_compiled/usr/local/lib/*.so* $(DIST)/usr/lib/omxplayer/
+	tar -czf omxplayer-dist.tar.gz $(DIST)
