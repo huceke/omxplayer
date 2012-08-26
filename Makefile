@@ -62,9 +62,9 @@ ffmpeg:
 
 dist: omxplayer.bin
 	mkdir -p $(DIST)/usr/lib/omxplayer
-	mkdir -p $(DIST)/usr/usr/bin
+	mkdir -p $(DIST)/usr/bin
 	mkdir -p $(DIST)/usr/share/doc
-	cp omxplayer omxplayer.bin $(DIST)/usr/usr/bin
+	cp omxplayer omxplayer.bin $(DIST)/usr/bin
 	cp COPYING $(DIST)/usr/share/doc/
 	cp README.md $(DIST)/usr/share/doc/README
 	cp -a ffmpeg_compiled/usr/local/lib/*.so* $(DIST)/usr/lib/omxplayer/
