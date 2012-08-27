@@ -179,7 +179,7 @@ void FlushStreams(double pts)
 //  }
 }
 
-void SetVideoMode(int width, int height, float fps, bool is3d)
+void SetVideoMode(int width, int height, int fpsrate, int fpsscale, bool is3d)
 {
   int32_t num_modes;
   HDMI_RES_GROUP_T prefer_group;
@@ -188,6 +188,10 @@ void SetVideoMode(int width, int height, float fps, bool is3d)
   #define TV_MAX_SUPPORTED_MODES 60
   TV_SUPPORTED_MODE_T supported_modes[TV_MAX_SUPPORTED_MODES];
   uint32_t group = HDMI_RES_GROUP_CEA;
+  float fps = 60; // better to force to higher rate if no information is known
+
+  if (fpsrate && fpsscale)
+    fps = DVD_TIME_BASE / OMXReader::NormalizeFrameduration((double)DVD_TIME_BASE * fpsscale / fpsrate);
 
   if(is3d)
     group = HDMI_RES_GROUP_CEA_3D;
@@ -254,8 +258,8 @@ void SetVideoMode(int width, int height, float fps, bool is3d)
       if (w*9 != h*16) // not 16:9 is a small negative
         score += 1<<12;
 
-      printf("mode %dx%d@%d %s%s:%x score=%d\n", tv->width, tv->height, 
-             tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code, score);
+      /*printf("mode %dx%d@%d %s%s:%x score=%d\n", tv->width, tv->height, 
+             tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code, score);*/
 
       if (score < best_score) 
       {
@@ -456,7 +460,7 @@ int main(int argc, char *argv[])
     if(m_filename.find("3DSBS") != string::npos)
       m_3d = true;
 
-    SetVideoMode(m_hints_video.width, m_hints_video.height, m_player_video.GetFPS(), m_3d);
+    SetVideoMode(m_hints_video.width, m_hints_video.height, m_hints_video.fpsrate, m_hints_video.fpsscale, m_3d);
 
   }
 
