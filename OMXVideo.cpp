@@ -237,22 +237,15 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
       m_video_codec_name = "omx-vp8";
     break;
     case CODEC_ID_VC1:
+    case CODEC_ID_WMV3:
       // (role name) video_decoder.vc1
       // VC-1, WMV9
       decoder_name = OMX_VC1_DECODER;
       m_codingType = OMX_VIDEO_CodingWMV;
       m_video_codec_name = "omx-vc1";
-      break;
-    /*
-    case CODEC_ID_WMV3:
-      // (role name) video_decoder.wmv3
-      //WMV3
-      decoder_name = OMX_WMV3_DECODER;
-      m_codingType = OMX_VIDEO_CodingWMV;
-      m_video_codec_name = "omx-wmv3";
-      break;
-    */
+      break;    
     default:
+      printf("Vcodec id unknown: %x\n", hints.codec);
       return false;
     break;
   }
@@ -363,6 +356,9 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
 
   portParam.nPortIndex = m_omx_decoder.GetInputPort();
   portParam.nBufferCountActual = VIDEO_BUFFERS;
+
+  portParam.format.video.nFrameWidth  = m_decoded_width;
+  portParam.format.video.nFrameHeight = m_decoded_height;
 
   omx_err = m_omx_decoder.SetParameter(OMX_IndexParamPortDefinition, &portParam);
   if(omx_err != OMX_ErrorNone)
