@@ -851,10 +851,12 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->fpsrate      = 0;
     }
 
-    if (stream->sample_aspect_ratio.num == 0)
-      hints->aspect = 0.0f;
-    else
+    if (stream->sample_aspect_ratio.num != 0)
       hints->aspect = av_q2d(stream->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
+    else if (stream->codec->sample_aspect_ratio.num != 0)
+      hints->aspect = av_q2d(stream->codec->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
+    else
+      hints->aspect = 0.0f;
   }
 
   return true;
