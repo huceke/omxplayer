@@ -55,6 +55,7 @@ public:
   float GetDelay();
   float GetCacheTime();
   float GetCacheTotal();
+  unsigned int GetAudioRenderingLatency();
   COMXAudio();
   bool Initialize(IAudioCallback* pCallback, const CStdString& device, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode);
