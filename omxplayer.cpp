@@ -100,6 +100,12 @@ static void restore_termios (int status, void * arg)
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
 }
 
+static int orig_fl;
+static void restore_fl(int status, void * arg)
+{
+  fcntl(STDIN_FILENO, F_SETFL, orig_fl);
+}
+
 void sig_handler(int s)
 {
   printf("strg-c catched\n");
@@ -289,20 +295,29 @@ int main(int argc, char *argv[])
 {
   signal(SIGINT, sig_handler);
 
-  struct termios new_termios;
+  if (isatty(STDIN_FILENO))
+  {
+    struct termios new_termios;
 
-  tcgetattr(STDIN_FILENO, &orig_termios);
+    tcgetattr(STDIN_FILENO, &orig_termios);
 
-  new_termios             = orig_termios;
-  new_termios.c_lflag     &= ~(ICANON | ECHO | ECHOCTL | ECHONL);
-  new_termios.c_cflag     |= HUPCL;
-  new_termios.c_cc[VMIN]  = 0;
+    new_termios             = orig_termios;
+    new_termios.c_lflag     &= ~(ICANON | ECHO | ECHOCTL | ECHONL);
+    new_termios.c_cflag     |= HUPCL;
+    new_termios.c_cc[VMIN]  = 0;
+
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
+    on_exit(restore_termios, &orig_termios);
+  }
+  else
+  {
+    orig_fl = fcntl(STDIN_FILENO, F_GETFL);
+    fcntl(STDIN_FILENO, F_SETFL, orig_fl | O_NONBLOCK);
+    on_exit(restore_fl, NULL);
+  }
 
   std::string last_sub = "";
-
-  tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-  on_exit(restore_termios, &orig_termios);
-
   std::string            m_filename;
   double                m_incr                = 0;
   CRBP                  g_RBP;
