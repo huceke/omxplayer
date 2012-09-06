@@ -95,13 +95,13 @@ float             m_display_aspect      = 0.0f;
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
 static struct termios orig_termios;
-static void restore_termios (int status, void * arg)
+static void restore_termios()
 {
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
 }
 
 static int orig_fl;
-static void restore_fl(int status, void * arg)
+static void restore_fl()
 {
   fcntl(STDIN_FILENO, F_SETFL, orig_fl);
 }
@@ -308,13 +308,13 @@ int main(int argc, char *argv[])
 
 
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-    on_exit(restore_termios, &orig_termios);
+    atexit(restore_termios);
   }
   else
   {
     orig_fl = fcntl(STDIN_FILENO, F_GETFL);
     fcntl(STDIN_FILENO, F_SETFL, orig_fl | O_NONBLOCK);
-    on_exit(restore_fl, NULL);
+    atexit(restore_fl);
   }
 
   std::string last_sub = "";
