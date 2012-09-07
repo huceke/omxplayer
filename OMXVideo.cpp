@@ -1086,18 +1086,18 @@ void COMXVideo::WaitCompletion()
     return;
   }
 
-  clock_gettime(CLOCK_REALTIME, &starttime);
+  // clock_gettime(CLOCK_REALTIME, &starttime);
 
   while(true)
   {
     if(m_omx_render.IsEOS())
       break;
-    clock_gettime(CLOCK_REALTIME, &endtime);
-    if((endtime.tv_sec - starttime.tv_sec) > 5)
-    {
-      CLog::Log(LOGERROR, "%s::%s - wait for eos timed out\n", CLASSNAME, __func__);
-      break;
-    }
+    // clock_gettime(CLOCK_REALTIME, &endtime);
+    // if((endtime.tv_sec - starttime.tv_sec) > 5)
+    // {
+    //   CLog::Log(LOGERROR, "%s::%s - wait for eos timed out\n", CLASSNAME, __func__);
+    //   break;
+    // }
     OMXClock::OMXSleep(50);
   }
 
