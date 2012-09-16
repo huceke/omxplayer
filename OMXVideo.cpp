@@ -534,7 +534,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
     return false;
   }
 
-  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer(10);
+  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer();
   if(!omx_buffer)
     return false;
   omx_err = m_omx_text.FillThisBuffer(omx_buffer);
@@ -715,7 +715,7 @@ unsigned int COMXVideo::GetSize()
 
 OMXPacket *COMXVideo::GetText()
 {
-  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer(10);
+  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer();
   OMXPacket *pkt = NULL;
 
   if(omx_buffer)

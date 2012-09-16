@@ -1,6 +1,6 @@
 #pragma once
 /*
- *      Copyright (C) 2010 Team XBMC
+ *      Copyright (C) 2010-2012 Team XBMC
  *      http://www.xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -14,9 +14,8 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *  http://www.gnu.org/copyleft/gpl.html
+ *  along with XBMC; see the file COPYING.  If not, see
+ *  <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -76,6 +75,7 @@ public:
   OMX_ERRORTYPE Deestablish(bool noWait = false);
   OMX_ERRORTYPE Establish(bool portSettingsChanged);
 private:
+  pthread_mutex_t   m_lock;
   bool              m_portSettingsChanged;
   COMXCoreComponent *m_src_component;
   COMXCoreComponent *m_dst_component;
@@ -83,6 +83,8 @@ private:
   unsigned int      m_dst_port;
   DllOMX            *m_DllOMX;
   bool              m_DllOMXOpen;
+  void              Lock();
+  void              UnLock();
 };
 
 class COMXCoreComponent
@@ -99,7 +101,6 @@ public:
   OMX_ERRORTYPE DisableAllPorts();
   void          Remove(OMX_EVENTTYPE eEvent, OMX_U32 nData1, OMX_U32 nData2);
   OMX_ERRORTYPE AddEvent(OMX_EVENTTYPE eEvent, OMX_U32 nData1, OMX_U32 nData2);
-  //bool          GotError(OMX_ERRORTYPE errorType);
   OMX_ERRORTYPE WaitForEvent(OMX_EVENTTYPE event, long timeout = 300);
   OMX_ERRORTYPE WaitForCommand(OMX_U32 command, OMX_U32 nData2, long timeout = 2000);
   OMX_ERRORTYPE SetStateForComponent(OMX_STATETYPE state);
@@ -147,10 +148,10 @@ public:
   void FlushOutput();
 
   OMX_BUFFERHEADERTYPE *GetInputBuffer(long timeout=200);
-  OMX_BUFFERHEADERTYPE *GetOutputBuffer(long timeout=200);
+  OMX_BUFFERHEADERTYPE *GetOutputBuffer();
 
-  OMX_ERRORTYPE AllocInputBuffers(void);
-  OMX_ERRORTYPE AllocOutputBuffers(void);
+  OMX_ERRORTYPE AllocInputBuffers(bool use_buffers = false);
+  OMX_ERRORTYPE AllocOutputBuffers(bool use_buffers = false);
 
   OMX_ERRORTYPE FreeInputBuffers(bool wait);
   OMX_ERRORTYPE FreeOutputBuffers(bool wait);
@@ -161,9 +162,9 @@ private:
   OMX_HANDLETYPE m_handle;
   unsigned int   m_input_port;
   unsigned int   m_output_port;
-  int            m_ports_enabled[OMX_MAX_PORTS];
   std::string    m_componentName;
   pthread_mutex_t   m_omx_event_mutex;
+  pthread_mutex_t   m_lock;
   std::vector<omx_event> m_omx_events;
 
   OMX_CALLBACKTYPE  m_callbacks;
@@ -175,6 +176,7 @@ private:
   unsigned int  m_input_alignment;
   unsigned int  m_input_buffer_size;
   unsigned int  m_input_buffer_count;
+  bool          m_omx_input_use_buffers;
 
   // OMXCore output buffers (video frames)
   pthread_mutex_t   m_omx_output_mutex;
@@ -183,6 +185,8 @@ private:
   unsigned int  m_output_alignment;
   unsigned int  m_output_buffer_size;
   unsigned int  m_output_buffer_count;
+  bool          m_omx_output_use_buffers;
+  sem_t         m_omx_fill_buffer_done;
 
   bool          m_exit;
   DllOMX        *m_DllOMX;
@@ -193,6 +197,8 @@ private:
   bool          m_eos;
   bool          m_flush_input;
   bool          m_flush_output;
+  void              Lock();
+  void              UnLock();
 };
 
 class COMXCore
