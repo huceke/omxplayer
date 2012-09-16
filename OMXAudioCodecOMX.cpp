@@ -305,36 +305,90 @@ void COMXAudioCodecOMX::BuildChannelMap()
   m_channels = m_pCodecContext->channels;
   m_layout   = m_pCodecContext->channel_layout;
 
-  int64_t layout;
-
-  int bits = count_bits(m_pCodecContext->channel_layout);
-  if (bits == m_pCodecContext->channels)
-    layout = m_pCodecContext->channel_layout;
+  int index = 0;
+  if(m_pCodecContext->codec_id == CODEC_ID_AAC && m_pCodecContext->channels == 3)
+  {
+    m_channelMap[index++] = PCM_FRONT_CENTER;
+    m_channelMap[index++] = PCM_FRONT_LEFT;
+    m_channelMap[index++] = PCM_FRONT_RIGHT;
+  }
+  else if(m_pCodecContext->codec_id == CODEC_ID_AAC && m_pCodecContext->channels == 4)
+  {
+    m_channelMap[index++] = PCM_FRONT_CENTER;
+    m_channelMap[index++] = PCM_FRONT_LEFT;
+    m_channelMap[index++] = PCM_FRONT_RIGHT;
+    m_channelMap[index++] = PCM_BACK_CENTER;
+  }
+  else if(m_pCodecContext->codec_id == CODEC_ID_AAC && m_pCodecContext->channels == 5)
+  {
+    m_channelMap[index++] = PCM_FRONT_CENTER;
+    m_channelMap[index++] = PCM_FRONT_LEFT;
+    m_channelMap[index++] = PCM_FRONT_RIGHT;
+    m_channelMap[index++] = PCM_BACK_LEFT;
+    m_channelMap[index++] = PCM_BACK_RIGHT;
+  }
+  else if(m_pCodecContext->codec_id == CODEC_ID_AAC && m_pCodecContext->channels == 6)
+  {
+    m_channelMap[index++] = PCM_FRONT_CENTER;
+    m_channelMap[index++] = PCM_FRONT_LEFT;
+    m_channelMap[index++] = PCM_FRONT_RIGHT;
+    m_channelMap[index++] = PCM_BACK_LEFT;
+    m_channelMap[index++] = PCM_BACK_RIGHT;
+    m_channelMap[index++] = PCM_LOW_FREQUENCY;
+  }
+  else if(m_pCodecContext->codec_id == CODEC_ID_AAC && m_pCodecContext->channels == 7)
+  {
+    m_channelMap[index++] = PCM_FRONT_CENTER;
+    m_channelMap[index++] = PCM_FRONT_LEFT;
+    m_channelMap[index++] = PCM_FRONT_RIGHT;
+    m_channelMap[index++] = PCM_BACK_LEFT;
+    m_channelMap[index++] = PCM_BACK_RIGHT;
+    m_channelMap[index++] = PCM_BACK_CENTER;
+    m_channelMap[index++] = PCM_LOW_FREQUENCY;
+  }
+  else if(m_pCodecContext->codec_id == CODEC_ID_AAC && m_pCodecContext->channels == 8)
+  {
+    m_channelMap[index++] = PCM_FRONT_CENTER;
+    m_channelMap[index++] = PCM_SIDE_LEFT;
+    m_channelMap[index++] = PCM_SIDE_RIGHT;
+    m_channelMap[index++] = PCM_FRONT_LEFT;
+    m_channelMap[index++] = PCM_FRONT_RIGHT;
+    m_channelMap[index++] = PCM_BACK_LEFT;
+    m_channelMap[index++] = PCM_BACK_RIGHT;
+    m_channelMap[index++] = PCM_LOW_FREQUENCY;
+  }
   else
   {
-    CLog::Log(LOGINFO, "COMXAudioCodecOMX::GetChannelMap - FFmpeg reported %d channels, but the layout contains %d ignoring", m_pCodecContext->channels, bits);
-    layout = m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels);
-  }
 
-  int index = 0;
-  if (layout & AV_CH_FRONT_LEFT           ) m_channelMap[index++] = PCM_FRONT_LEFT           ;
-  if (layout & AV_CH_FRONT_RIGHT          ) m_channelMap[index++] = PCM_FRONT_RIGHT          ;
-  if (layout & AV_CH_FRONT_CENTER         ) m_channelMap[index++] = PCM_FRONT_CENTER         ;
-  if (layout & AV_CH_LOW_FREQUENCY        ) m_channelMap[index++] = PCM_LOW_FREQUENCY        ;
-  if (layout & AV_CH_BACK_LEFT            ) m_channelMap[index++] = PCM_BACK_LEFT            ;
-  if (layout & AV_CH_BACK_RIGHT           ) m_channelMap[index++] = PCM_BACK_RIGHT           ;
-  if (layout & AV_CH_FRONT_LEFT_OF_CENTER ) m_channelMap[index++] = PCM_FRONT_LEFT_OF_CENTER ;
-  if (layout & AV_CH_FRONT_RIGHT_OF_CENTER) m_channelMap[index++] = PCM_FRONT_RIGHT_OF_CENTER;
-  if (layout & AV_CH_BACK_CENTER          ) m_channelMap[index++] = PCM_BACK_CENTER          ;
-  if (layout & AV_CH_SIDE_LEFT            ) m_channelMap[index++] = PCM_SIDE_LEFT            ;
-  if (layout & AV_CH_SIDE_RIGHT           ) m_channelMap[index++] = PCM_SIDE_RIGHT           ;
-  if (layout & AV_CH_TOP_CENTER           ) m_channelMap[index++] = PCM_TOP_CENTER           ;
-  if (layout & AV_CH_TOP_FRONT_LEFT       ) m_channelMap[index++] = PCM_TOP_FRONT_LEFT       ;
-  if (layout & AV_CH_TOP_FRONT_CENTER     ) m_channelMap[index++] = PCM_TOP_FRONT_CENTER     ;
-  if (layout & AV_CH_TOP_FRONT_RIGHT      ) m_channelMap[index++] = PCM_TOP_FRONT_RIGHT      ;
-  if (layout & AV_CH_TOP_BACK_LEFT        ) m_channelMap[index++] = PCM_TOP_BACK_LEFT        ;
-  if (layout & AV_CH_TOP_BACK_CENTER      ) m_channelMap[index++] = PCM_TOP_BACK_CENTER      ;
-  if (layout & AV_CH_TOP_BACK_RIGHT       ) m_channelMap[index++] = PCM_TOP_BACK_RIGHT       ;
+    int64_t layout;
+    int bits = count_bits(m_pCodecContext->channel_layout);
+    if (bits == m_pCodecContext->channels)
+      layout = m_pCodecContext->channel_layout;
+    else
+    {
+      CLog::Log(LOGINFO, "COMXAudioCodecOMX::GetChannelMap - FFmpeg reported %d channels, but the layout contains %d ignoring", m_pCodecContext->channels, bits);
+      layout = m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels);
+    }
+
+    if (layout & AV_CH_FRONT_LEFT           ) m_channelMap[index++] = PCM_FRONT_LEFT           ;
+    if (layout & AV_CH_FRONT_RIGHT          ) m_channelMap[index++] = PCM_FRONT_RIGHT          ;
+    if (layout & AV_CH_FRONT_CENTER         ) m_channelMap[index++] = PCM_FRONT_CENTER         ;
+    if (layout & AV_CH_LOW_FREQUENCY        ) m_channelMap[index++] = PCM_LOW_FREQUENCY        ;
+    if (layout & AV_CH_BACK_LEFT            ) m_channelMap[index++] = PCM_BACK_LEFT            ;
+    if (layout & AV_CH_BACK_RIGHT           ) m_channelMap[index++] = PCM_BACK_RIGHT           ;
+    if (layout & AV_CH_FRONT_LEFT_OF_CENTER ) m_channelMap[index++] = PCM_FRONT_LEFT_OF_CENTER ;
+    if (layout & AV_CH_FRONT_RIGHT_OF_CENTER) m_channelMap[index++] = PCM_FRONT_RIGHT_OF_CENTER;
+    if (layout & AV_CH_BACK_CENTER          ) m_channelMap[index++] = PCM_BACK_CENTER          ;
+    if (layout & AV_CH_SIDE_LEFT            ) m_channelMap[index++] = PCM_SIDE_LEFT            ;
+    if (layout & AV_CH_SIDE_RIGHT           ) m_channelMap[index++] = PCM_SIDE_RIGHT           ;
+    if (layout & AV_CH_TOP_CENTER           ) m_channelMap[index++] = PCM_TOP_CENTER           ;
+    if (layout & AV_CH_TOP_FRONT_LEFT       ) m_channelMap[index++] = PCM_TOP_FRONT_LEFT       ;
+    if (layout & AV_CH_TOP_FRONT_CENTER     ) m_channelMap[index++] = PCM_TOP_FRONT_CENTER     ;
+    if (layout & AV_CH_TOP_FRONT_RIGHT      ) m_channelMap[index++] = PCM_TOP_FRONT_RIGHT      ;
+    if (layout & AV_CH_TOP_BACK_LEFT        ) m_channelMap[index++] = PCM_TOP_BACK_LEFT        ;
+    if (layout & AV_CH_TOP_BACK_CENTER      ) m_channelMap[index++] = PCM_TOP_BACK_CENTER      ;
+    if (layout & AV_CH_TOP_BACK_RIGHT       ) m_channelMap[index++] = PCM_TOP_BACK_RIGHT       ;
+  }
 
   //terminate the channel map
   m_channelMap[index] = PCM_INVALID;

@@ -45,22 +45,24 @@
 
 using namespace std;
 
-#define OMX_MAX_CHANNELS 8
+#define OMX_MAX_CHANNELS 9
 
 static enum PCMChannels OMXChannelMap[OMX_MAX_CHANNELS] =
 {
-  PCM_FRONT_LEFT  , PCM_FRONT_RIGHT  ,
+  PCM_FRONT_LEFT  , PCM_FRONT_RIGHT,
   PCM_FRONT_CENTER, PCM_LOW_FREQUENCY,
-  PCM_BACK_LEFT   , PCM_BACK_RIGHT   ,
-  PCM_SIDE_LEFT   , PCM_SIDE_RIGHT
+  PCM_BACK_LEFT   , PCM_BACK_RIGHT,
+  PCM_SIDE_LEFT   , PCM_SIDE_RIGHT,
+  PCM_BACK_CENTER
 };
 
 static enum OMX_AUDIO_CHANNELTYPE OMXChannels[OMX_MAX_CHANNELS] =
 {
   OMX_AUDIO_ChannelLF, OMX_AUDIO_ChannelRF,
   OMX_AUDIO_ChannelCF, OMX_AUDIO_ChannelLFE,
-  OMX_AUDIO_ChannelLR, OMX_AUDIO_ChannelRR ,
-  OMX_AUDIO_ChannelLS, OMX_AUDIO_ChannelRS
+  OMX_AUDIO_ChannelLR, OMX_AUDIO_ChannelRR,
+  OMX_AUDIO_ChannelLS, OMX_AUDIO_ChannelRS,
+  OMX_AUDIO_ChannelCS
 };
 
 static unsigned int WAVEChannels[OMX_MAX_CHANNELS] =
@@ -68,7 +70,8 @@ static unsigned int WAVEChannels[OMX_MAX_CHANNELS] =
   SPEAKER_FRONT_LEFT,       SPEAKER_FRONT_RIGHT,
   SPEAKER_TOP_FRONT_CENTER, SPEAKER_LOW_FREQUENCY,
   SPEAKER_BACK_LEFT,        SPEAKER_BACK_RIGHT,
-  SPEAKER_SIDE_LEFT,        SPEAKER_SIDE_RIGHT
+  SPEAKER_SIDE_LEFT,        SPEAKER_SIDE_RIGHT,
+  SPEAKER_BACK_CENTER
 };
 
 static const uint16_t AC3Bitrates[] = {32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 576, 640};
@@ -215,7 +218,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     m_OutputChannels = 0;
     int ch = 0, map;
     int chan = 0;
-    while(outLayout[ch] != PCM_INVALID && chan < OMX_MAX_CHANNELS)
+    while(outLayout[ch] != PCM_INVALID && chan < OMX_AUDIO_MAXCHANNELS)
     {
       for(map = 0; map < OMX_MAX_CHANNELS; ++map)
       {
@@ -232,8 +235,9 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     m_OutputChannels = chan;
 
     /* setup input channel map */
-    for (chan=0; chan<OMX_MAX_CHANNELS; chan++)
+    for (chan=0; chan < OMX_AUDIO_MAXCHANNELS; chan++)
       m_pcm_input.eChannelMapping[chan] = OMX_AUDIO_ChannelNone;
+
     ch = 0;
     map = 0;
     chan = 0;
