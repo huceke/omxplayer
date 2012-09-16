@@ -245,7 +245,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
     }
   }
 
-  printf("file : %s reult %d format %s audio streams %d video streams %d chapters %d subtitles %d\n", 
+  printf("file : %s result %d format %s audio streams %d video streams %d chapters %d subtitles %d\n", 
       m_filename.c_str(), result, m_pFormatContext->iformat->name, m_audio_count, m_video_count, m_chapter_count, m_subtitle_count);
 
 
@@ -658,6 +658,9 @@ void OMXReader::AddStream(int id)
     return;
 
   AVStream *pStream = m_pFormatContext->streams[id];
+  // discard MJPEG stream as we don't support it, and it stops mp3 files playing with album art
+  if (pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO && (pStream->codec->codec_id == CODEC_ID_MJPEG || pStream->codec->codec_id == CODEC_ID_MJPEGB))
+    return;
 
   switch (pStream->codec->codec_type)
   {
