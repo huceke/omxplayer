@@ -118,7 +118,7 @@ void print_usage()
   printf("Usage: omxplayer [OPTIONS] [FILE]\n");
   printf("Options :\n");
   printf("         -h / --help                    print this help\n");
-  printf("         -a / --alang language          audio language        : e.g. ger\n");
+//  printf("         -a / --alang language          audio language        : e.g. ger\n");
   printf("         -n / --aidx  index             audio stream index    : e.g. 1\n");
   printf("         -o / --adev  device            audio out device      : e.g. hdmi/local\n");
   printf("         -i / --info                    dump stream format and exit\n");
