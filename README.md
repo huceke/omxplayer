@@ -81,10 +81,10 @@ While playing you can use the following keys to control omxplayer:
     m			Next Subtitle stream
     s			Toggle subtitles
     q			Exit OMXPlayer
-    Space or p		Pause/Resume
+    Space or p	Pause/Resume
     -			Decrease Volume
     +			Increase Volume
-    Left Arrow		Seek -30
-    Right Arrow		Seek +30
-    Down Arrow		Seek -600
-    Up Arrow		Seek +600
+    Left Arrow	Seek -30
+    Right Arrow	Seek +30
+    Down Arrow	Seek -600
+    Up Arrow	Seek +600
