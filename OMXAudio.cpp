@@ -110,7 +110,7 @@ COMXAudio::COMXAudio() :
   m_extrasize       (0      ),
   m_visBufferLength (0      ),
   m_last_pts        (DVD_NOPTS_VALUE),
-  m_boost_on_downmix(true   )
+  m_boost_on_downmix(false  )
 {
 }
 
