@@ -250,7 +250,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
     break;
   }
 
-  if(m_decoded_width <= 720 && m_decoded_height <=576 && deinterlace)
+  if(deinterlace)
   {
     printf("enable deinterlace\n");
     m_deinterlace = true;
