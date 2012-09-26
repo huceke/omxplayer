@@ -661,11 +661,11 @@ int main(int argc, char *argv[])
         }
         break;
       case '-':
-        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() - 50);
+        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() - 300);
         printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
         break;
       case '+':
-        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 50);
+        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 300);
         printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
         break;
       default:

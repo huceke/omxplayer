@@ -59,7 +59,7 @@ public:
   COMXAudio();
   bool Initialize(IAudioCallback* pCallback, const CStdString& device, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode);
-  bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic=false, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE);
+  bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic=false, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE);
   ~COMXAudio();
 
   unsigned int AddPackets(const void* data, unsigned int len);
@@ -110,6 +110,7 @@ private:
   unsigned int  m_ChunkLen;
   unsigned int  m_InputChannels;
   unsigned int  m_OutputChannels;
+  unsigned int  m_downmix_channels;
   unsigned int  m_BitsPerSample;
   COMXCoreComponent *m_omx_clock;
   OMXClock       *m_av_clock;
@@ -125,7 +126,6 @@ private:
   // stuff for visualisation
   unsigned int  m_visBufferLength;
   double        m_last_pts;
-  bool		m_boost_on_downmix;
   short            m_visBuffer[VIS_PACKET_SIZE+2];
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
