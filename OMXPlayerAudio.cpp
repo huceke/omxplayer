@@ -616,12 +616,14 @@ bool OMXPlayerAudio::OpenDecoder()
   }
   else
   {
+    unsigned int downmix_channels = m_hints.channels;
+
     /* omx needs 6 channels packed into 8 for PCM */
     if(m_hints.channels == 6)
       m_hints.channels = 8;
 
     bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_hints.channels, m_pChannelMap,
-                                             m_hints.samplerate, m_hints.bitspersample, 
+                                             downmix_channels, m_hints.samplerate, m_hints.bitspersample,
                                              false, false, m_passthrough);
   }
 

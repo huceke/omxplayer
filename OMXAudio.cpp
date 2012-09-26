@@ -43,6 +43,8 @@
 #define VOLUME_MINIMUM -6000  // -60dB
 #endif
 
+#include <algorithm>
+
 using namespace std;
 
 #define OMX_MAX_CHANNELS 9
@@ -79,6 +81,33 @@ static const uint16_t AC3FSCod   [] = {48000, 44100, 32000, 0};
 
 static const uint16_t DTSFSCod   [] = {0, 8000, 16000, 32000, 0, 0, 11025, 22050, 44100, 0, 0, 12000, 24000, 48000, 0, 0};
 
+// Dolby 5.1 downmixing coefficients
+const float downmixing_coefficients_6[16] = {
+  //        L       R
+  /* L */   1,      0,
+  /* R */   0,      1,
+  /* C */   0.7071, 0.7071,
+  /* LFE */ 0.7071, 0.7071,
+  /* Ls */  0.7071, 0,
+  /* Rs */  0,      0.7071,
+  /* Lr */  0,      0,
+  /* Rr */  0,      0
+};
+
+// 7.1 downmixing coefficients
+const float downmixing_coefficients_8[16] = {
+  //        L       R
+  /* L */   1,      0,
+  /* R */   0,      1,
+  /* C */   0.7071, 0.7071,
+  /* LFE */ 0.7071, 0.7071,
+  /* Ls */  0.7071, 0,
+  /* Rs */  0,      0.7071,
+  /* Lr */  0.7071, 0,
+  /* Rr */  0,      0.7071
+};
+
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -96,6 +125,7 @@ COMXAudio::COMXAudio() :
   m_ChunkLen        (0      ),
   m_InputChannels   (0      ),
   m_OutputChannels  (0      ),
+  m_downmix_channels(0      ),
   m_BitsPerSample   (0      ),
   m_omx_clock       (NULL   ),
   m_av_clock        (NULL   ),
@@ -109,8 +139,7 @@ COMXAudio::COMXAudio() :
   m_extradata       (NULL   ),
   m_extrasize       (0      ),
   m_visBufferLength (0      ),
-  m_last_pts        (DVD_NOPTS_VALUE),
-  m_boost_on_downmix(true   )
+  m_last_pts        (DVD_NOPTS_VALUE)
 {
 }
 
@@ -153,7 +182,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   return Initialize(pCallback, device, hints.channels, channelMap, hints.samplerate, hints.bitspersample, false, false, bPassthrough);
 }
 
-bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, EEncoded bPassthrough)
+bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, EEncoded bPassthrough)
 {
   std::string deviceuse;
   if(device == "hdmi") {
@@ -189,6 +218,8 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
 #else
   m_CurrentVolume = 0;
 #endif
+
+  m_downmix_channels = downmixChannels;
 
   m_InputChannels = iChannels;
   m_remap.Reset();
@@ -701,17 +732,83 @@ void COMXAudio::Mute(bool bMute)
 bool COMXAudio::SetCurrentVolume(long nVolume)
 {
   if(!m_Initialized || m_Passthrough)
-    return -1;
+    return false;
 
   m_CurrentVolume = nVolume;
 
-  OMX_AUDIO_CONFIG_VOLUMETYPE volume;
-  OMX_INIT_STRUCTURE(volume);
-  volume.nPortIndex = m_omx_render.GetInputPort();
+  if((m_downmix_channels == 6 || m_downmix_channels == 8) &&
+     m_OutputChannels == 2)
+  {
+    // Convert from millibels to amplitude ratio
+    double r = pow(10, nVolume / 2000.0);
 
-  volume.sVolume.nValue = nVolume;
+    const float* coeff = NULL;
 
-  m_omx_render.SetConfig(OMX_IndexConfigAudioVolume, &volume);
+    switch(m_downmix_channels)
+    {
+      case 6:
+        coeff = downmixing_coefficients_6;
+        break;
+      case 8:
+        coeff = downmixing_coefficients_8;
+        break;
+      default:
+        assert(0);
+    }
+
+    double sum_L = 0;
+    double sum_R = 0;
+    for(size_t i = 0; i < 16; ++i)
+    {
+      if(i & 1)
+        sum_R += coeff[i];
+      else
+        sum_L += coeff[i];
+    }
+    double normalization = 1 / max(sum_L, sum_R);
+    
+    // printf("normalization: %f\n", normalization);
+
+    double s = r * normalization;
+
+    OMX_CONFIG_BRCMAUDIODOWNMIXCOEFFICIENTS mix;
+    OMX_INIT_STRUCTURE(mix);
+    mix.nPortIndex = m_omx_mixer.GetInputPort();
+
+    static_assert(sizeof(mix.coeff)/sizeof(mix.coeff[0]) == 16,
+        "Unexpected OMX_CONFIG_BRCMAUDIODOWNMIXCOEFFICIENTS::coeff length");
+
+    for(size_t i = 0; i < 16; ++i)
+      mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * s));
+
+    OMX_ERRORTYPE omx_err =
+      m_omx_mixer.SetConfig(OMX_IndexConfigBrcmAudioDownmixCoefficients, &mix);
+
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s - error setting OMX_IndexConfigBrcmAudioDownmixCoefficients, error 0x%08x\n",
+                CLASSNAME, __func__, omx_err);
+      return false;
+    }
+  }
+  else
+  {
+    OMX_AUDIO_CONFIG_VOLUMETYPE volume;
+    OMX_INIT_STRUCTURE(volume);
+    volume.nPortIndex = m_omx_render.GetInputPort();
+
+    volume.sVolume.nValue = nVolume;
+
+    OMX_ERRORTYPE omx_err =
+      m_omx_render.SetConfig(OMX_IndexConfigAudioVolume, &volume);
+
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s - error setting OMX_IndexConfigAudioVolume, error 0x%08x\n",
+                CLASSNAME, __func__, omx_err);
+      return false;
+    }
+  }
 
   return true;
 }
@@ -900,16 +997,6 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
         if(omx_err != OMX_ErrorNone)
         {
           CLog::Log(LOGERROR, "COMXAudio::AddPackets error GetParameter 2  omx_err(0x%08x)\n", omx_err);
-        }
-
-        if (m_pcm_input.nChannels > m_pcm_output.nChannels && m_boost_on_downmix)
-        {
-          OMX_AUDIO_CONFIG_VOLUMETYPE volume;
-          OMX_INIT_STRUCTURE(volume);
-          volume.nPortIndex = m_omx_mixer.GetInputPort();
-          volume.bLinear    = OMX_FALSE;
-          volume.sVolume.nValue = (int)(12.0f*100.0f+0.5f);
-          m_omx_mixer.SetConfig(OMX_IndexConfigAudioVolume, &volume);
         }
 
         m_pcm_output.nPortIndex      = m_omx_render.GetInputPort();
