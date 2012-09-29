@@ -43,7 +43,6 @@ Using OMXPlayer
     Usage: omxplayer [OPTIONS] [FILE]
     Options :
              -h / --help                    print this help
-             -a / --alang language          audio language        : e.g. ger
              -n / --aidx  index             audio stream index    : e.g. 1
              -o / --adev  device            audio out device      : e.g. hdmi/local
              -i / --info                    dump stream format and exit
