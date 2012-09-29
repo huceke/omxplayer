@@ -91,6 +91,7 @@ bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
+bool              m_boost_on_downmix    = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -130,6 +131,7 @@ void print_usage()
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
+  printf("              --boost-on-downmix        boost volume when downmixing\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
   printf("              --font-size size          font size as thousandths of screen height\n");
@@ -329,6 +331,8 @@ int main(int argc, char *argv[])
   double                startpts              = 0;
   TV_GET_STATE_RESP_T   tv_state;
 
+  const int boost_on_downmix_opt = 0x200;
+
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
     { "help",         no_argument,        NULL,          'h' },
@@ -345,6 +349,7 @@ int main(int argc, char *argv[])
     { "font",         required_argument,  NULL,          0x100 },
     { "font-size",    required_argument,  NULL,          0x101 },
     { "align",        required_argument,  NULL,          0x102 },
+    { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -412,6 +417,9 @@ int main(int argc, char *argv[])
           m_centered = true;
         else
           m_centered = false;
+        break;
+      case boost_on_downmix_opt:
+        m_boost_on_downmix = true;
         break;
       case 0:
         break;
@@ -511,7 +519,8 @@ int main(int argc, char *argv[])
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
-                                         m_passthrough, m_use_hw_audio, m_thread_player))
+                                         m_passthrough, m_use_hw_audio,
+                                         m_boost_on_downmix, m_thread_player))
     goto do_exit;
 
   m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);

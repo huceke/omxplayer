@@ -120,6 +120,7 @@ COMXAudio::COMXAudio() :
   m_CurrentVolume   (0      ),
   m_Passthrough     (false  ),
   m_HWDecode        (false  ),
+  m_normalize_downmix(true   ),
   m_BytesPerSec     (0      ),
   m_BufferLen       (0      ),
   m_ChunkLen        (0      ),
@@ -151,7 +152,8 @@ COMXAudio::~COMXAudio()
 
 
 bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode)
+                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode,
+                           bool boostOnDownmix)
 {
   m_HWDecode = false;
   m_Passthrough = false;
@@ -179,10 +181,10 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     memcpy(m_extradata, hints.extradata, hints.extrasize);
   }
 
-  return Initialize(pCallback, device, hints.channels, channelMap, hints.samplerate, hints.bitspersample, false, false, bPassthrough);
+  return Initialize(pCallback, device, hints.channels, channelMap, hints.channels, hints.samplerate, hints.bitspersample, false, boostOnDownmix, false, bPassthrough);
 }
 
-bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, EEncoded bPassthrough)
+bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic, EEncoded bPassthrough)
 {
   std::string deviceuse;
   if(device == "hdmi") {
@@ -220,6 +222,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
 #endif
 
   m_downmix_channels = downmixChannels;
+  m_normalize_downmix = !boostOnDownmix;
 
   m_InputChannels = iChannels;
   m_remap.Reset();
@@ -756,20 +759,21 @@ bool COMXAudio::SetCurrentVolume(long nVolume)
         assert(0);
     }
 
-    double sum_L = 0;
-    double sum_R = 0;
-    for(size_t i = 0; i < 16; ++i)
+    if(m_normalize_downmix)
     {
-      if(i & 1)
-        sum_R += coeff[i];
-      else
-        sum_L += coeff[i];
-    }
-    double normalization = 1 / max(sum_L, sum_R);
-    
-    // printf("normalization: %f\n", normalization);
+      double sum_L = 0;
+      double sum_R = 0;
 
-    double s = r * normalization;
+      for(size_t i = 0; i < 16; ++i)
+      {
+        if(i & 1)
+          sum_R += coeff[i];
+        else
+          sum_L += coeff[i];
+      }
+
+      r /= max(sum_L, sum_R);
+    }
 
     OMX_CONFIG_BRCMAUDIODOWNMIXCOEFFICIENTS mix;
     OMX_INIT_STRUCTURE(mix);
@@ -779,7 +783,7 @@ bool COMXAudio::SetCurrentVolume(long nVolume)
         "Unexpected OMX_CONFIG_BRCMAUDIODOWNMIXCOEFFICIENTS::coeff length");
 
     for(size_t i = 0; i < 16; ++i)
-      mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * s));
+      mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * r));
 
     OMX_ERRORTYPE omx_err =
       m_omx_mixer.SetConfig(OMX_IndexConfigBrcmAudioDownmixCoefficients, &mix);
