@@ -75,6 +75,7 @@ protected:
   bool                      m_use_hw_decode;
   IAudioRenderer::EEncoded  m_passthrough;
   bool                      m_hw_decode;
+  bool                      m_boost_on_downmix;
   bool                      m_bMpeg;
   bool                      m_bAbort;
   bool                      m_use_thread; 
@@ -108,7 +109,8 @@ public:
   OMXPlayerAudio();
   ~OMXPlayerAudio();
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-            std::string device, bool passthrough, bool hw_decode, bool use_thread);
+            std::string device, bool passthrough, bool hw_decode,
+            bool boost_on_downmix, bool use_thread);
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();

@@ -99,7 +99,8 @@ void OMXPlayerAudio::UnLockDecoder()
 }
 
 bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-                          std::string device, bool passthrough, bool hw_decode, bool use_thread)
+                          std::string device, bool passthrough, bool hw_decode,
+                          bool boost_on_downmix, bool use_thread)
 {
   if(ThreadHandle())
     Close();
@@ -117,6 +118,7 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_hw_decode   = false;
   m_use_passthrough = passthrough;
   m_use_hw_decode   = hw_decode;
+  m_boost_on_downmix = boost_on_downmix;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
   m_bMpeg       = m_omx_reader->IsMpegVideo();
@@ -612,7 +614,8 @@ bool OMXPlayerAudio::OpenDecoder()
     if(m_passthrough)
       m_hw_decode = false;
     bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_pChannelMap,
-                                             m_hints, m_av_clock, m_passthrough, m_hw_decode);
+                                             m_hints, m_av_clock, m_passthrough, 
+                                             m_hw_decode, m_boost_on_downmix);
   }
   else
   {
@@ -624,7 +627,7 @@ bool OMXPlayerAudio::OpenDecoder()
 
     bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_hints.channels, m_pChannelMap,
                                              downmix_channels, m_hints.samplerate, m_hints.bitspersample,
-                                             false, false, m_passthrough);
+                                             false, m_boost_on_downmix, false, m_passthrough);
   }
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
