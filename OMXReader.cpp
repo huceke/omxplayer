@@ -658,8 +658,9 @@ void OMXReader::AddStream(int id)
     return;
 
   AVStream *pStream = m_pFormatContext->streams[id];
-  // discard MJPEG stream as we don't support it, and it stops mp3 files playing with album art
-  if (pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO && (pStream->codec->codec_id == CODEC_ID_MJPEG || pStream->codec->codec_id == CODEC_ID_MJPEGB))
+  // discard MJPEG/PNG stream as we don't support it, and it stops mp3 files playing with album art
+  if (pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO && 
+    (pStream->codec->codec_id == CODEC_ID_MJPEG || pStream->codec->codec_id == CODEC_ID_MJPEGB || pStream->codec->codec_id == CODEC_ID_PNG))
     return;
 
   switch (pStream->codec->codec_type)
