@@ -144,7 +144,8 @@ bool OMXReader::Open(std::string filename, bool dump_format)
     m_filename.replace(0, 8, "http://");
 
   if(m_filename.substr(0,6) == "mms://" || m_filename.substr(0,7) == "http://" || 
-      m_filename.substr(0,7) == "rtmp://" || m_filename.substr(0,6) == "udp://")
+      m_filename.substr(0,7) == "rtmp://" || m_filename.substr(0,6) == "udp://" ||
+      m_filename.substr(0,7) == "rtsp://" )
   {
     // ffmpeg dislikes the useragent from AirPlay urls
     //int idx = m_filename.Find("|User-Agent=AppleCoreMedia");
