@@ -32,6 +32,8 @@
 #include <VG/vgu.h>
 #include <cassert>
 
+#include "bcm_host.h"
+
 class BoxRenderer {
   VGPath path_;
   VGPaint paint_;
