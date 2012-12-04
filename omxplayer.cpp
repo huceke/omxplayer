@@ -72,6 +72,7 @@ bool              m_centered            = false;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = -1;
+int               m_seek_pos            = 0;
 bool              m_buffer_empty        = true;
 bool              m_thread_player       = false;
 OMXClock          *m_av_clock           = NULL;
@@ -131,6 +132,7 @@ void print_usage()
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
+  printf("         -l / --pos                     start position (in seconds)\n");  
   printf("              --boost-on-downmix        boost volume when downmixing\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
@@ -329,6 +331,7 @@ int main(int argc, char *argv[])
   bool                  m_3d                  = false;
   bool                  m_refresh             = false;
   double                startpts              = 0;
+  
   TV_GET_STATE_RESP_T   tv_state;
 
   const int boost_on_downmix_opt = 0x200;
@@ -346,6 +349,7 @@ int main(int argc, char *argv[])
     { "hdmiclocksync", no_argument,       NULL,          'y' },
     { "refresh",      no_argument,        NULL,          'r' },
     { "sid",          required_argument,  NULL,          't' },
+    { "pos",          required_argument,  NULL,          'l' },    
     { "font",         required_argument,  NULL,          0x100 },
     { "font-size",    required_argument,  NULL,          0x101 },
     { "align",        required_argument,  NULL,          0x102 },
@@ -354,7 +358,7 @@ int main(int argc, char *argv[])
   };
 
   int c;
-  while ((c = getopt_long(argc, argv, "wihn:o:cslpd3yt:r", longopts, NULL)) != -1)  
+  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3yt:r", longopts, NULL)) != -1)  
   {
     switch (c) 
     {
@@ -401,6 +405,11 @@ int main(int argc, char *argv[])
         m_audio_index_use = atoi(optarg) - 1;
         if(m_audio_index_use < 0)
           m_audio_index_use = 0;
+        break;
+      case 'l':
+        m_seek_pos = atoi(optarg) ;
+        if (m_seek_pos < 0)
+            m_seek_pos = 0;
         break;
       case 0x100:
         m_font_path = optarg;
@@ -495,6 +504,12 @@ int main(int argc, char *argv[])
   if(current_tv_state.width && current_tv_state.height)
     m_display_aspect = (float)current_tv_state.width / (float)current_tv_state.height;
 
+  // seek on start
+  if (m_seek_pos !=0 && m_omx_reader.CanSeek()) {
+        printf("Seeking start of video to %i seconds\n", m_seek_pos);
+        m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
+  }
+  
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect))
     goto do_exit;
