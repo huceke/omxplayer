@@ -172,7 +172,7 @@ private:
 
   OMX_CALLBACKTYPE  m_callbacks;
 
-  //additional event handler
+  //additional event handlers
   OMX_ERRORTYPE (*CustomDecoderFillBufferDoneHandler)(OMX_HANDLETYPE, OMX_PTR, OMX_BUFFERHEADERTYPE*);
   OMX_ERRORTYPE (*CustomDecoderEmptyBufferDoneHandler)(OMX_HANDLETYPE, OMX_PTR, OMX_BUFFERHEADERTYPE*);
 

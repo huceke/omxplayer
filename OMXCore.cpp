@@ -1468,8 +1468,8 @@ OMX_ERRORTYPE COMXCoreComponent::DecoderEmptyBufferDoneCallback(
   COMXCoreComponent *ctx = static_cast<COMXCoreComponent*>(pAppData);
 
   if(ctx->CustomDecoderFillBufferDoneHandler){
-	OMX_ERRORTYPE omx_err = (*(ctx->CustomDecoderFillBufferDoneHandler))(hComponent, pAppData, pBuffer);
-	if(omx_err != OMX_ErrorNone)return omx_err;
+		OMX_ERRORTYPE omx_err = (*(ctx->CustomDecoderFillBufferDoneHandler))(hComponent, pAppData, pBuffer);
+		if(omx_err != OMX_ErrorNone)return omx_err;
   }
 
   return ctx->DecoderEmptyBufferDone( hComponent, pAppData, pBuffer);
@@ -1487,8 +1487,8 @@ OMX_ERRORTYPE COMXCoreComponent::DecoderFillBufferDoneCallback(
   COMXCoreComponent *ctx = static_cast<COMXCoreComponent*>(pAppData);
  
   if(ctx->CustomDecoderFillBufferDoneHandler){
-	OMX_ERRORTYPE omx_err = (*(ctx->CustomDecoderFillBufferDoneHandler))(hComponent, pAppData, pBuffer);
-	if(omx_err != OMX_ErrorNone)return omx_err;
+		OMX_ERRORTYPE omx_err = (*(ctx->CustomDecoderFillBufferDoneHandler))(hComponent, pAppData, pBuffer);
+		if(omx_err != OMX_ErrorNone)return omx_err;
   }
 
   return ctx->DecoderFillBufferDone(hComponent, pAppData, pBuffer);
