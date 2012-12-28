@@ -1714,6 +1714,8 @@ void COMXCore::Deinitialize()
     }  
     m_DllOMX->Unload();
   }
+  CustomDecoderFillBufferDoneHandler = NULL;
+  CustomDecoderEmptyBufferDoneHandler = NULL;
 }
 
 #endif
