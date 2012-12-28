@@ -1470,8 +1470,8 @@ OMX_ERRORTYPE COMXCoreComponent::DecoderEmptyBufferDoneCallback(
 
   COMXCoreComponent *ctx = static_cast<COMXCoreComponent*>(pAppData);
 
-  if(ctx->CustomDecoderFillBufferDoneHandler){
-    OMX_ERRORTYPE omx_err = (*(ctx->CustomDecoderFillBufferDoneHandler))(hComponent, pAppData, pBuffer);
+  if(ctx->CustomDecoderEmptyBufferDoneHandler){
+    OMX_ERRORTYPE omx_err = (*(ctx->CustomDecoderEmptyBufferDoneHandler))(hComponent, pAppData, pBuffer);
     if(omx_err != OMX_ErrorNone)return omx_err;
   }
 
