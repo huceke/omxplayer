@@ -135,8 +135,14 @@ int CFile::Write(const void* lpBuf, int64_t uiBufSize)
 
 int CFile::IoControl(EIoControl request, void* param)
 {
-  if(request == IOCTRL_SEEK_POSSIBLE)
-    return 1;
+  if(request == IOCTRL_SEEK_POSSIBLE && m_pFile)
+  {
+    struct stat st;
+    if (fstat(fileno(m_pFile), &st) == 0)
+    {
+      return !S_ISFIFO(st.st_mode);
+    }
+  }
 
   return -1;
 }
