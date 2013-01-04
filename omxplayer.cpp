@@ -93,6 +93,13 @@ bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = false;
+//boblight parameter
+bool              m_boblight_enabled    = false;
+std::string       m_boblight_host       = "localhost";
+int               m_boblight_port       = 19333;
+int               m_boblight_priority   = 128;
+int               m_boblight_sizedown   = 90;
+int               m_boblight_margin     = 13;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -110,7 +117,7 @@ static void restore_fl()
 
 void sig_handler(int s)
 {
-  printf("strg-c catched\n");
+  printf("ctrl-c catched\n");
   signal(SIGINT, SIG_DFL);
   g_abort = true;
 }
@@ -139,6 +146,17 @@ void print_usage()
   printf("              --font-size size          font size as thousandths of screen height\n");
   printf("                                        (default: 55)\n");
   printf("              --align left/center       subtitle alignment (default: left)\n");
+  printf("         -b / --boblight                activate boblight client\n");
+  printf("              --boblight-host           boblight server host/ip\n");
+  printf("                                        (default: localhost)\n");
+  printf("              --boblight-port           boblight server port\n");
+  printf("                                        (default: 19333)\n");
+  printf("              --boblight-priority       boblight client priority\n");
+  printf("                                        (default: 128)\n");
+  printf("              --boblight-sizedown       maximal side length of the picture sent to boblight in pixel\n");
+  printf("                                        (default: 90)\n");
+  printf("              --boblight-margin         margin of the image border sent to boblight in percent\n");
+  printf("                                        (default: 13)\n");
 }
 
 void SetSpeed(int iSpeed)
@@ -354,11 +372,17 @@ int main(int argc, char *argv[])
     { "font-size",    required_argument,  NULL,          0x101 },
     { "align",        required_argument,  NULL,          0x102 },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
+    { "boblight",     no_argument,        NULL,          'b' },
+    { "boblight-host", required_argument, NULL,          0x150 },
+    { "boblight-port", required_argument, NULL,          0x151 },
+    { "boblight-priority", required_argument, NULL,       0x152 },
+    { "boblight-sizedown", required_argument, NULL,       0x153 },
+    { "boblight-margin", required_argument, NULL,         0x154 },
     { 0, 0, 0, 0 }
   };
 
   int c;
-  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3yt:r", longopts, NULL)) != -1)  
+  while ((c = getopt_long(argc, argv, "wihnl:o:cslbpd3yt:r", longopts, NULL)) != -1)  
   {
     switch (c) 
     {
@@ -439,6 +463,25 @@ int main(int argc, char *argv[])
       case ':':
         return 0;
         break;
+      //handle boblight obtions
+      case 'b':
+        m_boblight_enabled = true;
+        break;
+      case 0x150:
+        m_boblight_host = optarg;
+        break;
+      case 0x151:
+        if (atoi(optarg)>0) m_boblight_port = atoi(optarg);
+        break;
+      case 0x152:
+        if (atoi(optarg)>0) m_boblight_priority = atoi(optarg);
+        break;
+      case 0x153:
+        if (atoi(optarg)>0) m_boblight_sizedown = atoi(optarg);
+        break;
+      case 0x154:
+        if (atoi(optarg)>0) m_boblight_margin = atoi(optarg);
+        break;
       default:
         return 0;
         break;
@@ -510,8 +553,10 @@ int main(int argc, char *argv[])
         m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace, m_bMpeg, 
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect,
+                                         m_boblight_enabled, m_boblight_host, m_boblight_port,
+                                         m_boblight_priority, m_boblight_sizedown, m_boblight_margin))
     goto do_exit;
 
   if(m_has_subtitle &&
@@ -721,8 +766,10 @@ int main(int argc, char *argv[])
         FlushStreams(startpts);
 
       m_player_video.Close();
-      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace, m_bMpeg, 
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect,
+                                         m_boblight_enabled, m_boblight_host, m_boblight_port,
+                                         m_boblight_priority, m_boblight_sizedown, m_boblight_margin))
         goto do_exit;
     }
 

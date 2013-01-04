@@ -114,7 +114,7 @@ void OMXPlayerVideo::UnLockSubtitles()
     pthread_mutex_unlock(&m_lock_subtitle);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect)
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect, bool boblight_enabled, std::string boblight_host, int boblight_port, int boblight_priority, int boblight_sizedown, int boblight_margin)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
@@ -143,6 +143,14 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinte
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
+
+  //copy boblight parameter
+  m_boblight_enabled = boblight_enabled;
+  m_boblight_host = boblight_host;
+  m_boblight_port = boblight_port;
+  m_boblight_priority = boblight_priority;
+  m_boblight_sizedown = boblight_sizedown;
+  m_boblight_margin = boblight_margin;
 
   m_FlipTimeStamp = m_av_clock->GetAbsoluteClock();
 
@@ -422,6 +430,7 @@ void OMXPlayerVideo::Process()
     }
     UnLockDecoder();
     
+	
     OMXPacket *subtitle_pkt = m_decoder->GetText();
 
     if(subtitle_pkt)
@@ -520,7 +529,7 @@ bool OMXPlayerVideo::OpenDecoder()
   m_frametime = (double)DVD_TIME_BASE / m_fps;
 
   m_decoder = new COMXVideo();
-  if(!m_decoder->Open(m_hints, m_av_clock, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync))
+  if(!m_decoder->Open(m_hints, m_av_clock, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync, m_boblight_enabled, m_boblight_host, m_boblight_port, m_boblight_priority, m_boblight_sizedown, m_boblight_margin))
   {
     CloseDecoder();
     return false;
