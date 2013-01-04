@@ -673,12 +673,12 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
       COMXVideo::m_boblight_height = (int)round(factor * m_decoded_height);
       //calculate margins of processed pixels on the outer border of the image
       COMXVideo::m_boblight_margin_t = (int)round(m_boblight_margin*m_boblight_height/100);
-	  COMXVideo::m_boblight_margin_b = m_boblight_height - m_boblight_margin_t;
-	  COMXVideo::m_boblight_margin_l = (int)round(m_boblight_margin*m_boblight_width/100);
-	  COMXVideo::m_boblight_margin_r = m_boblight_width - m_boblight_margin_l;
-	  CLog::Log(LOGDEBUG, "Setting boblight scanrange to %ix%i, scan margin is %i percent\n", COMXVideo::m_boblight_width, COMXVideo::m_boblight_height, m_boblight_margin);
-	  boblight_setscanrange(COMXVideo::m_boblight, COMXVideo::m_boblight_width, COMXVideo::m_boblight_height);
-	}
+      COMXVideo::m_boblight_margin_b = m_boblight_height - m_boblight_margin_t;
+      COMXVideo::m_boblight_margin_l = (int)round(m_boblight_margin*m_boblight_width/100);
+      COMXVideo::m_boblight_margin_r = m_boblight_width - m_boblight_margin_l;
+      CLog::Log(LOGDEBUG, "Setting boblight scanrange to %ix%i, scan margin is %i percent\n", COMXVideo::m_boblight_width, COMXVideo::m_boblight_height, m_boblight_margin);
+      boblight_setscanrange(COMXVideo::m_boblight, COMXVideo::m_boblight_width, COMXVideo::m_boblight_height);
+    }
 
     OMX_PARAM_PORTDEFINITIONTYPE  m_decoded_format;
     OMX_INIT_STRUCTURE(m_decoded_format);
