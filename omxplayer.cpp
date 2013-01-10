@@ -736,7 +736,7 @@ int main(int argc, char *argv[])
     if(m_stats)
     {
       printf("V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \r",
-             m_player_video.GetCurrentPTS() / DVD_TIME_BASE, m_player_video.GetDecoderBufferSize(),
+             m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(),
              m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
              m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
     }
