@@ -56,6 +56,8 @@ extern "C" {
 #include "OMXPlayerSubtitles.h"
 #include "DllOMX.h"
 
+#include "boblight.h"
+
 #include <string>
 
 enum PCMChannels  *m_pChannelMap        = NULL;
@@ -94,12 +96,15 @@ bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = false;
 //boblight parameter
+void*             m_boblight = NULL;
 bool              m_boblight_enabled    = false;
 std::string       m_boblight_host       = "localhost";
 int               m_boblight_port       = 19333;
 int               m_boblight_priority   = 128;
-int               m_boblight_sizedown   = 90;
-int               m_boblight_margin     = 13;
+int               m_boblight_sizedown   = 64;
+int               m_boblight_margin     = 10;
+int               m_boblight_timeout = 35;
+std::vector<std::string> m_boblight_options; 
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -126,37 +131,39 @@ void print_usage()
 {
   printf("Usage: omxplayer [OPTIONS] [FILE]\n");
   printf("Options :\n");
-  printf("         -h / --help                    print this help\n");
+  printf("         -h / --help                     print this help\n");
 //  printf("         -a / --alang language          audio language        : e.g. ger\n");
-  printf("         -n / --aidx  index             audio stream index    : e.g. 1\n");
-  printf("         -o / --adev  device            audio out device      : e.g. hdmi/local\n");
-  printf("         -i / --info                    dump stream format and exit\n");
-  printf("         -s / --stats                   pts and buffer stats\n");
-  printf("         -p / --passthrough             audio passthrough\n");
-  printf("         -d / --deinterlace             deinterlacing\n");
-  printf("         -w / --hw                      hw audio decoding\n");
-  printf("         -3 / --3d                      switch tv into 3d mode\n");
-  printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
-  printf("         -t / --sid index               show subtitle with index\n");
-  printf("         -r / --refresh                 adjust framerate/resolution to video\n");
-  printf("         -l / --pos                     start position (in seconds)\n");  
-  printf("              --boost-on-downmix        boost volume when downmixing\n");
-  printf("              --font path               subtitle font\n");
-  printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
-  printf("              --font-size size          font size as thousandths of screen height\n");
-  printf("                                        (default: 55)\n");
-  printf("              --align left/center       subtitle alignment (default: left)\n");
-  printf("         -b / --boblight                activate boblight client\n");
-  printf("              --boblight-host           boblight server host/ip\n");
-  printf("                                        (default: localhost)\n");
-  printf("              --boblight-port           boblight server port\n");
-  printf("                                        (default: 19333)\n");
-  printf("              --boblight-priority       boblight client priority\n");
-  printf("                                        (default: 128)\n");
-  printf("              --boblight-sizedown       maximal side length of the picture sent to boblight in pixel\n");
-  printf("                                        (default: 90)\n");
-  printf("              --boblight-margin         margin of the image border sent to boblight in percent\n");
-  printf("                                        (default: 13)\n");
+  printf("         -n / --aidx  index              audio stream index    : e.g. 1\n");
+  printf("         -o / --adev  device             audio out device      : e.g. hdmi/local\n");
+  printf("         -i / --info                     dump stream format and exit\n");
+  printf("         -s / --stats                    pts and buffer stats\n");
+  printf("         -p / --passthrough              audio passthrough\n");
+  printf("         -d / --deinterlace              deinterlacing\n");
+  printf("         -w / --hw                       hw audio decoding\n");
+  printf("         -3 / --3d                       switch tv into 3d mode\n");
+  printf("         -y / --hdmiclocksync            adjust display refresh rate to match video\n");
+  printf("         -t / --sid index                show subtitle with index\n");
+  printf("         -r / --refresh                  adjust framerate/resolution to video\n");
+  printf("         -l / --pos                      start position (in seconds)\n");  
+  printf("              --boost-on-downmix         boost volume when downmixing\n");
+  printf("              --font path                subtitle font\n");
+  printf("                                         (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
+  printf("              --font-size size           font size as thousandths of screen height\n");
+  printf("                                         (default: 55)\n");
+  printf("              --align left/center        subtitle alignment (default: left)\n");
+  printf("         -b / --boblight                 activate boblight client\n");
+  printf("              --boblight-host ip[:port]  boblight server\n");
+  printf("                                         (default: localhost:19333)\n");
+  printf("              --boblight-priority pri.   boblight client priority from 0 to 255\n");
+  printf("                                         (default: 128)\n");
+  printf("              --boblight-option                                    \n");
+  printf("                [lightname:]option=value boblight deamon option: e.g. interpolation=1\n");
+  printf("              --boblight-sizedown size   maximal side length of the picture sent to boblight in pixel\n");
+  printf("                                         (default: 64)\n");
+  printf("              --boblight-margin margin   with of the outer image border sent to boblight in percent between 1 and 50\n");
+  printf("                                         (default: 10)\n");
+  printf("              --boblight-timeout timeout timeout between scheduled boblight updates in ms\n");
+  printf("                                         (default: 35)\n");
 }
 
 void SetSpeed(int iSpeed)
@@ -340,7 +347,7 @@ int main(int argc, char *argv[])
   }
 
   std::string last_sub = "";
-  std::string            m_filename;
+  std::string           m_filename;
   double                m_incr                = 0;
   CRBP                  g_RBP;
   COMXCore              g_OMX;
@@ -374,14 +381,16 @@ int main(int argc, char *argv[])
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { "boblight",     no_argument,        NULL,          'b' },
     { "boblight-host", required_argument, NULL,          0x150 },
-    { "boblight-port", required_argument, NULL,          0x151 },
-    { "boblight-priority", required_argument, NULL,       0x152 },
-    { "boblight-sizedown", required_argument, NULL,       0x153 },
-    { "boblight-margin", required_argument, NULL,         0x154 },
+    { "boblight-priority", required_argument, NULL,      0x151 },
+    { "boblight-option", required_argument, NULL,        0x152 },
+    { "boblight-sizedown", required_argument, NULL,      0x153 },
+    { "boblight-margin", required_argument, NULL,        0x154 },
+    { "boblight-timeout", required_argument, NULL,       0x155 },
     { 0, 0, 0, 0 }
   };
 
   int c;
+  std::string string_optarg, suffix; //needed for string operations with boblight-host
   while ((c = getopt_long(argc, argv, "wihnl:o:cslbpd3yt:r", longopts, NULL)) != -1)  
   {
     switch (c) 
@@ -468,19 +477,31 @@ int main(int argc, char *argv[])
         m_boblight_enabled = true;
         break;
       case 0x150:
-        m_boblight_host = optarg;
+        string_optarg = optarg;
+        m_boblight_host = string_optarg.substr(0, string_optarg.find(':'));
+        if (string_optarg.find(':') != string::npos)
+        {
+          suffix = string_optarg.substr(string_optarg.find(':') + 1);
+          if (atoi(suffix.c_str()) >= 0 || atoi(suffix.c_str()) <= 65535)
+          {
+            m_boblight_port = atoi(suffix.c_str());
+          }
+        }
         break;
       case 0x151:
-        if (atoi(optarg)>0) m_boblight_port = atoi(optarg);
+        if (atoi(optarg)>=0 && atoi(optarg)<=255) m_boblight_priority = atoi(optarg);
         break;
       case 0x152:
-        if (atoi(optarg)>0) m_boblight_priority = atoi(optarg);
+        m_boblight_options.push_back(optarg);
         break;
       case 0x153:
         if (atoi(optarg)>0) m_boblight_sizedown = atoi(optarg);
         break;
       case 0x154:
-        if (atoi(optarg)>0) m_boblight_margin = atoi(optarg);
+        if (atoi(optarg)>0 || atoi(optarg)<=50) m_boblight_margin = atoi(optarg);
+        break;
+     case 0x155:
+        if (atoi(optarg)>0) m_boblight_timeout = atoi(optarg);
         break;
       default:
         return 0;
@@ -492,6 +513,84 @@ int main(int argc, char *argv[])
     print_usage();
     return 0;
   }
+
+  //begin boblight business
+  if(m_boblight_enabled && !m_boblight){
+    m_boblight = boblight_init();
+
+    if (!boblight_connect(m_boblight, m_boblight_host.c_str(), m_boblight_port, 5000000) || !boblight_setpriority(m_boblight, m_boblight_priority))
+    {
+      printf("Boblight: Error connecting to boblight deamon at %s:%i: %s\n", m_boblight_host.c_str(), m_boblight_port, boblight_geterror(m_boblight));
+      boblight_destroy(m_boblight);
+      m_boblight = NULL;
+      return 0;
+    }
+    if(m_boblight){
+      //set the supplied boblight options (code partially from generic boblight client http://code.google.com/p/boblight/source/browse/trunk/src/clients/flagmanager.cpp)
+
+      int nrlights = boblight_getnrlights(m_boblight);
+ 
+      bool gamma_override = false;
+      for (unsigned int i = 0; i < m_boblight_options.size(); i++)
+      {
+        std::string option = m_boblight_options[i];
+        std::string lightname;
+        std::string optionname;
+        std::string optionvalue;
+        int    lightnr = -1;
+
+        //check if we have a lightname, otherwise we use all lights
+        if (option.find(':') != string::npos)
+        {
+          lightname = option.substr(0, option.find(':'));
+          if (option.find(':') == option.size() - 1) //check if : isn't the last char in the string
+          {
+            printf("Boblight: wrong option \"%s\" syntax, syntax is [lightname:]option=value\n", option.c_str());
+          }
+          option = option.substr(option.find(':') + 1); //shave off the lightname
+
+          //check which light this is
+          bool lightfound = false;
+          for (int j = 0; j < nrlights; j++)
+          {
+            if (lightname == boblight_getlightname(m_boblight, j))
+            {
+              lightfound = true;
+              lightnr = j;
+              break;
+            }
+          }
+          if (!lightfound)
+          {
+            printf("Boblight: light \"%s\" used in option \"%s\" doesn't exist\n", lightname.c_str(), option.c_str());
+            return 0;
+          }
+        }
+
+        //check if '=' exists and it's not at the end of the string
+        if (option.find('=') == string::npos || option.find('=') == option.size() - 1)
+        {
+          printf("Boblight: wrong option \"%s\" syntax, syntax is [light:]option=value", option.c_str());
+          return 0;
+        }
+
+        optionname = option.substr(0, option.find('='));   //option name is everything before = (already shaved off the lightname here)
+        optionvalue = option.substr(option.find('=') + 1); //value is everything after =
+        
+        if(optionname == "gamma")gamma_override=true;      //gamma is set by the user
+        option = optionname + " " + optionvalue;           //libboblight wants syntax without =
+
+        if (!boblight_setoption(m_boblight, lightnr, option.c_str()))
+        {
+          printf("Boblight: setting option failed %s\n", boblight_geterror(m_boblight));
+          return 0;
+        }
+      }
+      //set video gamma (2.2) if not overridden by the user
+      if(!gamma_override)boblight_setoption(m_boblight, -1, "gamma=2.2");
+    }
+  }
+  //end boblight business
 
   m_filename = argv[optind];
 
@@ -555,8 +654,7 @@ int main(int argc, char *argv[])
   
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace, m_bMpeg, 
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect,
-                                         m_boblight_enabled, m_boblight_host, m_boblight_port,
-                                         m_boblight_priority, m_boblight_sizedown, m_boblight_margin))
+                                         m_boblight, m_boblight_sizedown, m_boblight_margin, m_boblight_timeout))
     goto do_exit;
 
   if(m_has_subtitle &&
@@ -766,10 +864,10 @@ int main(int argc, char *argv[])
         FlushStreams(startpts);
 
       m_player_video.Close();
+
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace, m_bMpeg, 
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect,
-                                         m_boblight_enabled, m_boblight_host, m_boblight_port,
-                                         m_boblight_priority, m_boblight_sizedown, m_boblight_margin))
+                                         m_boblight, m_boblight_sizedown, m_boblight_margin, m_boblight_timeout))
         goto do_exit;
     }
 
@@ -783,7 +881,7 @@ int main(int argc, char *argv[])
     if(m_stats)
     {
       printf("V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \r",
-             m_player_video.GetCurrentPTS() / DVD_TIME_BASE, m_player_video.GetDecoderBufferSize(),
+             m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(),
              m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
              m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
     }
@@ -891,7 +989,6 @@ int main(int argc, char *argv[])
 
 do_exit:
   printf("\n");
-
   if(!m_stop && !g_abort)
   {
     if(m_has_audio)
@@ -899,32 +996,30 @@ do_exit:
     else if(m_has_video)
       m_player_video.WaitCompletion();
   }
-
   if(m_refresh)
   {
     m_BcmHost.vc_tv_hdmi_power_on_best(tv_state.width, tv_state.height, tv_state.frame_rate, HDMI_NONINTERLACED,
                                        (EDID_MODE_MATCH_FLAG_T)(HDMI_MODE_MATCH_FRAMERATE|HDMI_MODE_MATCH_RESOLUTION|HDMI_MODE_MATCH_SCANMODE));
   }
-
   m_av_clock->OMXStop();
   m_av_clock->OMXStateIdle();
-
   m_player_subtitles.Close();
   m_player_video.Close();
   m_player_audio.Close();
-
   if(m_omx_pkt)
   {
     m_omx_reader.FreePacket(m_omx_pkt);
     m_omx_pkt = NULL;
   }
-
   m_omx_reader.Close();
-
   vc_tv_show_info(0);
-
   g_OMX.Deinitialize();
   g_RBP.Deinitialize();
+
+  if(m_boblight){
+    boblight_destroy(m_boblight);
+    m_boblight = NULL;
+  }
 
   printf("have a nice day ;)\n");
   return 1;

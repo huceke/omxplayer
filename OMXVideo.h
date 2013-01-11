@@ -49,7 +49,7 @@ public:
 
   // Required overrides
   bool SendDecoderConfig();
-  bool Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect = 0.0f, bool deinterlace = false, bool hdmi_clock_sync = false, bool boblight_enabled = false, std::string boblight_host = "localhost", int boblight_port = 19333, int boblight_priority = 128, int boblight_sizedown = 90, int boblight_margin = 13);
+  bool Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect = 0.0f, bool deinterlace = false, bool hdmi_clock_sync = false, void* boblight_instance = NULL, int boblight_sizedown = 64, int boblight_margin = 10, int boblight_timeout = 35);
   void Close(void);
   unsigned int GetFreeSpace();
   unsigned int GetSize();
@@ -64,7 +64,8 @@ public:
   void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
   int GetInputBufferSize();
   void WaitCompletion();
-  static OMX_ERRORTYPE ProcessRGB(OMX_HANDLETYPE hComponent, OMX_PTR pAppData, OMX_BUFFERHEADERTYPE* pBuffer);
+  static void* BoblightClientThread(void* data);
+  static OMX_ERRORTYPE BufferDoneHandler(OMX_HANDLETYPE hComponent, OMX_PTR pAppData, OMX_BUFFERHEADERTYPE* pBuffer);
 protected:
   // Video format
   bool              m_drop_state;
@@ -82,22 +83,28 @@ protected:
   COMXCoreComponent m_omx_resize;
 
   static void*      m_boblight; //pointer to boblight instance
-  bool              m_boblight_enabled; //parameter to enable boblight
-  std::string       m_boblight_host;
-  int               m_boblight_port;
-  int               m_boblight_priority;
   int               m_boblight_sizedown;
   int               m_boblight_margin;
-  //internal boblight parameters follow
-  static uint8_t    m_boblight_margin_t; 
-  static uint8_t    m_boblight_margin_b;
-  static uint8_t    m_boblight_margin_l;
-  static uint8_t    m_boblight_margin_r;
-  static uint8_t    m_boblight_width;
-  static uint8_t    m_boblight_height;
+  //internal boblight variables follow
+  static unsigned int m_boblight_margin_t; 
+  static unsigned int m_boblight_margin_b;
+  static unsigned int m_boblight_margin_l;
+  static unsigned int m_boblight_margin_r;
+  static int        m_boblight_width;
+  static int        m_boblight_height;
+  static int        m_boblight_timeout;
+  static OMX_BUFFERHEADERTYPE*    m_boblight_bufferpointer;
+  //boblight threads
+  static volatile bool m_boblight_threadstop; //set true to stop all threads
+
+  static pthread_t  m_boblight_clientthread;
+
+  static pthread_mutex_t m_boblight_bufferdone_mutex;
+  static pthread_cond_t  m_boblight_bufferdone_cond;
+  static volatile bool m_boblight_bufferdone_flag;
 
   COMXCoreComponent *m_omx_clock;
-  OMXClock           *m_av_clock;
+  OMXClock          *m_av_clock;
 
   COMXCoreTunel     m_omx_tunnel_text;
   COMXCoreTunel     m_omx_tunnel_decoder;
