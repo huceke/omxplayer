@@ -92,12 +92,10 @@ protected:
   double                    m_iSubtitleDelay;
   COMXOverlayCodec          *m_pSubtitleCodec;
   //boblight parameter
-  bool              m_boblight_enabled; //parameter to enable boblight
-  std::string       m_boblight_host;
-  int               m_boblight_port;
-  int               m_boblight_priority;
+  void*             m_boblight;
   int               m_boblight_sizedown;
   int               m_boblight_margin;
+  int               m_boblight_timeout;
 
   void Lock();
   void UnLock();
@@ -109,7 +107,7 @@ private:
 public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect, bool boblight_enabled, std::string boblight_host, int boblight_port, int boblight_priority, int boblight_sizedown, int boblight_margin);
+  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect, void* m_boblight, int boblight_sizedown, int boblight_margin, int boblight_timeout);
   bool Close();
   void Output(double pts);
   bool Decode(OMXPacket *pkt);

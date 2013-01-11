@@ -1,0 +1,32 @@
+include Makefile.include
+
+WORK=$(PWD)
+
+all: checkout configure compile
+
+compile: 
+	cd boblight; \
+	make -j9
+
+configure: 
+	cd boblight; \
+	CFLAGS="$(CFLAGS) ${INCLUDES}" \
+	CXXFLAGS="${CXXFLAGS} -march=armv6 -mfpu=vfp -mfloat-abi=$(FLOAT)" \
+	LDFLAGS="" \
+	./configure \
+		--without-portaudio \
+		--without-opengl \
+		--without-x11 \
+		--host=$(HOST)
+
+clean:
+	@rm -rf boblight
+
+checkout: 
+	svn checkout http://boblight.googlecode.com/svn/trunk/ boblight
+
+install:
+	cd boblight; make -j9 DESTDIR="$(WORK)/boblight_compiled" install
+	cp $(WORK)/boblight/src/lib/*.h $(WORK)/boblight_compiled/usr/local/include/
+	$(HOST)-strip boblight_compiled/usr/local/lib/*.so
+
