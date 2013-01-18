@@ -21,7 +21,7 @@ fi
 if [ -e /usr/lib/omxplayer ]; then
   export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:$LD_LIBRARY_PATH 
 else
-  export LD_LIBRARY_PATH=$PWD/ffmpeg_compiled/usr/local/lib:/opt/vc/lib:$LD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=$PWD/ffmpeg_compiled/usr/local/lib:$PWD/boblight_compiled/usr/local/lib:/opt/vc/lib:$LD_LIBRARY_PATH
 fi
 
 XRES=1920

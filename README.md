@@ -24,9 +24,16 @@ Edit Makefile.include and change the settings according your locations.
 
 You can also compile it on the PI the native way ;)
 
+To compile on raspbian run 
+
+    ./prepare-native-raspbian.sh
+
+before running make.
+
 Running OMXPlayer
 -----------------
 
+    make boblight
     make ffmpeg
     make
     make dist
@@ -37,29 +44,46 @@ Installing OMXPlayer
 Copy over `omxplayer-dist/*` to the Pi `/`. You may want to specify a valid font
 path inside the `omxplayer` shell script.
 
+After a native compile just run 
+
+    sudo make install
+
 Using OMXPlayer
 ---------------
 
     Usage: omxplayer [OPTIONS] [FILE]
     Options :
-             -h / --help                    print this help
-             -n / --aidx  index             audio stream index    : e.g. 1
-             -o / --adev  device            audio out device      : e.g. hdmi/local
-             -i / --info                    dump stream format and exit
-             -s / --stats                   pts and buffer stats
-             -p / --passthrough             audio passthrough
-             -d / --deinterlace             deinterlacing
-             -w / --hw                      hw audio decoding
-             -3 / --3d                      switch tv into 3d mode
-             -y / --hdmiclocksync           adjust display refresh rate to match video
-             -t / --sid index               show subtitle with index
-             -r / --refresh                 adjust framerate/resolution to video
-                  --boost-on-downmix        boost volume when downmixing
-                  --font path               subtitle font
-                                            (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
-                  --font-size size          font size as thousandths of screen height
-                                            (default: 55)
-                  --align left/center       subtitle alignment (default: left)
+             -h / --help                     print this help
+             -n / --aidx  index              audio stream index    : e.g. 1
+             -o / --adev  device             audio out device      : e.g. hdmi/local
+             -i / --info                     dump stream format and exit
+             -s / --stats                    pts and buffer stats
+             -p / --passthrough              audio passthrough
+             -d / --deinterlace              deinterlacing
+             -w / --hw                       hw audio decoding
+             -3 / --3d                       switch tv into 3d mode
+             -y / --hdmiclocksync            adjust display refresh rate to match video
+             -t / --sid index                show subtitle with index
+             -r / --refresh                  adjust framerate/resolution to video
+                  --boost-on-downmix         boost volume when downmixing
+                  --font path                subtitle font
+                                             (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
+                  --font-size size           font size as thousandths of screen height
+                                             (default: 55)
+                  --align left/center        subtitle alignment (default: left)
+             -b / --boblight                 activate boblight client
+                  --boblight-host ip[:port]  boblight server
+                                             (default: localhost:19333)
+                  --boblight-priority pri.   boblight client priority from 0 to 255
+                                             (default: 128)
+                  --boblight-option                                    
+                    [lightname:]option=value boblight deamon option: e.g. interpolation=1
+                  --boblight-sizedown size   maximal side length of the picture sent to boblight in pixel
+                                             (default: 64)
+                  --boblight-margin margin   with of the outer image border sent to boblight in percent between 1 and 50
+                                             (default: 10)
+                  --boblight-timeout timeout timeout between scheduled boblight updates in ms
+                                             (default: 35)
 
 For example:
 
