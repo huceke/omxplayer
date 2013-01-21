@@ -71,15 +71,15 @@
 
 #define MAX_TEXT_LENGTH 1024
 
-void*            COMXVideo::m_boblight = NULL;
-unsigned int     COMXVideo::m_boblight_margin_t=0;
-unsigned int     COMXVideo::m_boblight_margin_b=0;
-unsigned int     COMXVideo::m_boblight_margin_l=0;
-unsigned int     COMXVideo::m_boblight_margin_r=0;
-int              COMXVideo::m_boblight_width=0;
-int              COMXVideo::m_boblight_height=0;
-int              COMXVideo::m_boblight_timeout=0;
-bool volatile    COMXVideo::m_boblight_threadstop=false;
+void*            COMXVideo::m_boblight;
+unsigned int     COMXVideo::m_boblight_margin_t;
+unsigned int     COMXVideo::m_boblight_margin_b;
+unsigned int     COMXVideo::m_boblight_margin_l;
+unsigned int     COMXVideo::m_boblight_margin_r;
+int              COMXVideo::m_boblight_width;
+int              COMXVideo::m_boblight_height;
+int              COMXVideo::m_boblight_timeout;
+bool volatile    COMXVideo::m_boblight_threadstop;
 
 OMX_BUFFERHEADERTYPE* COMXVideo::m_boblight_bufferpointer;
 
@@ -87,7 +87,7 @@ pthread_t        COMXVideo::m_boblight_clientthread;
 
 pthread_mutex_t  COMXVideo::m_boblight_bufferdone_mutex;
 pthread_cond_t   COMXVideo::m_boblight_bufferdone_cond;
-bool volatile    COMXVideo::m_boblight_bufferdone_flag=false;
+bool volatile    COMXVideo::m_boblight_bufferdone_flag;
 
 COMXVideo::COMXVideo()
 {
@@ -104,6 +104,17 @@ COMXVideo::COMXVideo()
   m_hdmi_clock_sync   = false;
   m_first_frame       = true;
   m_first_text        = true;
+
+  COMXVideo::m_boblight = NULL;
+  COMXVideo::m_boblight_margin_t=0;
+  COMXVideo::m_boblight_margin_b=0;
+  COMXVideo::m_boblight_margin_l=0;
+  COMXVideo::m_boblight_margin_r=0;
+  COMXVideo::m_boblight_width=0;
+  COMXVideo::m_boblight_height=0;
+  COMXVideo::m_boblight_timeout=0;
+  COMXVideo::m_boblight_threadstop=false;
+  COMXVideo::m_boblight_bufferdone_flag=false;
 }
 
 COMXVideo::~COMXVideo()
