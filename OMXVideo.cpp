@@ -30,6 +30,8 @@
 #include "OMXStreamInfo.h"
 #include "utils/log.h"
 #include "linux/XMemUtils.h"
+#include "boblight.h"
+
 
 #include <sys/time.h>
 #include <inttypes.h>
@@ -69,6 +71,24 @@
 
 #define MAX_TEXT_LENGTH 1024
 
+void*            COMXVideo::m_boblight;
+unsigned int     COMXVideo::m_boblight_margin_t;
+unsigned int     COMXVideo::m_boblight_margin_b;
+unsigned int     COMXVideo::m_boblight_margin_l;
+unsigned int     COMXVideo::m_boblight_margin_r;
+int              COMXVideo::m_boblight_width;
+int              COMXVideo::m_boblight_height;
+int              COMXVideo::m_boblight_timeout;
+bool volatile    COMXVideo::m_boblight_threadstop;
+
+OMX_BUFFERHEADERTYPE* COMXVideo::m_boblight_bufferpointer;
+
+pthread_t        COMXVideo::m_boblight_clientthread;
+
+pthread_mutex_t  COMXVideo::m_boblight_bufferdone_mutex;
+pthread_cond_t   COMXVideo::m_boblight_bufferdone_cond;
+bool volatile    COMXVideo::m_boblight_bufferdone_flag;
+
 COMXVideo::COMXVideo()
 {
   m_is_open           = false;
@@ -84,10 +104,22 @@ COMXVideo::COMXVideo()
   m_hdmi_clock_sync   = false;
   m_first_frame       = true;
   m_first_text        = true;
+
+  COMXVideo::m_boblight = NULL;
+  COMXVideo::m_boblight_margin_t=0;
+  COMXVideo::m_boblight_margin_b=0;
+  COMXVideo::m_boblight_margin_l=0;
+  COMXVideo::m_boblight_margin_r=0;
+  COMXVideo::m_boblight_width=0;
+  COMXVideo::m_boblight_height=0;
+  COMXVideo::m_boblight_timeout=0;
+  COMXVideo::m_boblight_threadstop=false;
+  COMXVideo::m_boblight_bufferdone_flag=false;
 }
 
 COMXVideo::~COMXVideo()
 {
+
   if (m_is_open)
     Close();
 }
@@ -129,7 +161,7 @@ bool COMXVideo::SendDecoderConfig()
   return true;
 }
 
-bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect, bool deinterlace, bool hdmi_clock_sync)
+bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect, bool deinterlace, bool hdmi_clock_sync, void* boblight_instance, int boblight_sizedown, int boblight_margin, int boblight_timeout)
 {
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
   std::string decoder_name;
@@ -141,6 +173,12 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
   m_decoded_height = hints.height;
 
   m_hdmi_clock_sync = hdmi_clock_sync;
+
+  //copy boblight parameter
+  m_boblight_sizedown = boblight_sizedown;
+  m_boblight_margin = boblight_margin;
+  COMXVideo::m_boblight = boblight_instance;
+  COMXVideo::m_boblight_timeout = boblight_timeout;
 
   if(!m_decoded_width || !m_decoded_height)
     return false;
@@ -274,6 +312,16 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
   if(!m_omx_sched.Initialize(componentName, OMX_IndexParamVideoInit))
     return false;
 
+  if(COMXVideo::m_boblight){
+    componentName = "OMX.broadcom.video_splitter";
+    if(!m_omx_split.Initialize(componentName, OMX_IndexParamVideoInit))
+      return false;
+
+    componentName = "OMX.broadcom.resize";
+    if(!m_omx_resize.Initialize(componentName, OMX_IndexParamImageInit))
+      return false;
+  }
+
   if(m_deinterlace)
   {
     componentName = "OMX.broadcom.image_fx";
@@ -307,7 +355,17 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
   {
     m_omx_tunnel_decoder.Initialize(&m_omx_decoder, m_omx_decoder.GetOutputPort(), &m_omx_sched, m_omx_sched.GetInputPort());
   }
-  m_omx_tunnel_sched.Initialize(&m_omx_sched, m_omx_sched.GetOutputPort(), &m_omx_render, m_omx_render.GetInputPort());
+  
+  if(COMXVideo::m_boblight){
+    m_omx_tunnel_sched.Initialize(&m_omx_sched, m_omx_sched.GetOutputPort(), &m_omx_split, m_omx_split.GetInputPort());
+    m_omx_tunnel_split.Initialize(&m_omx_split, m_omx_split.GetOutputPort()+1, &m_omx_render, m_omx_render.GetInputPort());
+    m_omx_tunnel_resize.Initialize(&m_omx_split, m_omx_split.GetOutputPort(), &m_omx_resize, m_omx_resize.GetInputPort());
+  }
+  else
+  {
+    m_omx_tunnel_sched.Initialize(&m_omx_sched, m_omx_sched.GetOutputPort(), &m_omx_render, m_omx_render.GetInputPort());
+  }
+
   m_omx_tunnel_clock.Initialize(m_omx_clock, m_omx_clock->GetInputPort() + 1, &m_omx_sched, m_omx_sched.GetOutputPort() + 1);
   m_omx_tunnel_text.Initialize(m_omx_clock, m_omx_clock->GetInputPort() + 2, &m_omx_text, m_omx_text.GetInputPort() + 2);
 
@@ -520,6 +578,15 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
     return false;
   }
 
+/**
+  omx_err = m_omx_tunnel_write.Establish(false);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "COMXVideo::Open m_omx_tunnel_write.Establish\n");
+    return false;
+  }
+**/
+
   omx_err = m_omx_text.SetStateForComponent(OMX_StateExecuting);
   if (omx_err != OMX_ErrorNone)
   {
@@ -550,6 +617,127 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
   {
     CLog::Log(LOGERROR, "COMXVideo::Open error m_omx_sched.SetStateForComponent\n");
     return false;
+  }
+
+  if(COMXVideo::m_boblight){
+    omx_err = m_omx_split.SetStateForComponent(OMX_StateExecuting);
+    if (omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "COMXVideo::Open error m_omx_split.SetStateForComponent\n");
+      return false;
+    }
+
+    //set up the resizer
+    //make sure output of the splitter and input of the resize match
+    OMX_PARAM_PORTDEFINITIONTYPE port_def;
+    OMX_INIT_STRUCTURE(port_def);
+
+    port_def.nPortIndex = m_omx_split.GetOutputPort();
+    m_omx_split.GetParameter(OMX_IndexParamPortDefinition, &port_def);
+    port_def.nPortIndex = m_omx_resize.GetInputPort();
+    m_omx_resize.SetParameter(OMX_IndexParamPortDefinition, &port_def);
+
+    omx_err = m_omx_tunnel_resize.Establish(false);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s m_omx_tunnel_resize.Establish\n", CLASSNAME, __func__);
+      return false;
+    }
+    omx_err = m_omx_resize.WaitForEvent(OMX_EventPortSettingsChanged);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s m_omx_resize.WaitForEvent=%x\n", CLASSNAME, __func__, omx_err);
+      return false;
+    }
+
+    port_def.nPortIndex = m_omx_resize.GetOutputPort();
+    m_omx_resize.GetParameter(OMX_IndexParamPortDefinition, &port_def);
+
+    port_def.nPortIndex = m_omx_resize.GetOutputPort();
+    port_def.format.image.eCompressionFormat = OMX_IMAGE_CodingUnused;
+    port_def.format.image.eColorFormat = OMX_COLOR_Format32bitARGB8888;
+    //calculate the size of the sized-down image
+    if(m_boblight_sizedown%2==1)m_boblight_sizedown--; //make sure we have even dimensions, since resize component requires it
+    float factor;
+    if(m_decoded_width>m_decoded_height){
+      factor = (float)m_boblight_sizedown / m_decoded_width;
+    }else{
+      factor = (float)m_boblight_sizedown / m_decoded_height;
+    }
+    port_def.format.image.nFrameWidth = round(factor * m_decoded_width);
+    port_def.format.image.nFrameHeight = round(factor * m_decoded_height);
+    port_def.format.image.nStride = 0;
+    port_def.format.image.nSliceHeight = 0;
+    port_def.format.image.bFlagErrorConcealment = OMX_FALSE;
+
+    omx_err = m_omx_resize.SetParameter(OMX_IndexParamPortDefinition, &port_def);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s m_omx_resize.SetParameter result(0x%x)\n", CLASSNAME, __func__, omx_err);
+      return false;
+    }
+
+    COMXVideo::m_boblight_width = (int)round(factor * m_decoded_width);
+    COMXVideo::m_boblight_height = (int)round(factor * m_decoded_height);
+    //calculate margins of processed pixels on the outer border of the image
+    COMXVideo::m_boblight_margin_t = (int)round(m_boblight_margin*m_boblight_height/100);
+    COMXVideo::m_boblight_margin_b = m_boblight_height - m_boblight_margin_t;
+    COMXVideo::m_boblight_margin_l = (int)round(m_boblight_margin*m_boblight_width/100);
+    COMXVideo::m_boblight_margin_r = m_boblight_width - m_boblight_margin_l;
+    CLog::Log(LOGDEBUG, "Setting boblight scanrange to %ix%i, scan margin is %i percent\n", COMXVideo::m_boblight_width, COMXVideo::m_boblight_height, m_boblight_margin);
+    boblight_setscanrange(COMXVideo::m_boblight, COMXVideo::m_boblight_width, COMXVideo::m_boblight_height);
+
+    OMX_PARAM_PORTDEFINITIONTYPE  m_decoded_format;
+    OMX_INIT_STRUCTURE(m_decoded_format);
+    m_decoded_format.nPortIndex = m_omx_resize.GetOutputPort();
+    omx_err = m_omx_resize.GetParameter(OMX_IndexParamPortDefinition, &m_decoded_format);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s m_omx_resize.GetParameter result(0x%x)\n", CLASSNAME, __func__, omx_err);
+      return false;
+    }
+    assert(m_decoded_format.nBufferCountActual == 1);
+
+    omx_err = m_omx_resize.AllocOutputBuffers();
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s m_omx_resize.AllocOutputBuffers result(0x%x)\n", CLASSNAME, __func__, omx_err);
+      return false;
+    }
+
+    omx_err = m_omx_resize.SetStateForComponent(OMX_StateExecuting);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s m_omx_resize.SetStateForComponent result(0x%x)\n", CLASSNAME, __func__, omx_err);
+      return false;
+    }
+
+    omx_err = m_omx_tunnel_split.Establish(false);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "COMXVideo::Open m_omx_tunnel_split.Establish\n");
+      return false;
+    }
+
+    omx_err = m_omx_tunnel_resize.Establish(false);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "COMXVideo::Open m_omx_tunnel_resize.Establish\n");
+      return false;
+    }
+
+    //setting the custom callback to broadcast a signal COMXVideo::Thread is waiting for
+    m_omx_resize.SetCustomDecoderFillBufferDoneHandler(&COMXVideo::BufferDoneHandler);
+
+    //prepare boblight client thread and start it
+    pthread_cond_init(&COMXVideo::m_boblight_bufferdone_cond, NULL);
+    pthread_mutex_init(&COMXVideo::m_boblight_bufferdone_mutex, NULL);
+
+    COMXCoreComponent* args[2];
+    args[0] = &m_omx_split;
+    args[1] = &m_omx_resize;
+
+    pthread_create(&COMXVideo::m_boblight_clientthread, NULL, &COMXVideo::BoblightClientThread, (void*)&args);
   }
 
   omx_err = m_omx_render.SetStateForComponent(OMX_StateExecuting);
@@ -656,11 +844,26 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
 
 void COMXVideo::Close()
 {
+  if(COMXVideo::m_boblight){
+    //signal thread to stop
+    COMXVideo::m_boblight_threadstop = true;
+    //wait for thread to terminate nicely
+    pthread_join(COMXVideo::m_boblight_clientthread, NULL);
+    //cleanup thread related stuff
+    pthread_mutex_destroy(&COMXVideo::m_boblight_bufferdone_mutex);
+    pthread_cond_destroy(&COMXVideo::m_boblight_bufferdone_cond); 
+  }
+
+  //close components and tunnels
   m_omx_tunnel_decoder.Flush();
   if(m_deinterlace)
     m_omx_tunnel_image_fx.Flush();
   m_omx_tunnel_clock.Flush();
   m_omx_tunnel_sched.Flush();
+  if(COMXVideo::m_boblight){
+    m_omx_tunnel_split.Flush();
+    m_omx_tunnel_resize.Flush();
+  }
   m_omx_tunnel_text.Flush();
 
   m_omx_tunnel_clock.Deestablish();
@@ -668,11 +871,20 @@ void COMXVideo::Close()
   if(m_deinterlace)
     m_omx_tunnel_image_fx.Deestablish();
   m_omx_tunnel_sched.Deestablish();
+  if(COMXVideo::m_boblight){
+    m_omx_tunnel_split.Deestablish();
+    m_omx_tunnel_resize.Deestablish();
+  }
   m_omx_tunnel_text.Deestablish();
 
   m_omx_decoder.FlushInput();
 
   m_omx_sched.Deinitialize();
+
+  if(COMXVideo::m_boblight){
+    m_omx_split.Deinitialize();
+    m_omx_resize.Deinitialize();
+  }
   if(m_deinterlace)
     m_omx_image_fx.Deinitialize();
   m_omx_decoder.Deinitialize();
@@ -688,6 +900,8 @@ void COMXVideo::Close()
 
   if(m_converter)
     delete m_converter;
+
+  //reset variables for an eventual restart
   m_converter         = NULL;
   m_video_convert     = false;
   m_video_codec_name  = "";
@@ -696,6 +910,10 @@ void COMXVideo::Close()
   m_first_text        = true;
   m_setStartTime      = true;
   m_setStartTimeText  = true;
+
+  COMXVideo::m_boblight_threadstop=false;
+  COMXVideo::m_boblight_bufferdone_flag=false;
+  COMXVideo::m_boblight=NULL;
 }
 
 void COMXVideo::SetDropState(bool bDrop)
@@ -713,8 +931,90 @@ unsigned int COMXVideo::GetSize()
   return m_omx_decoder.GetInputBufferSize();
 }
 
+OMX_ERRORTYPE COMXVideo::BufferDoneHandler(OMX_HANDLETYPE hComponent, OMX_PTR pAppData, OMX_BUFFERHEADERTYPE* pBuffer){
+  pthread_mutex_lock(&COMXVideo::m_boblight_bufferdone_mutex);
+  COMXVideo::m_boblight_bufferpointer = pBuffer;
+  COMXVideo::m_boblight_bufferdone_flag = true;
+  pthread_cond_broadcast(&COMXVideo::m_boblight_bufferdone_cond);
+  pthread_mutex_unlock(&COMXVideo::m_boblight_bufferdone_mutex);
+  return OMX_ErrorNone;
+}
+
+void* COMXVideo::BoblightClientThread(void* data){
+  int rgb[3];
+  unsigned int offset = 0;
+  uint_fast16_t x=0, y=0;
+
+  COMXCoreComponent* p_omx_split = ((COMXCoreComponent**)data)[0];
+  COMXCoreComponent* p_omx_resize = ((COMXCoreComponent**)data)[1];
+
+  OMX_BUFFERHEADERTYPE *omx_buffer_fb;
+  OMX_PARAM_U32TYPE singlestep_param;
+  OMX_INIT_STRUCTURE(singlestep_param);
+  singlestep_param.nPortIndex = p_omx_split->GetOutputPort();               
+  singlestep_param.nU32 = 1;
+
+  while(1){
+    if(COMXVideo::m_boblight_threadstop){
+      pthread_exit(0);
+    }
+
+    //set the first splitter port into the single-image mode (video goes out through the second one)
+    OMX_ERRORTYPE omx_err = p_omx_split->SetParameter(OMX_IndexConfigSingleStep, &singlestep_param);
+    if(omx_err != OMX_ErrorNone)
+    {
+      CLog::Log(LOGERROR, "%s::%s - error OMX_IndexConfigSingleStep omx_err(0x%08x)\n", CLASSNAME, __func__, omx_err);
+    }
+    
+    //request a new screenshot
+    omx_buffer_fb = p_omx_resize->GetOutputBuffer();
+    p_omx_resize->FillThisBuffer(omx_buffer_fb); //the callback BufferDoneHandler will be triggered instantly
+
+    //wait until a screenshot is available in the buffer
+    pthread_mutex_lock(&COMXVideo::m_boblight_bufferdone_mutex);
+    while (!COMXVideo::m_boblight_bufferdone_flag) {
+      pthread_cond_wait(&COMXVideo::m_boblight_bufferdone_cond, &COMXVideo::m_boblight_bufferdone_mutex);
+    }
+    COMXVideo::m_boblight_bufferdone_flag = false;
+    pthread_mutex_unlock(&COMXVideo::m_boblight_bufferdone_mutex);
+
+    //process the screenshot
+    if(COMXVideo::m_boblight_bufferpointer && COMXVideo::m_boblight_bufferpointer->nFilledLen != 0){
+      x=COMXVideo::m_boblight_width-1;
+      y=COMXVideo::m_boblight_height-1;
+      //sorry for the bad readability, but using a down-counting loop helps to squeeze out some CPU cycles to reduce the boblight delay
+      for(offset = (COMXVideo::m_boblight_width*COMXVideo::m_boblight_height)*4; offset>0; offset-=4, --x){
+        //the buffer is filled in BGRA format -> extract RGB data boblight expects
+        rgb[0] = (int)COMXVideo::m_boblight_bufferpointer->pBuffer[offset-2];
+        rgb[1] = (int)COMXVideo::m_boblight_bufferpointer->pBuffer[offset-3];
+        rgb[2] = (int)COMXVideo::m_boblight_bufferpointer->pBuffer[offset-4];
+
+        boblight_addpixelxy(COMXVideo::m_boblight, x, y, rgb);
+
+        if(x==0){
+          //jump to the previous line
+          x=(COMXVideo::m_boblight_width-1)+1; //1 is add to compensate the follwing decrement
+          --y;
+        }else{
+           //check if we are in the middle of the image vertically and skip the respective horizontal parts
+           if(x == COMXVideo::m_boblight_margin_r && y > COMXVideo::m_boblight_margin_t && y < COMXVideo::m_boblight_margin_b){
+             x=COMXVideo::m_boblight_margin_l+1;
+             offset -= (COMXVideo::m_boblight_margin_r-(COMXVideo::m_boblight_margin_l+1))*4;
+           }
+        }
+      }
+      boblight_sendrgb(COMXVideo::m_boblight, 0, NULL);
+    }
+
+    //the buffer was processed completely
+    OMXClock::OMXSleep(COMXVideo::m_boblight_timeout);
+  }
+  pthread_exit(0); 
+}
+
 OMXPacket *COMXVideo::GetText()
 {
+
   OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer();
   OMXPacket *pkt = NULL;
 
@@ -974,7 +1274,6 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
         }
       }
     }
-
     return true;
 
   }
@@ -988,6 +1287,10 @@ void COMXVideo::Reset(void)
   m_omx_tunnel_text.Flush();
   m_omx_decoder.FlushInput();
   m_omx_tunnel_decoder.Flush();
+  if(COMXVideo::m_boblight){
+    m_omx_split.FlushAll();
+    m_omx_resize.FlushAll();
+  }
 
   //m_setStartTime      = true;
   //m_setStartTimeText  = true;
@@ -1100,6 +1403,6 @@ void COMXVideo::WaitCompletion()
     // }
     OMXClock::OMXSleep(50);
   }
-
   return;
 }
+
