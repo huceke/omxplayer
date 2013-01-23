@@ -58,6 +58,7 @@ extern "C" {
 
 #include <string>
 
+typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB } FORMAT_3D_T;
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 bool              m_bMpeg               = false;
@@ -80,6 +81,7 @@ COMXStreamInfo    m_hints_audio;
 COMXStreamInfo    m_hints_video;
 OMXPacket         *m_omx_pkt            = NULL;
 bool              m_hdmi_clock_sync     = false;
+bool              m_no_hdmi_clock_sync  = false;
 bool              m_stop                = false;
 bool              m_show_subtitle       = false;
 int               m_subtitle_index      = 0;
@@ -128,8 +130,9 @@ void print_usage()
   printf("         -p / --passthrough             audio passthrough\n");
   printf("         -d / --deinterlace             deinterlacing\n");
   printf("         -w / --hw                      hw audio decoding\n");
-  printf("         -3 / --3d                      switch tv into 3d mode\n");
-  printf("         -y / --hdmiclocksync           adjust display refresh rate to match video\n");
+  printf("         -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)\n");
+  printf("         -y / --hdmiclocksync           adjust display refresh rate to match video (default)\n");
+  printf("         -z / --nohdmiclocksync         do not adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -l / --pos                     start position (in seconds)\n");  
@@ -157,6 +160,34 @@ void SetSpeed(int iSpeed)
     m_Pause = false;
 
   m_av_clock->OMXSpeed(iSpeed);
+}
+
+static float get_display_aspect_ratio(HDMI_ASPECT_T aspect)
+{
+  float display_aspect;
+  switch (aspect) {
+    case HDMI_ASPECT_4_3:   display_aspect = 4.0/3.0;   break;
+    case HDMI_ASPECT_14_9:  display_aspect = 14.0/9.0;  break;
+    case HDMI_ASPECT_16_9:  display_aspect = 16.0/9.0;  break;
+    case HDMI_ASPECT_5_4:   display_aspect = 5.0/4.0;   break;
+    case HDMI_ASPECT_16_10: display_aspect = 16.0/10.0; break;
+    case HDMI_ASPECT_15_9:  display_aspect = 15.0/9.0;  break;
+    case HDMI_ASPECT_64_27: display_aspect = 64.0/27.0; break;
+    default:                display_aspect = 16.0/9.0;  break;
+  }
+  return display_aspect;
+}
+
+static float get_display_aspect_ratio(SDTV_ASPECT_T aspect)
+{
+  float display_aspect;
+  switch (aspect) {
+    case SDTV_ASPECT_4_3:  display_aspect = 4.0/3.0;  break;
+    case SDTV_ASPECT_14_9: display_aspect = 14.0/9.0; break;
+    case SDTV_ASPECT_16_9: display_aspect = 16.0/9.0; break;
+    default:               display_aspect = 4.0/3.0;  break;
+  }
+  return display_aspect;
 }
 
 void FlushStreams(double pts)
@@ -189,95 +220,95 @@ void FlushStreams(double pts)
 //  }
 }
 
-void SetVideoMode(int width, int height, int fpsrate, int fpsscale, bool is3d)
+void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T is3d)
 {
-  int32_t num_modes;
+  int32_t num_modes = 0;
+  int i;
   HDMI_RES_GROUP_T prefer_group;
-  int i = 0;
+  HDMI_RES_GROUP_T group = HDMI_RES_GROUP_CEA;
+  float fps = 60.0f; // better to force to higher rate if no information is known
   uint32_t prefer_mode;
-  #define TV_MAX_SUPPORTED_MODES 60
-  TV_SUPPORTED_MODE_T supported_modes[TV_MAX_SUPPORTED_MODES];
-  uint32_t group = HDMI_RES_GROUP_CEA;
-  float fps = 60; // better to force to higher rate if no information is known
 
   if (fpsrate && fpsscale)
     fps = DVD_TIME_BASE / OMXReader::NormalizeFrameduration((double)DVD_TIME_BASE * fpsscale / fpsrate);
 
-  if(is3d)
-    group = HDMI_RES_GROUP_CEA_3D;
-  else
-    group = HDMI_RES_GROUP_CEA;
+  //Supported HDMI CEA/DMT resolutions, preferred resolution will be returned
+  TV_SUPPORTED_MODE_NEW_T *supported_modes = NULL;
+  // query the number of modes first
+  int max_supported_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group, NULL, 0, &prefer_group, &prefer_mode);
+ 
+  if (max_supported_modes > 0)
+    supported_modes = new TV_SUPPORTED_MODE_NEW_T[max_supported_modes];
+ 
+  if (supported_modes)
+  {
+    num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group,
+        supported_modes, max_supported_modes, &prefer_group, &prefer_mode);
 
-  num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes((HDMI_RES_GROUP_T)group,
-                                          supported_modes, TV_MAX_SUPPORTED_MODES,
-                                          &prefer_group, &prefer_mode);
+    CLog::Log(LOGDEBUG, "EGL get supported modes (%d) = %d, prefer_group=%x, prefer_mode=%x\n",
+        group, num_modes, prefer_group, prefer_mode);
+  }
 
-  TV_SUPPORTED_MODE_T *tv_found = NULL;
-  int ifps = (int)(fps+0.5f);
-  //printf("num_modes %d, %d, %d\n", num_modes, prefer_group, prefer_mode);
+  TV_SUPPORTED_MODE_NEW_T *tv_found = NULL;
 
   if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID)
   {
-    TV_SUPPORTED_MODE_T *tv = supported_modes;
     uint32_t best_score = 1<<30;
-    uint32_t isNative = tv->native ? 1:0;
-    uint32_t w = tv->width;
-    uint32_t h = tv->height;
-    uint32_t r = tv->frame_rate;
-    uint32_t match_flag = HDMI_MODE_MATCH_FRAMERATE | HDMI_MODE_MATCH_RESOLUTION;
     uint32_t scan_mode = 0;
-    uint32_t score = 0;
 
-    for (i=0; i<num_modes; i++, tv++)
+    for (i=0; i<num_modes; i++)
     {
-      isNative = tv->native ? 1:0;
-      w = tv->width;
-      h = tv->height;
-      r = tv->frame_rate;
-
-      //printf("mode %dx%d@%d %s%s:%x\n", tv->width, tv->height, 
-      //       tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code);
+      TV_SUPPORTED_MODE_NEW_T *tv = supported_modes + i;
+      uint32_t score = 0;
+      uint32_t w = tv->width;
+      uint32_t h = tv->height;
+      uint32_t r = tv->frame_rate;
 
       /* Check if frame rate match (equal or exact multiple) */
-      if(ifps) 
-      {
-        if(r == ((r/ifps)*ifps))
-          score += abs((int)(r/ifps-1)) * (1<<8); // prefer exact framerate to multiples. Ideal is 1
-        else
-          score += ((match_flag & HDMI_MODE_MATCH_FRAMERATE) ? (1<<28):(1<<12))/r; // bad - but prefer higher framerate
-      }
+      if(fabs(r - 1.0f*fps) / fps < 0.002f)
+	score += 0;
+      else if(fabs(r - 2.0f*fps) / fps < 0.002f)
+	score += 1<<8;
+      else 
+	score += (1<<28)/r; // bad - but prefer higher framerate
+
       /* Check size too, only choose, bigger resolutions */
       if(width && height) 
       {
         /* cost of too small a resolution is high */
-        score += max((int)(width - w), 0) * (1<<16);
-        score += max((int)(height- h), 0) * (1<<16);
+        score += max((int)(width -w), 0) * (1<<16);
+        score += max((int)(height-h), 0) * (1<<16);
         /* cost of too high a resolution is lower */
-        score += max((int)(w-width),   0) * ((match_flag & HDMI_MODE_MATCH_RESOLUTION) ? (1<<8):(1<<0));
-        score += max((int)(h-height),  0) * ((match_flag & HDMI_MODE_MATCH_RESOLUTION) ? (1<<8):(1<<0));
+        score += max((int)(w-width ), 0) * (1<<4);
+        score += max((int)(h-height), 0) * (1<<4);
       } 
-      else if (!isNative) 
-      {
-        // native is good
+
+      // native is good
+      if (!tv->native) 
         score += 1<<16;
-      }
 
+      // interlace is bad
       if (scan_mode != tv->scan_mode) 
-        score += (match_flag & HDMI_MODE_MATCH_SCANMODE) ? (1<<20):(1<<8);
+        score += (1<<16);
 
-      if (w*9 != h*16) // not 16:9 is a small negative
-        score += 1<<12;
+      // wanting 3D but not getting it is a negative
+      if (is3d == CONF_FLAGS_FORMAT_SBS && !(tv->struct_3d_mask & HDMI_3D_STRUCT_SIDE_BY_SIDE_HALF_HORIZONTAL))
+        score += 1<<18;
+      if (is3d == CONF_FLAGS_FORMAT_TB  && !(tv->struct_3d_mask & HDMI_3D_STRUCT_TOP_AND_BOTTOM))
+        score += 1<<18;
 
-      /*printf("mode %dx%d@%d %s%s:%x score=%d\n", tv->width, tv->height, 
-             tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code, score);*/
+      // prefer square pixels modes
+      float par = get_display_aspect_ratio((HDMI_ASPECT_T)tv->aspect_ratio)*(float)tv->height/(float)tv->width;
+      score += fabs(par - 1.0f) * (1<<12);
+
+      /*printf("mode %dx%d@%d %s%s:%x par=%.2f score=%d\n", tv->width, tv->height, 
+             tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code, par, score);*/
 
       if (score < best_score) 
       {
         tv_found = tv;
         best_score = score;
       }
-      /* reset score */
-      score = 0;
     }
   }
 
@@ -288,10 +319,25 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, bool is3d)
     // if we are closer to ntsc version of framerate, let gpu know
     int ifps = (int)(fps+0.5f);
     bool ntsc_freq = fabs(fps*1001.0f/1000.0f - ifps) < fabs(fps-ifps);
-    printf("ntsc_freq:%d\n", ntsc_freq);
     char response[80];
     vc_gencmd(response, sizeof response, "hdmi_ntsc_freqs %d", ntsc_freq);
-    m_BcmHost.vc_tv_hdmi_power_on_explicit(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
+
+    /* inform TV of any 3D settings. Note this property just applies to next hdmi mode change, so no need to call for 2D modes */
+    HDMI_PROPERTY_PARAM_T property;
+    property.property = HDMI_PROPERTY_3D_STRUCTURE;
+    property.param1 = HDMI_3D_FORMAT_NONE;
+    property.param2 = 0;
+    if (is3d != CONF_FLAGS_FORMAT_NONE)
+    {
+      if (is3d == CONF_FLAGS_FORMAT_SBS && tv_found->struct_3d_mask & HDMI_3D_STRUCT_SIDE_BY_SIDE_HALF_HORIZONTAL)
+        property.param1 = HDMI_3D_FORMAT_SBS_HALF;
+      else if (is3d == CONF_FLAGS_FORMAT_TB && tv_found->struct_3d_mask & HDMI_3D_STRUCT_TOP_AND_BOTTOM)
+        property.param1 = HDMI_3D_FORMAT_TB_HALF;
+      m_BcmHost.vc_tv_hdmi_set_property(&property);
+    }
+
+    printf("ntsc_freq:%d %s%s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS":"", property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB":"");
+    m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
   }
 }
 
@@ -328,11 +374,11 @@ int main(int argc, char *argv[])
   COMXCore              g_OMX;
   bool                  m_stats               = false;
   bool                  m_dump_format         = false;
-  bool                  m_3d                  = false;
+  FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
   
-  TV_GET_STATE_RESP_T   tv_state;
+  TV_DISPLAY_STATE_T   tv_state;
 
   const int boost_on_downmix_opt = 0x200;
 
@@ -345,8 +391,9 @@ int main(int argc, char *argv[])
     { "passthrough",  no_argument,        NULL,          'p' },
     { "deinterlace",  no_argument,        NULL,          'd' },
     { "hw",           no_argument,        NULL,          'w' },
-    { "3d",           no_argument,        NULL,          '3' },
+    { "3d",           required_argument,  NULL,          '3' },
     { "hdmiclocksync", no_argument,       NULL,          'y' },
+    { "nohdmiclocksync", no_argument,     NULL,          'z' },
     { "refresh",      no_argument,        NULL,          'r' },
     { "sid",          required_argument,  NULL,          't' },
     { "pos",          required_argument,  NULL,          'l' },    
@@ -358,7 +405,8 @@ int main(int argc, char *argv[])
   };
 
   int c;
-  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3yt:r", longopts, NULL)) != -1)  
+  std::string mode;
+  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3:yzt:r", longopts, NULL)) != -1)  
   {
     switch (c) 
     {
@@ -368,8 +416,20 @@ int main(int argc, char *argv[])
       case 'y':
         m_hdmi_clock_sync = true;
         break;
+      case 'z':
+        m_no_hdmi_clock_sync = true;
+        break;
       case '3':
-        m_3d = true;
+        mode = optarg;
+        if(mode != "SBS" && mode != "TB")
+        {
+          print_usage();
+          return 0;
+        }
+        if(mode == "TB")
+          m_3d = CONF_FLAGS_FORMAT_TB;
+        else
+          m_3d = CONF_FLAGS_FORMAT_SBS;
         break;
       case 'd':
         m_Deinterlace = true;
@@ -472,6 +532,19 @@ int main(int argc, char *argv[])
   m_has_audio     = m_omx_reader.AudioStreamCount();
   m_has_subtitle  = m_omx_reader.SubtitleStreamCount();
 
+  if(m_filename.find("3DSBS") != string::npos || m_filename.find("HSBS") != string::npos)
+    m_3d = CONF_FLAGS_FORMAT_SBS;
+  else if(m_filename.find("3DTAB") != string::npos || m_filename.find("HTAB") != string::npos)
+    m_3d = CONF_FLAGS_FORMAT_TB;
+
+  // 3d modes don't work without switch hdmi mode
+  if (m_3d != CONF_FLAGS_FORMAT_NONE)
+    m_refresh = true;
+
+  // you really don't want want to match refresh rate without hdmi clock sync
+  if (m_refresh && !m_no_hdmi_clock_sync)
+    m_hdmi_clock_sync = true;
+
   if(!m_av_clock->OMXInitialize(m_has_video, m_has_audio))
     goto do_exit;
 
@@ -486,23 +559,23 @@ int main(int argc, char *argv[])
           
   if(m_has_video && m_refresh)
   {
-    memset(&tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
-    m_BcmHost.vc_tv_get_state(&tv_state);
-
-    if(m_filename.find("3DSBS") != string::npos)
-      m_3d = true;
+    memset(&tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
+    m_BcmHost.vc_tv_get_display_state(&tv_state);
 
     SetVideoMode(m_hints_video.width, m_hints_video.height, m_hints_video.fpsrate, m_hints_video.fpsscale, m_3d);
-
   }
-
   // get display aspect
-  TV_GET_STATE_RESP_T current_tv_state;
-  memset(&current_tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
-  m_BcmHost.vc_tv_get_state(&current_tv_state);
-
-  if(current_tv_state.width && current_tv_state.height)
-    m_display_aspect = (float)current_tv_state.width / (float)current_tv_state.height;
+  TV_DISPLAY_STATE_T current_tv_state;
+  memset(&current_tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
+  m_BcmHost.vc_tv_get_display_state(&current_tv_state);
+  if(current_tv_state.state & ( VC_HDMI_HDMI | VC_HDMI_DVI )) {
+    //HDMI or DVI on
+    m_display_aspect = get_display_aspect_ratio((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
+  } else {
+    //composite on
+    m_display_aspect = get_display_aspect_ratio((SDTV_ASPECT_T)current_tv_state.display.sdtv.display_options.aspect);
+  }
+  m_display_aspect *= (float)current_tv_state.display.hdmi.height/(float)current_tv_state.display.hdmi.width;
 
   // seek on start
   if (m_seek_pos !=0 && m_omx_reader.CanSeek()) {
@@ -853,10 +926,9 @@ do_exit:
       m_player_video.WaitCompletion();
   }
 
-  if(m_refresh)
+  if(m_has_video && m_refresh && tv_state.display.hdmi.group && tv_state.display.hdmi.mode)
   {
-    m_BcmHost.vc_tv_hdmi_power_on_best(tv_state.width, tv_state.height, tv_state.frame_rate, HDMI_NONINTERLACED,
-                                       (EDID_MODE_MATCH_FLAG_T)(HDMI_MODE_MATCH_FRAMERATE|HDMI_MODE_MATCH_RESOLUTION|HDMI_MODE_MATCH_SCANMODE));
+    m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)tv_state.display.hdmi.group, tv_state.display.hdmi.mode);
   }
 
   m_av_clock->OMXStop();

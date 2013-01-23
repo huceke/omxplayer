@@ -567,23 +567,21 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
   m_setStartTime      = true;
   m_setStartTimeText  = true;
 
+  float fAspect = (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height; 
+  float par = hints.aspect ? fAspect/display_aspect : 0.0f;
   // only set aspect when we have a aspect and display doesn't match the aspect
-  if(display_aspect != 0.0f && (hints.aspect != display_aspect))
+  if(par != 0.0f && fabs(par - 1.0f) > 0.01f)
   {
     OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
     OMX_INIT_STRUCTURE(configDisplay);
     configDisplay.nPortIndex = m_omx_render.GetInputPort();
 
     AVRational aspect;
-    float fAspect = (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height;
-
-    aspect = av_d2q(fAspect, 100);
-
-    printf("Aspect : num %d den %d aspect %f display aspect %f\n", aspect.num, aspect.den, hints.aspect, display_aspect);
-
+    aspect = av_d2q(par, 100);
     configDisplay.set      = OMX_DISPLAY_SET_PIXEL;
     configDisplay.pixel_x  = aspect.num;
     configDisplay.pixel_y  = aspect.den;
+    printf("Aspect : num %d den %d aspect %f pixel aspect %f\n", aspect.num, aspect.den, hints.aspect, par);
     omx_err = m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
     if(omx_err != OMX_ErrorNone)
       return false;
