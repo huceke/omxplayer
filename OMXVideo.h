@@ -27,8 +27,6 @@
 
 #include <IL/OMX_Video.h>
 
-#include "BitstreamConverter.h"
-
 #include "OMXClock.h"
 #include "OMXReader.h"
 
@@ -49,6 +47,7 @@ public:
 
   // Required overrides
   bool SendDecoderConfig();
+  bool NaluFormatStartCodes(enum CodecID codec, uint8_t *in_extradata, int in_extrasize);
   bool Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect = 0.0f, bool deinterlace = false, bool hdmi_clock_sync = false);
   void Close(void);
   unsigned int GetFreeSpace();
@@ -94,8 +93,6 @@ protected:
   uint8_t           *m_extradata;
   int               m_extrasize;
 
-  CBitstreamConverter   *m_converter;
-  bool              m_video_convert;
   std::string       m_video_codec_name;
 
   bool              m_deinterlace;

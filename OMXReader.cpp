@@ -821,9 +821,6 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
   hints->codec         = stream->codec->codec_id;
   hints->extradata     = stream->codec->extradata;
   hints->extrasize     = stream->codec->extradata_size;
-  hints->codec         = stream->codec->codec_id;
-  hints->extradata     = stream->codec->extradata;
-  hints->extrasize     = stream->codec->extradata_size;
   hints->channels      = stream->codec->channels;
   hints->samplerate    = stream->codec->sample_rate;
   hints->blockalign    = stream->codec->block_align;
@@ -863,6 +860,8 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->aspect = av_q2d(stream->codec->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
     else
       hints->aspect = 0.0f;
+    if (m_bAVI && stream->codec->codec_id == CODEC_ID_H264)
+      hints->ptsinvalid = true;
   }
 
   return true;
