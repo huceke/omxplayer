@@ -70,7 +70,11 @@ std::string       m_font_path           = "/usr/share/fonts/truetype/freefont/Fr
 float             m_font_size           = 0.055f;
 bool              m_centered            = false;
 bool              m_Pause               = false;
-OMXReader         *m_omx_reader;
+OMXReader         *m_omx_reader         = NULL;
+OMXReader         *m_omx_reader_next    = NULL;
+bool              m_omx_reader_openok;
+pthread_t         m_omx_reader_thread;
+bool              m_dump_format         = false;
 int               m_audio_index_use     = -1;
 int               m_seek_pos            = 0;
 bool              m_buffer_empty        = true;
@@ -140,6 +144,15 @@ void print_usage()
   printf("              --font-size size          font size as thousandths of screen height\n");
   printf("                                        (default: 55)\n");
   printf("              --align left/center       subtitle alignment (default: left)\n");
+}
+
+void *
+reader_open_thread(void *data)
+{
+  char *filename = (char *) data;
+  m_omx_reader_next = new OMXReader;
+  m_omx_reader_openok = m_omx_reader_next->Open(filename, m_dump_format);
+  return m_omx_reader_next;
 }
 
 void SetSpeed(int iSpeed)
@@ -328,7 +341,6 @@ int main(int argc, char *argv[])
   CRBP                  g_RBP;
   COMXCore              g_OMX;
   bool                  m_stats               = false;
-  bool                  m_dump_format         = false;
   bool                  m_3d                  = false;
   bool                  m_refresh             = false;
   bool                  m_loop                = false;
@@ -466,13 +478,18 @@ int main(int argc, char *argv[])
 
   optind_filenames = optind;
 
+  pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind]);
+
 play_file:
+  /* This is now not much used variable as we look directly into argv[]
+   * earlier in the process. */
   m_filename = argv[optind++];
 
   m_thread_player = true;
 
-  m_omx_reader = new OMXReader;
-  if(!m_omx_reader->Open(m_filename.c_str(), m_dump_format))
+  pthread_join(m_omx_reader_thread, NULL);
+  m_omx_reader = m_omx_reader_next;
+  if(!m_omx_reader_openok)
     goto do_exit;
 
   if(m_dump_format)
@@ -558,6 +575,12 @@ play_file:
   printf("Subtitle count : %d state %s : index %d\n", 
       m_omx_reader->SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
       (m_omx_reader->SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
+
+  /* Start opening next file on background. */
+  if (optind < argc)
+    pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind]);
+  else if (m_loop)
+    pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind_filenames]);
 
   while(!m_stop)
   {
@@ -885,7 +908,6 @@ do_exit:
 
   m_omx_reader->Close();
   delete m_omx_reader;
-  m_omx_reader = NULL;
 
   if (optind < argc)
   {
