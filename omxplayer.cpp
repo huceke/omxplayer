@@ -117,7 +117,7 @@ void sig_handler(int s)
 
 void print_usage()
 {
-  printf("Usage: omxplayer [OPTIONS] [FILE]\n");
+  printf("Usage: omxplayer [OPTIONS] [FILE...]\n");
   printf("Options :\n");
   printf("         -h / --help                    print this help\n");
 //  printf("         -a / --alang language          audio language        : e.g. ger\n");
@@ -133,6 +133,7 @@ void print_usage()
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -l / --pos                     start position (in seconds)\n");  
+  printf("         -L / --loop                    loop files endlessly\n");  
   printf("              --boost-on-downmix        boost volume when downmixing\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
@@ -330,7 +331,9 @@ int main(int argc, char *argv[])
   bool                  m_dump_format         = false;
   bool                  m_3d                  = false;
   bool                  m_refresh             = false;
+  bool                  m_loop                = false;
   double                startpts              = 0;
+  int                   optind_filenames;
   
   TV_GET_STATE_RESP_T   tv_state;
 
@@ -350,6 +353,7 @@ int main(int argc, char *argv[])
     { "refresh",      no_argument,        NULL,          'r' },
     { "sid",          required_argument,  NULL,          't' },
     { "pos",          required_argument,  NULL,          'l' },    
+    { "loop",         no_argument,        NULL,          'L' },
     { "font",         required_argument,  NULL,          0x100 },
     { "font-size",    required_argument,  NULL,          0x101 },
     { "align",        required_argument,  NULL,          0x102 },
@@ -358,7 +362,7 @@ int main(int argc, char *argv[])
   };
 
   int c;
-  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3yt:r", longopts, NULL)) != -1)  
+  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3yt:rL", longopts, NULL)) != -1)  
   {
     switch (c) 
     {
@@ -430,6 +434,9 @@ int main(int argc, char *argv[])
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
         break;
+      case 'L':
+        m_loop = true;
+        break;
       case 0:
         break;
       case 'h':
@@ -450,14 +457,17 @@ int main(int argc, char *argv[])
     return 0;
   }
 
-  m_filename = argv[optind];
-
   CLog::Init("./");
 
   g_RBP.Initialize();
   g_OMX.Initialize();
 
   m_av_clock = new OMXClock();
+
+  optind_filenames = optind;
+
+play_file:
+  m_filename = argv[optind++];
 
   m_thread_player = true;
 
@@ -873,6 +883,16 @@ do_exit:
   }
 
   m_omx_reader.Close();
+
+  if (optind < argc)
+  {
+    goto play_file;
+  }
+  else if (m_loop)
+  {
+    optind = optind_filenames;
+    goto play_file;
+  }
 
   vc_tv_show_info(0);
 
