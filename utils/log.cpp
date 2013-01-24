@@ -24,6 +24,7 @@
 #include "stdio_utf8.h"
 #include "stat_utf8.h"
 #include "utils/StdString.h"
+#include <sys/time.h>
 
 static FILE*       m_file           = NULL;
 static int         m_repeatCount    = 0;
@@ -57,7 +58,7 @@ void CLog::Log(int loglevel, const char *format, ... )
 {
   pthread_mutex_lock(&m_log_mutex);
 
-  static const char* prefixFormat = "%02.2d:%02.2d:%02.2d T:%" PRIu64 " %7s: ";
+  static const char* prefixFormat = "%02.2d:%02.2d:%02.2d.%04.4d %7s: ";
 #if !(defined(_DEBUG) || defined(PROFILE))
   if (m_logLevel > LOG_LEVEL_NORMAL ||
      (m_logLevel > LOG_LEVEL_NONE && loglevel >= LOGNOTICE))
@@ -69,8 +70,13 @@ void CLog::Log(int loglevel, const char *format, ... )
       return;
     }
 
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
     SYSTEMTIME time;
-    //GetLocalTime(&time);
+    time.wHour = (tv.tv_sec / 3600) % 24;
+    time.wMinute = (tv.tv_sec / 60) % 60;
+    time.wSecond = tv.tv_sec % 60;
+    time.wMilliseconds = tv.tv_usec / 1000;
 
     CStdString strPrefix, strData;
 
@@ -89,10 +95,7 @@ void CLog::Log(int loglevel, const char *format, ... )
     else if (m_repeatCount)
     {
       CStdString strData2;
-      time.wHour = 0;
-      time.wMinute = 0;
-      time.wSecond = 0;
-      strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, (uint64_t)0, levelNames[m_repeatLogLevel]);
+      strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds, levelNames[m_repeatLogLevel]);
 
       strData2.Format("Previous line repeats %d times." LINE_ENDING, m_repeatCount);
       fputs(strPrefix.c_str(), m_file);
@@ -125,7 +128,7 @@ void CLog::Log(int loglevel, const char *format, ... )
     strData.Replace("\n", LINE_ENDING"                                            ");
     strData += LINE_ENDING;
 
-    strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, (uint64_t)0, levelNames[loglevel]);
+    strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds, levelNames[loglevel]);
 
     fputs(strPrefix.c_str(), m_file);
     fputs(strData.c_str(), m_file);
