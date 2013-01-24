@@ -68,7 +68,7 @@ bool OMXThread::StopThread()
 
   m_thread = 0;
 
-  CLog::Log(LOGDEBUG, "%s::%s - Thread stopped\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s - Thread with id %d stopped\n", CLASSNAME, __func__, (int)m_thread);
   return true;
 }
 
