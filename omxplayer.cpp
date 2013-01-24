@@ -70,7 +70,7 @@ std::string       m_font_path           = "/usr/share/fonts/truetype/freefont/Fr
 float             m_font_size           = 0.055f;
 bool              m_centered            = false;
 bool              m_Pause               = false;
-OMXReader         m_omx_reader;
+OMXReader         *m_omx_reader;
 int               m_audio_index_use     = -1;
 int               m_seek_pos            = 0;
 bool              m_buffer_empty        = true;
@@ -150,7 +150,7 @@ void SetSpeed(int iSpeed)
   if(iSpeed < OMX_PLAYSPEED_PAUSE)
     return;
 
-  m_omx_reader.SetSpeed(iSpeed);
+  m_omx_reader->SetSpeed(iSpeed);
 
   if(m_av_clock->OMXPlaySpeed() != OMX_PLAYSPEED_PAUSE && iSpeed == OMX_PLAYSPEED_PAUSE)
     m_Pause = true;
@@ -176,7 +176,7 @@ void FlushStreams(double pts)
 
   if(m_omx_pkt)
   {
-    m_omx_reader.FreePacket(m_omx_pkt);
+    m_omx_reader->FreePacket(m_omx_pkt);
     m_omx_pkt = NULL;
   }
 
@@ -471,16 +471,17 @@ play_file:
 
   m_thread_player = true;
 
-  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format))
+  m_omx_reader = new OMXReader;
+  if(!m_omx_reader->Open(m_filename.c_str(), m_dump_format))
     goto do_exit;
 
   if(m_dump_format)
     goto do_exit;
 
-  m_bMpeg         = m_omx_reader.IsMpegVideo();
-  m_has_video     = m_omx_reader.VideoStreamCount();
-  m_has_audio     = m_omx_reader.AudioStreamCount();
-  m_has_subtitle  = m_omx_reader.SubtitleStreamCount();
+  m_bMpeg         = m_omx_reader->IsMpegVideo();
+  m_has_video     = m_omx_reader->VideoStreamCount();
+  m_has_audio     = m_omx_reader->AudioStreamCount();
+  m_has_subtitle  = m_omx_reader->SubtitleStreamCount();
 
   if(!m_av_clock->OMXInitialize(m_has_video, m_has_audio))
     goto do_exit;
@@ -488,11 +489,11 @@ play_file:
   if(m_hdmi_clock_sync && !m_av_clock->HDMIClockSync())
       goto do_exit;
 
-  m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
-  m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_hints_video);
+  m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
+  m_omx_reader->GetHints(OMXSTREAM_VIDEO, m_hints_video);
 
   if(m_audio_index_use != -1)
-    m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
+    m_omx_reader->SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
           
   if(m_has_video && m_refresh)
   {
@@ -515,9 +516,9 @@ play_file:
     m_display_aspect = (float)current_tv_state.width / (float)current_tv_state.height;
 
   // seek on start
-  if (m_seek_pos !=0 && m_omx_reader.CanSeek()) {
+  if (m_seek_pos !=0 && m_omx_reader->CanSeek()) {
         printf("Seeking start of video to %i seconds\n", m_seek_pos);
-        m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
+        m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
@@ -532,18 +533,18 @@ play_file:
   // index from the user we check to make sure that the value is larger than zero, but
   // we couldn't know without scanning the file if it was too high. If this is the case
   // then we replace the subtitle index with the maximum value possible.
-  if(m_has_subtitle && m_subtitle_index > (m_omx_reader.SubtitleStreamCount() - 1))
+  if(m_has_subtitle && m_subtitle_index > (m_omx_reader->SubtitleStreamCount() - 1))
   {
-    m_subtitle_index = m_omx_reader.SubtitleStreamCount() - 1;
+    m_subtitle_index = m_omx_reader->SubtitleStreamCount() - 1;
   }
 
   // Here we actually enable the subtitle streams if we have one available.
-  if (m_show_subtitle && m_has_subtitle && m_subtitle_index <= (m_omx_reader.SubtitleStreamCount() - 1))
-    m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+  if (m_show_subtitle && m_has_subtitle && m_subtitle_index <= (m_omx_reader->SubtitleStreamCount() - 1))
+    m_omx_reader->SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
 
-  m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
+  m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
 
-  if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
+  if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, m_omx_reader, deviceString, 
                                          m_passthrough, m_use_hw_audio,
                                          m_boost_on_downmix, m_thread_player))
     goto do_exit;
@@ -555,8 +556,8 @@ play_file:
   struct timespec starttime, endtime;
 
   printf("Subtitle count : %d state %s : index %d\n", 
-      m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
-      (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
+      m_omx_reader->SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+      (m_omx_reader->SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
 
   while(!m_stop)
   {
@@ -584,19 +585,19 @@ play_file:
       case 'j':
         if(m_has_audio)
         {
-          int new_index = m_omx_reader.GetAudioIndex() - 1;
+          int new_index = m_omx_reader->GetAudioIndex() - 1;
           if (new_index >= 0)
-            m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, new_index);
+            m_omx_reader->SetActiveStream(OMXSTREAM_AUDIO, new_index);
         }
         break;
       case 'k':
         if(m_has_audio)
-          m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
+          m_omx_reader->SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader->GetAudioIndex() + 1);
         break;
       case 'i':
-        if(m_omx_reader.GetChapterCount() > 0)
+        if(m_omx_reader->GetChapterCount() > 0)
         {
-          m_omx_reader.SeekChapter(m_omx_reader.GetChapter() - 1, &startpts);
+          m_omx_reader->SeekChapter(m_omx_reader->GetChapter() - 1, &startpts);
           FlushStreams(startpts);
         }
         else
@@ -605,9 +606,9 @@ play_file:
         }
         break;
       case 'o':
-        if(m_omx_reader.GetChapterCount() > 0)
+        if(m_omx_reader->GetChapterCount() > 0)
         {
-          m_omx_reader.SeekChapter(m_omx_reader.GetChapter() + 1, &startpts);
+          m_omx_reader->SeekChapter(m_omx_reader->GetChapter() + 1, &startpts);
           FlushStreams(startpts);
         }
         else
@@ -623,9 +624,9 @@ play_file:
           {
             m_subtitle_index = new_index;
             printf("Subtitle count : %d state %s : index %d\n", 
-              m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
-              (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
-            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+              m_omx_reader->SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+              (m_omx_reader->SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
+            m_omx_reader->SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_player_subtitles.Flush();
           }
         }
@@ -634,13 +635,13 @@ play_file:
         if(m_has_subtitle)
         {
           int new_index = m_subtitle_index+1;
-          if(new_index < m_omx_reader.SubtitleStreamCount())
+          if(new_index < m_omx_reader->SubtitleStreamCount())
           {
             m_subtitle_index = new_index;
             printf("Subtitle count : %d state %s : index %d\n", 
-              m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
-              (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
-            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+              m_omx_reader->SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+              (m_omx_reader->SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
+            m_omx_reader->SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_player_subtitles.Flush();
           }
         }
@@ -650,18 +651,18 @@ play_file:
         {
           if(m_show_subtitle)
           {
-            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, -1);
+            m_omx_reader->SetActiveStream(OMXSTREAM_SUBTITLE, -1);
             m_player_subtitles.Flush();
             m_show_subtitle = false;
           }
           else
           {
-            m_omx_reader.SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
+            m_omx_reader->SetActiveStream(OMXSTREAM_SUBTITLE, m_subtitle_index);
             m_show_subtitle = true;
           }
           printf("Subtitle count : %d state %s : index %d\n", 
-            m_omx_reader.SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
-            (m_omx_reader.SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
+            m_omx_reader->SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
+            (m_omx_reader->SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
         }
         break;
       case 'q':
@@ -669,16 +670,16 @@ play_file:
         goto do_exit;
         break;
       case 0x5b44: // key left
-        if(m_omx_reader.CanSeek()) m_incr = -30.0;
+        if(m_omx_reader->CanSeek()) m_incr = -30.0;
         break;
       case 0x5b43: // key right
-        if(m_omx_reader.CanSeek()) m_incr = 30.0;
+        if(m_omx_reader->CanSeek()) m_incr = 30.0;
         break;
       case 0x5b41: // key up
-        if(m_omx_reader.CanSeek()) m_incr = 600.0;
+        if(m_omx_reader->CanSeek()) m_incr = 600.0;
         break;
       case 0x5b42: // key down
-        if(m_omx_reader.CanSeek()) m_incr = -600.0;
+        if(m_omx_reader->CanSeek()) m_incr = -600.0;
         break;
       case ' ':
       case 'p':
@@ -727,7 +728,7 @@ play_file:
 
       m_incr = 0;
 
-      if(m_omx_reader.SeekTime(seek_pos, seek_flags, &startpts))
+      if(m_omx_reader->SeekTime(seek_pos, seek_flags, &startpts))
         FlushStreams(startpts);
 
       m_player_video.Close();
@@ -751,7 +752,7 @@ play_file:
              m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
     }
 
-    if(m_omx_reader.IsEof() && !m_omx_pkt)
+    if(m_omx_reader->IsEof() && !m_omx_pkt)
     {
       if (!m_player_audio.GetCached() && !m_player_video.GetCached())
         break;
@@ -799,9 +800,9 @@ play_file:
     }
 
     if(!m_omx_pkt)
-      m_omx_pkt = m_omx_reader.Read();
+      m_omx_pkt = m_omx_reader->Read();
 
-    if(m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
+    if(m_has_video && m_omx_pkt && m_omx_reader->IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {
       if(m_player_video.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
@@ -825,7 +826,7 @@ play_file:
       else
         OMXClock::OMXSleep(10);
     }
-    else if(m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_SUBTITLE, m_omx_pkt->stream_index))
+    else if(m_omx_pkt && m_omx_reader->IsActive(OMXSTREAM_SUBTITLE, m_omx_pkt->stream_index))
     {
       if(m_omx_pkt->size && m_show_subtitle &&
           (m_omx_pkt->hints.codec == CODEC_ID_TEXT || 
@@ -838,7 +839,7 @@ play_file:
       }
       else
       {
-        m_omx_reader.FreePacket(m_omx_pkt);
+        m_omx_reader->FreePacket(m_omx_pkt);
         m_omx_pkt = NULL;
       }
     }
@@ -846,7 +847,7 @@ play_file:
     {
       if(m_omx_pkt)
       {
-        m_omx_reader.FreePacket(m_omx_pkt);
+        m_omx_reader->FreePacket(m_omx_pkt);
         m_omx_pkt = NULL;
       }
     }
@@ -878,11 +879,13 @@ do_exit:
 
   if(m_omx_pkt)
   {
-    m_omx_reader.FreePacket(m_omx_pkt);
+    m_omx_reader->FreePacket(m_omx_pkt);
     m_omx_pkt = NULL;
   }
 
-  m_omx_reader.Close();
+  m_omx_reader->Close();
+  delete m_omx_reader;
+  m_omx_reader = NULL;
 
   if (optind < argc)
   {
