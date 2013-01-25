@@ -65,7 +65,10 @@
 #define OMX_MPEG2V_DECODER      OMX_VIDEO_DECODER
 #define OMX_VC1_DECODER         OMX_VIDEO_DECODER
 #define OMX_WMV3_DECODER        OMX_VIDEO_DECODER
+#define OMX_VP6_DECODER         OMX_VIDEO_DECODER
 #define OMX_VP8_DECODER         OMX_VIDEO_DECODER
+#define OMX_THEORA_DECODER      OMX_VIDEO_DECODER
+#define OMX_MJPEG_DECODER       OMX_VIDEO_DECODER
 
 #define MAX_TEXT_LENGTH 1024
 
@@ -227,12 +230,36 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
       m_codingType = OMX_VIDEO_CodingMPEG4;
       m_video_codec_name = "omx-h263";
       break;
+    case CODEC_ID_VP6:
+    case CODEC_ID_VP6F:
+    case CODEC_ID_VP6A:
+      // (role name) video_decoder.vp6
+      // VP6
+      decoder_name = OMX_VP6_DECODER;
+      m_codingType = OMX_VIDEO_CodingVP6;
+      m_video_codec_name = "omx-vp6";
+    break;
     case CODEC_ID_VP8:
       // (role name) video_decoder.vp8
       // VP8
       decoder_name = OMX_VP8_DECODER;
       m_codingType = OMX_VIDEO_CodingVP8;
       m_video_codec_name = "omx-vp8";
+    break;
+    case CODEC_ID_THEORA:
+      // (role name) video_decoder.theora
+      // theora
+      decoder_name = OMX_THEORA_DECODER;
+      m_codingType = OMX_VIDEO_CodingTheora;
+      m_video_codec_name = "omx-theora";
+    break;
+    case CODEC_ID_MJPEG:
+    case CODEC_ID_MJPEGB:
+      // (role name) video_decoder.mjpg
+      // mjpg
+      decoder_name = OMX_MJPEG_DECODER;
+      m_codingType = OMX_VIDEO_CodingMJPEG;
+      m_video_codec_name = "omx-mjpeg";
     break;
     case CODEC_ID_VC1:
     case CODEC_ID_WMV3:
