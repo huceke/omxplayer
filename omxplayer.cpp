@@ -909,14 +909,16 @@ do_exit:
   m_omx_reader->Close();
   delete m_omx_reader;
 
-  if (optind < argc)
-  {
-    goto play_file;
-  }
-  else if (m_loop)
-  {
-    optind = optind_filenames;
-    goto play_file;
+  if (!m_stop) {
+    if (optind < argc)
+    {
+      goto play_file;
+    }
+    else if (m_loop)
+    {
+      optind = optind_filenames;
+      goto play_file;
+    }
   }
 
   vc_tv_show_info(0);
