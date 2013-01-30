@@ -109,6 +109,7 @@ public:
   void Process();
   void FlushSubtitles();
   void Flush();
+  void UnFlush();
   bool AddPacket(OMXPacket *pkt);
   bool OpenDecoder();
   bool CloseDecoder();

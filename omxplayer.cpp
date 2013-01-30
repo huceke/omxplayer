@@ -95,6 +95,7 @@ bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = false;
+bool              m_loop                = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -137,6 +138,7 @@ void print_usage()
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -l / --pos                     start position (in seconds)\n");  
   printf("              --boost-on-downmix        boost volume when downmixing\n");
+  printf("              --loop                    repeat content\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
   printf("              --font-size size          font size as thousandths of screen height\n");
@@ -381,6 +383,7 @@ int main(int argc, char *argv[])
   TV_DISPLAY_STATE_T   tv_state;
 
   const int boost_on_downmix_opt = 0x200;
+  const int loop_opt = 0x201;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -401,6 +404,7 @@ int main(int argc, char *argv[])
     { "font-size",    required_argument,  NULL,          0x101 },
     { "align",        required_argument,  NULL,          0x102 },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
+    { "loop",         no_argument,        NULL,          loop_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -489,6 +493,9 @@ int main(int argc, char *argv[])
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
+        break;
+      case loop_opt:
+        m_loop = true;
         break;
       case 0:
         break;
@@ -817,14 +824,34 @@ int main(int argc, char *argv[])
     if(m_omx_reader.IsEof() && !m_omx_pkt)
     {
       if (!m_player_audio.GetCached() && !m_player_video.GetCached())
-        break;
+      {
+        if (m_loop)
+        {
 
-      // Abort audio buffering, now we're on our own
-      if (m_buffer_empty)
-        m_av_clock->OMXResume();
+          if(m_has_audio)
+            m_player_audio.WaitCompletion();
+          else if(m_has_video)
+            m_player_video.WaitCompletion();
 
-      OMXClock::OMXSleep(10);
-      continue;
+          if(m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
+          {
+            FlushStreams(startpts);
+            if (m_has_video) m_player_video.UnFlush();
+          }
+
+        }
+        else
+          break;
+      }
+      else
+      {
+        // Abort audio buffering, now we're on our own
+        if (m_buffer_empty)
+          m_av_clock->OMXResume();
+
+        OMXClock::OMXSleep(10);
+        continue;
+      }
     }
 
     /* when the audio buffer runs under 0.1 seconds we buffer up */
