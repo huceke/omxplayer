@@ -115,6 +115,7 @@ public:
   bool CloseDecoder();
   int  GetDecoderBufferSize();
   int  GetDecoderFreeSpace();
+  void SetCurrentPTS(double pts) { m_pts = pts; }
   double GetCurrentPTS() { return m_pts; };
   double GetFPS() { return m_fps; };
   unsigned int GetCached() { return m_cached_size; };
