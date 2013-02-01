@@ -22,13 +22,14 @@
 #include "OMXReader.h"
 #include "OMXClock.h"
 #include "OMXOverlayCodecText.h"
+#include "Subtitle.h"
+#include "utils/Mailbox.h"
 
 #include <boost/config.hpp>
 #include <boost/circular_buffer.hpp>
 #include <atomic>
 #include <string>
-#include <deque>
-#include <mutex>
+#include <vector>
 
 class OMXPlayerSubtitles : public OMXThread
 {
@@ -37,34 +38,109 @@ public:
   OMXPlayerSubtitles& operator=(const OMXPlayerSubtitles&) = delete;
   OMXPlayerSubtitles() BOOST_NOEXCEPT;
   ~OMXPlayerSubtitles() BOOST_NOEXCEPT;
-  bool Open(const std::string& font_path, float font_size, bool centered, OMXClock* clock) BOOST_NOEXCEPT;
+  bool Open(size_t stream_count,
+            std::vector<Subtitle>&& external_subtitles,
+            const std::string& font_path,
+            float font_size,
+            bool centered,
+            unsigned int lines,
+            OMXClock* clock) BOOST_NOEXCEPT;
   void Close() BOOST_NOEXCEPT;
-  void Flush() BOOST_NOEXCEPT;
-  bool AddPacket(OMXPacket *pkt) BOOST_NOEXCEPT;
+  void Flush(double pts) BOOST_NOEXCEPT;
+  void Resume() BOOST_NOEXCEPT;
+  void Pause() BOOST_NOEXCEPT;
+
+  void SetVisible(bool visible) BOOST_NOEXCEPT;
+
+  bool GetVisible() BOOST_NOEXCEPT
+  {
+    assert(m_open);
+    return m_visible;
+  }
+  
+  void SetActiveStream(size_t index) BOOST_NOEXCEPT;
+
+  size_t GetActiveStream() BOOST_NOEXCEPT
+  {
+    assert(m_open);
+    assert(!m_subtitle_buffers.empty());
+    return m_active_index;
+  }
+
+  void SetDelay(int value) BOOST_NOEXCEPT;
+
+  int GetDelay() BOOST_NOEXCEPT
+  {
+    assert(m_open);
+    return m_delay;
+  }
+
+  void SetUseExternalSubtitles(bool use) BOOST_NOEXCEPT;
+
+  bool GetUseExternalSubtitles() BOOST_NOEXCEPT
+  {
+    assert(m_open);
+    return m_use_external_subtitles;
+  }
+
+  bool AddPacket(OMXPacket *pkt, size_t stream_index) BOOST_NOEXCEPT;
 
 private:
-  struct Subtitle
-  {
-    double start;
-    double stop;
-    std::vector<std::string> text_lines;
+  struct Message {
+    struct Stop {};
+    struct Flush
+    {
+      std::vector<Subtitle> subtitles;
+    };
+    struct Push
+    {
+      Subtitle subtitle;
+    };
+    struct Seek
+    {
+      int time;
+    };
+    struct SetDelay
+    {
+      int value;
+    };
+    struct SetPaused
+    {
+      bool value;
+    };
   };
 
   void Process();
-  void RenderLoop(const std::string& font_path, float font_size, bool centered, OMXClock* clock);
+  void RenderLoop(const std::string& font_path,
+                  float font_size,
+                  bool centered,
+                  unsigned int lines,
+                  OMXClock* clock);
   std::vector<std::string> GetTextLines(OMXPacket *pkt);
+  void FlushRenderer();
+
+  COMXOverlayCodecText                          m_subtitle_codec;
+  std::vector<Subtitle>                         m_external_subtitles;
+  std::vector<boost::circular_buffer<Subtitle>> m_subtitle_buffers;
+  Mailbox<Message::Stop,
+          Message::Flush,
+          Message::Push,
+          Message::Seek,
+          Message::SetPaused,
+          Message::SetDelay>                    m_mailbox;
+  bool                                          m_paused;
+  bool                                          m_visible;
+  bool                                          m_use_external_subtitles;
+  size_t                                        m_active_index;
+  int                                           m_delay;
+  std::atomic<bool>                             m_thread_stopped;
+  std::string                                   m_font_path;
+  float                                         m_font_size;
+  bool                                          m_centered;
+  unsigned int                                  m_lines;
+  OMXClock*                                     m_av_clock;
 
 #ifndef NDEBUG
   bool m_open;
 #endif
-
-  COMXOverlayCodecText                   m_subtitle_codec;
-  boost::circular_buffer<Subtitle>       m_subtitle_queue;
-  std::mutex                             m_subtitle_queue_lock;
-  std::atomic<bool>                      m_thread_stopped;
-  std::atomic<bool>                      m_flush;
-  std::string                            m_font_path;
-  float                                  m_font_size;
-  bool                                   m_centered;
-  OMXClock*                              m_av_clock;
 };
