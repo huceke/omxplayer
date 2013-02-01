@@ -26,11 +26,14 @@
 
 #include "SubtitleRenderer.h"
 #include "Unicode.h"
-#include "ScopeExit.h"
-#include "Enforce.h"
+#include "utils/ScopeExit.h"
+#include "utils/Enforce.h"
+#include "utils/Clamp.h"
 
+#include <bcm_host.h>
 #include <VG/vgu.h>
 #include <cassert>
+#include <algorithm>
 
 #include "bcm_host.h"
 
@@ -109,7 +112,7 @@ void SubtitleRenderer::load_glyph(char32_t codepoint) {
       VGfloat glyph_origin[2]{};
 
       if (bitmap.width > 0 && bitmap.rows > 0) {
-        constexpr VGfloat blur_stddev = 0.6;
+        constexpr VGfloat blur_stddev = 0.52;
         const int padding = static_cast<int>(3*blur_stddev + 0.5);
         const int image_width = bitmap.width + padding*2;
         const int image_height = bitmap.rows + padding*2;
@@ -144,7 +147,7 @@ void SubtitleRenderer::load_glyph(char32_t codepoint) {
                                             image_width,
                                             image_height,
                                             VG_IMAGE_QUALITY_NONANTIALIASED);
-        assert(image);
+        assert(softened_image);
 
         // Even out hard and soft edges
         vgGaussianBlur(softened_image, image, blur_stddev, blur_stddev, VG_TILE_FILL);
@@ -263,12 +266,11 @@ SubtitleRenderer(int layer,
                  float margin_bottom,
                  bool centered,
                  unsigned int white_level,
-                 unsigned int box_opacity)
+                 unsigned int box_opacity,
+                 unsigned int lines)
 : prepared_(),
   dispman_element_(),
   dispman_display_(),
-  screen_width_(),
-  screen_height_(),
   display_(),
   context_(),
   surface_(),
@@ -282,16 +284,42 @@ SubtitleRenderer(int layer,
   line_height_(),
   box_offset_(),
   box_h_padding_(),
-  margin_left_(margin_left),
-  margin_bottom_(margin_bottom),
+  margin_left_(),
+  margin_bottom_(),
+  buffer_width_(),
+  buffer_height_(),
   centered_(centered),
   white_level_(white_level),
   box_opacity_(box_opacity)
 {
   try {
-    initialize_window(layer);
-    initialize_egl();
-    initialize_fonts(font_path, font_size);
+    uint32_t screen_width, screen_height;
+    ENFORCE(graphics_get_display_size(0, &screen_width, &screen_height) >= 0);
+
+    initialize_fonts(font_path, font_size*screen_height);
+
+    int abs_margin_bottom =
+      static_cast<int>(margin_bottom * screen_height + 0.5f) - box_offset_;
+
+    int buffer_padding = (line_height_+2)/4;
+    int buffer_bottom = clamp(abs_margin_bottom + box_offset_ - buffer_padding,
+                              0, (int) screen_height-1);
+    int buffer_top = clamp(buffer_bottom + line_height_ * (int) lines + buffer_padding*2,
+                           0, (int) screen_height-1);
+
+    buffer_width_ = screen_width;
+    buffer_height_ = buffer_top - buffer_bottom + 1;
+    margin_left_ = (screen_width - screen_height) / 2 +
+                   static_cast<int>(margin_left * screen_height + 0.5f); 
+    margin_bottom_ = abs_margin_bottom - buffer_bottom; 
+
+    initialize_window(layer,
+                      0,
+                      screen_height - buffer_top - 1,
+                      screen_width,
+                      buffer_height_);
+
+    initialize_vg();
   } catch (...) {
     destroy();
     throw;
@@ -299,17 +327,17 @@ SubtitleRenderer(int layer,
 }
 
 void SubtitleRenderer::destroy() {
-  destroy_fonts();
-  destroy_egl();
+  destroy_vg();
   destroy_window();
+  destroy_fonts();
 }
 
 void SubtitleRenderer::
-initialize_fonts(const std::string& font_path, float font_size) {
+initialize_fonts(const std::string& font_path, unsigned int font_size) {
   ENFORCE(!FT_Init_FreeType(&ft_library_));
   ENFORCE2(!FT_New_Face(ft_library_, font_path.c_str(), 0, &ft_face_),
            "Unable to open font");
-  ENFORCE(!FT_Set_Pixel_Sizes(ft_face_, 0, font_size*screen_height_));
+  ENFORCE(!FT_Set_Pixel_Sizes(ft_face_, 0, font_size));
 
   auto get_bbox = [this](char32_t cp) {
     auto glyph_index = FT_Get_Char_Index(ft_face_, cp);
@@ -333,27 +361,13 @@ initialize_fonts(const std::string& font_path, float font_size) {
   box_h_padding_ = line_height_/5.0f + 0.5f;
 
 
-  constexpr float border_thickness = 0.045f;
+  constexpr float border_thickness = 0.044f;
   ENFORCE(!FT_Stroker_New(ft_library_, &ft_stroker_));
   FT_Stroker_Set(ft_stroker_,
                  line_height_*border_thickness*64.0f,
                  FT_STROKER_LINECAP_ROUND,
                  FT_STROKER_LINEJOIN_ROUND,
                  0);
-
-  vgSeti(VG_FILTER_FORMAT_LINEAR, VG_TRUE);
-  assert(!vgGetError());
-
-  vgSeti(VG_IMAGE_QUALITY, VG_IMAGE_QUALITY_NONANTIALIASED);
-  assert(!vgGetError());
-
-  auto create_vg_font = [](VGFont& font) {
-    font = vgCreateFont(128);
-    ENFORCE(font);
-  };
-
-  create_vg_font(vg_font_);
-  create_vg_font(vg_font_border_);
 }
 
 void SubtitleRenderer::destroy_fonts() {
@@ -366,21 +380,22 @@ void SubtitleRenderer::destroy_fonts() {
   }
 } 
 
-void SubtitleRenderer::initialize_window(int layer) {
-  ENFORCE(graphics_get_display_size(0 /* LCD */, &screen_width_, &screen_height_)
-          >= 0);
-
+void SubtitleRenderer::initialize_window(int layer,
+                                         unsigned int x,
+                                         unsigned int y,
+                                         unsigned int width,
+                                         unsigned int height) {
   VC_RECT_T dst_rect;
-  dst_rect.x = 0;
-  dst_rect.y = 0;
-  dst_rect.width = screen_width_;
-  dst_rect.height = screen_height_;
-     
+  dst_rect.x = x;
+  dst_rect.y = y;
+  dst_rect.width = width;
+  dst_rect.height = height;
+
   VC_RECT_T src_rect;
   src_rect.x = 0;
   src_rect.y = 0;
-  src_rect.width = screen_width_ << 16;
-  src_rect.height = screen_height_ << 16;        
+  src_rect.width = dst_rect.width << 16;
+  src_rect.height = dst_rect.height << 16;        
 
   dispman_display_ = vc_dispmanx_display_open(0 /* LCD */);
   ENFORCE(dispman_display_);
@@ -431,7 +446,7 @@ void SubtitleRenderer::destroy_window() {
   }
 }
 
-void SubtitleRenderer::initialize_egl() {
+void SubtitleRenderer::initialize_vg() {
   // get an EGL display connection
   display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   ENFORCE(display_);
@@ -458,8 +473,8 @@ void SubtitleRenderer::initialize_egl() {
 
   static EGL_DISPMANX_WINDOW_T nativewindow;
   nativewindow.element = dispman_element_;
-  nativewindow.width = screen_width_;
-  nativewindow.height = screen_height_;
+  nativewindow.width = buffer_width_;
+  nativewindow.height = buffer_height_;
      
   surface_ = eglCreateWindowSurface(display_, config, &nativewindow, NULL);
   ENFORCE(surface_);
@@ -470,9 +485,26 @@ void SubtitleRenderer::initialize_egl() {
 
   auto result = eglMakeCurrent(display_, surface_, surface_, context_);
   assert(result);
+
+  vgSeti(VG_FILTER_FORMAT_LINEAR, VG_TRUE);
+  assert(!vgGetError());
+
+  vgSeti(VG_IMAGE_QUALITY, VG_IMAGE_QUALITY_NONANTIALIASED);
+  assert(!vgGetError());
+
+  auto create_vg_font = [](VGFont& font) {
+    font = vgCreateFont(64);
+    ENFORCE(font);
+  };
+
+  create_vg_font(vg_font_);
+  create_vg_font(vg_font_border_);
+
+  // VGfloat color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+  // vgSetfv(VG_CLEAR_COLOR, 4, color);
 }
 
-void SubtitleRenderer::destroy_egl() {
+void SubtitleRenderer::destroy_vg() {
   if (display_) {
     auto result =
       eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -490,9 +522,6 @@ void SubtitleRenderer::destroy_egl() {
 void SubtitleRenderer::
 prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT {
   const int n_lines = text_lines.size();
-  const int x = (screen_width_-screen_height_) / 2 +
-                static_cast<int>(margin_left_*screen_height_ + 0.5f);
-  const int y = margin_bottom_*screen_height_ + 0.5f;
 
   internal_lines_.resize(n_lines);
   line_widths_.resize(n_lines);
@@ -501,18 +530,18 @@ prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT {
     internal_lines_[i] = get_internal_chars(text_lines[i]);
     prepare_glyphs(internal_lines_[i]);
     line_widths_[i] = get_text_width(internal_lines_[i]);
-    line_positions_[i].second = y + (n_lines-i-1)*line_height_;
+    line_positions_[i].second = margin_bottom_ + (n_lines-i-1)*line_height_;
     if (centered_)
-      line_positions_[i].first = screen_width_/2 - line_widths_[i]/2;
+      line_positions_[i].first = buffer_width_/2 - line_widths_[i]/2;
     else
-      line_positions_[i].first = x;
+      line_positions_[i].first = margin_left_;
   }
 
   prepared_ = true;
 }
 
 void SubtitleRenderer::clear() BOOST_NOEXCEPT {
-  vgClear(0, 0, screen_width_, screen_height_);
+  vgClear(0, 0, buffer_width_, buffer_height_);
   assert(!vgGetError());
 }
 
