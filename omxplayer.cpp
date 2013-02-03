@@ -464,7 +464,7 @@ int main(int argc, char *argv[])
 
   int c;
   std::string mode;
-  while ((c = getopt_long(argc, argv, "wihnl:o:cslpd3:yzt:r", longopts, NULL)) != -1)  
+  while ((c = getopt_long(argc, argv, "wihn:l:o:cslpd3:yzt:r", longopts, NULL)) != -1)
   {
     switch (c) 
     {
