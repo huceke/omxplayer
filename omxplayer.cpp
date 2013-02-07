@@ -58,6 +58,9 @@ extern "C" {
 
 #include <string>
 
+CRBP              g_RBP;
+COMXCore          g_OMX;
+TV_GET_STATE_RESP_T   tv_state;
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 bool              m_bMpeg               = false;
@@ -151,8 +154,44 @@ reader_open_thread(void *data)
 {
   char *filename = (char *) data;
   m_omx_reader_next = new OMXReader;
+  printf("thread nextreader %p (%d)\n", m_omx_reader_next, m_omx_reader_next->AudioStreamCount());
   m_omx_reader_openok = m_omx_reader_next->Open(filename, m_dump_format);
+  printf("thread opened %p (%d) openok %d\n", m_omx_reader_next, m_omx_reader_next->AudioStreamCount(), m_omx_reader_openok);
   return m_omx_reader_next;
+}
+
+void start_omx()
+{
+  g_RBP.Initialize();
+  g_OMX.Initialize();
+
+  m_av_clock = new OMXClock();
+}
+
+void stop_omx()
+{
+  vc_tv_show_info(0);
+
+  delete m_av_clock;
+
+  g_OMX.Deinitialize();
+  g_RBP.Deinitialize();
+}
+
+void stop_player(bool m_refresh)
+{
+  if(m_refresh)
+  {
+    m_BcmHost.vc_tv_hdmi_power_on_best(tv_state.width, tv_state.height, tv_state.frame_rate, HDMI_NONINTERLACED,
+                                       (EDID_MODE_MATCH_FLAG_T)(HDMI_MODE_MATCH_FRAMERATE|HDMI_MODE_MATCH_RESOLUTION|HDMI_MODE_MATCH_SCANMODE));
+  }
+
+  m_av_clock->OMXStop();
+  m_av_clock->OMXStateIdle();
+
+  m_player_subtitles.Close();
+  m_player_video.Close();
+  m_player_audio.Close();
 }
 
 void SetSpeed(int iSpeed)
@@ -338,16 +377,12 @@ int main(int argc, char *argv[])
   std::string last_sub = "";
   std::string            m_filename;
   double                m_incr                = 0;
-  CRBP                  g_RBP;
-  COMXCore              g_OMX;
   bool                  m_stats               = false;
   bool                  m_3d                  = false;
   bool                  m_refresh             = false;
   bool                  m_loop                = false;
   double                startpts              = 0;
   int                   optind_filenames;
-  
-  TV_GET_STATE_RESP_T   tv_state;
 
   const int boost_on_downmix_opt = 0x200;
 
@@ -471,16 +506,13 @@ int main(int argc, char *argv[])
 
   CLog::Init("./");
 
-  g_RBP.Initialize();
-  g_OMX.Initialize();
-
-  m_av_clock = new OMXClock();
-
   optind_filenames = optind;
 
   pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind]);
 
 play_file:
+  start_omx();
+
   /* This is now not much used variable as we look directly into argv[]
    * earlier in the process. */
   m_filename = argv[optind++];
@@ -489,22 +521,33 @@ play_file:
 
   pthread_join(m_omx_reader_thread, NULL);
   m_omx_reader = m_omx_reader_next;
-  if(!m_omx_reader_openok)
+  if(!m_omx_reader_openok) {
+    printf("reader not openok. emergency exit!!!\n");
+    m_stop = 1;
     goto do_exit;
+  }
 
-  if(m_dump_format)
+  if(m_dump_format) {
+    m_stop = 1;
     goto do_exit;
+  }
 
   m_bMpeg         = m_omx_reader->IsMpegVideo();
   m_has_video     = m_omx_reader->VideoStreamCount();
   m_has_audio     = m_omx_reader->AudioStreamCount();
   m_has_subtitle  = m_omx_reader->SubtitleStreamCount();
 
-  if(!m_av_clock->OMXInitialize(m_has_video, m_has_audio))
+  if(!m_av_clock->OMXInitialize(m_has_video, m_has_audio)) {
+    printf("avclock error. emergency exit!!!\n");
+    m_stop = 1;
     goto do_exit;
+  }
 
-  if(m_hdmi_clock_sync && !m_av_clock->HDMIClockSync())
-      goto do_exit;
+  if(m_hdmi_clock_sync && !m_av_clock->HDMIClockSync()) {
+    printf("hdmi clock sync error. emergency exit!!!\n");
+    m_stop = 1;
+    goto do_exit;
+  }
 
   m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
   m_omx_reader->GetHints(OMXSTREAM_VIDEO, m_hints_video);
@@ -539,12 +582,18 @@ play_file:
   }
   
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect)) {
+    printf("video open error. emergency exit!!!\n");
+    m_stop = 1;
     goto do_exit;
+  }
 
   if(m_has_subtitle &&
-     !m_player_subtitles.Open(m_font_path, m_font_size, m_centered, m_av_clock))
+     !m_player_subtitles.Open(m_font_path, m_font_size, m_centered, m_av_clock)) {
+    printf("subtitles open error. emergency exit!!!\n");
+    m_stop = 1;
     goto do_exit;
+  }
 
   // This is an upper bound check on the subtitle limits. When we pulled the subtitle
   // index from the user we check to make sure that the value is larger than zero, but
@@ -561,10 +610,14 @@ play_file:
 
   m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
 
-  if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, m_omx_reader, deviceString, 
+  while(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, m_omx_reader, deviceString, 
                                          m_passthrough, m_use_hw_audio,
-                                         m_boost_on_downmix, m_thread_player))
+                                         m_boost_on_downmix, m_thread_player)) {
+    printf("audio open error. press enter to reset state\n");
+    sleep(1);
+    while (getchar() == EOF) ;
     goto do_exit;
+  }
 
   m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
   m_av_clock->OMXStateExecute();
@@ -756,14 +809,18 @@ play_file:
 
       m_player_video.Close();
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect)) {
+	printf("video open error. emergency exit!!!\n");
+	m_stop = 1;
         goto do_exit;
+      }
     }
 
     /* player got in an error state */
     if(m_player_audio.Error())
     {
       printf("audio player error. emergency exit!!!\n");
+      m_stop = 1;
       goto do_exit;
     }
 
@@ -887,18 +944,7 @@ do_exit:
       m_player_video.WaitCompletion();
   }
 
-  if(m_refresh)
-  {
-    m_BcmHost.vc_tv_hdmi_power_on_best(tv_state.width, tv_state.height, tv_state.frame_rate, HDMI_NONINTERLACED,
-                                       (EDID_MODE_MATCH_FLAG_T)(HDMI_MODE_MATCH_FRAMERATE|HDMI_MODE_MATCH_RESOLUTION|HDMI_MODE_MATCH_SCANMODE));
-  }
-
-  m_av_clock->OMXStop();
-  m_av_clock->OMXStateIdle();
-
-  m_player_subtitles.Close();
-  m_player_video.Close();
-  m_player_audio.Close();
+  stop_player(m_refresh);
 
   if(m_omx_pkt)
   {
@@ -909,7 +955,9 @@ do_exit:
   m_omx_reader->Close();
   delete m_omx_reader;
 
-  if (!m_stop) {
+  stop_omx();
+
+  if (!m_stop && !g_abort) {
     if (optind < argc)
     {
       goto play_file;
@@ -920,11 +968,6 @@ do_exit:
       goto play_file;
     }
   }
-
-  vc_tv_show_info(0);
-
-  g_OMX.Deinitialize();
-  g_RBP.Deinitialize();
 
   printf("have a nice day ;)\n");
   return 1;
