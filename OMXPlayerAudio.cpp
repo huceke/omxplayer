@@ -105,8 +105,10 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   if(ThreadHandle())
     Close();
 
-  if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
+  if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock) {
+    printf("OMXPlayerAudio DLL error\n");
     return false;
+  }
   
   m_dllAvFormat.av_register_all();
 
@@ -523,6 +525,7 @@ bool OMXPlayerAudio::OpenAudioCodec()
 
   if(!m_pAudioCodec->Open(m_hints))
   {
+    printf("OMXPlayerAudio audio codec open error\n");
     delete m_pAudioCodec; m_pAudioCodec = NULL;
     return false;
   }
@@ -634,6 +637,7 @@ bool OMXPlayerAudio::OpenDecoder()
   
   if(!bAudioRenderOpen)
   {
+    printf("OMXPlayerAudio audio decoder open error\n");
     delete m_decoder; 
     m_decoder = NULL;
     return false;

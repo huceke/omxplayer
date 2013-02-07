@@ -193,8 +193,10 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     deviceuse = "local";
   }
 
-  if(!m_dllAvUtil.Load())
+  if(!m_dllAvUtil.Load()) {
+    printf("COMXAudio dll error\n");
     return false;
+  }
 
   m_Passthrough = false;
 
@@ -338,26 +340,34 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   std::string componentName = "";
 
   componentName = "OMX.broadcom.audio_render";
-  if(!m_omx_render.Initialize(componentName, OMX_IndexParamAudioInit))
+  if(!m_omx_render.Initialize(componentName, OMX_IndexParamAudioInit)) {
+    printf("COMXAudio audio_render init error\n");
     return false;
+  }
 
   OMX_CONFIG_BRCMAUDIODESTINATIONTYPE audioDest;
   OMX_INIT_STRUCTURE(audioDest);
   strncpy((char *)audioDest.sName, device.c_str(), strlen(device.c_str()));
 
   omx_err = m_omx_render.SetConfig(OMX_IndexConfigBrcmAudioDestination, &audioDest);
-  if (omx_err != OMX_ErrorNone)
+  if (omx_err != OMX_ErrorNone) {
+    printf("COMXAudio audiodest error %d\n", omx_err);
     return false;
+  }
 
   componentName = "OMX.broadcom.audio_decode";
-  if(!m_omx_decoder.Initialize(componentName, OMX_IndexParamAudioInit))
+  if(!m_omx_decoder.Initialize(componentName, OMX_IndexParamAudioInit)) {
+    printf("COMXAudio audio_decode error\n");
     return false;
+  }
 
   if(!m_Passthrough)
   {
     componentName = "OMX.broadcom.audio_mixer";
-    if(!m_omx_mixer.Initialize(componentName, OMX_IndexParamAudioInit))
+    if(!m_omx_mixer.Initialize(componentName, OMX_IndexParamAudioInit)) {
+      printf("COMXAudio audio_mixer error\n");
       return false;
+    }
   }
 
   if(m_Passthrough)
