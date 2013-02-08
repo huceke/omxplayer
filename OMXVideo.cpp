@@ -145,7 +145,7 @@ bool COMXVideo::NaluFormatStartCodes(enum CodecID codec, uint8_t *in_extradata, 
   return false;    
 }
 
-bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect, bool deinterlace, bool hdmi_clock_sync)
+bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRect, float display_aspect, bool deinterlace, bool hdmi_clock_sync)
 {
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
   std::string decoder_name;
@@ -469,6 +469,8 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspec
       return false;
     }
   }
+  CRect SrcRect = {0,0,0,0};
+  SetVideoRect(SrcRect, DestRect);
 
   // Alloc buffers for the omx intput port.
   omx_err = m_omx_decoder.AllocInputBuffers();
@@ -1082,23 +1084,42 @@ bool COMXVideo::Resume()
 ///////////////////////////////////////////////////////////////////////////////////////////
 void COMXVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
 {
-  if(!m_is_open)
+  float sx1 = SrcRect.x1, sy1 = SrcRect.y1, sx2 = SrcRect.x2, sy2 = SrcRect.y2;
+  float dx1 = DestRect.x1, dy1 = DestRect.y1, dx2 = DestRect.x2, dy2 = DestRect.y2;
+  float sw = SrcRect.Width() / DestRect.Width();
+  float sh = SrcRect.Height() / DestRect.Height();
+
+  if (dx2 <= dx2 || dy2 <= dy1)
     return;
+
+  // doesn't like negative coordinates on dest_rect. So adjust by increasing src_rect
+  if (dx1 < 0.0f) {
+    sx1 -= dx1 * sw;
+    dx1 -= dx1;
+  }
+  if (dy1 < 0.0f) {
+    sy1 -= dy1 * sh;
+    dy1 -= dy1;
+  }
 
   OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
   OMX_INIT_STRUCTURE(configDisplay);
   configDisplay.nPortIndex = m_omx_render.GetInputPort();
 
-  configDisplay.set     = OMX_DISPLAY_SET_FULLSCREEN;
   configDisplay.fullscreen = OMX_FALSE;
+  configDisplay.noaspect   = OMX_TRUE;
 
-  m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
+  configDisplay.set        = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_DEST_RECT|OMX_DISPLAY_SET_SRC_RECT|OMX_DISPLAY_SET_FULLSCREEN|OMX_DISPLAY_SET_NOASPECT);
 
-  configDisplay.set     = OMX_DISPLAY_SET_DEST_RECT;
-  configDisplay.dest_rect.x_offset  = DestRect.x1;
-  configDisplay.dest_rect.y_offset  = DestRect.y1;
-  configDisplay.dest_rect.width     = DestRect.Width();
-  configDisplay.dest_rect.height    = DestRect.Height();
+  configDisplay.dest_rect.x_offset  = (int)(dx1+0.5f);
+  configDisplay.dest_rect.y_offset  = (int)(dy1+0.5f);
+  configDisplay.dest_rect.width     = (int)(dx2-dx1+0.5f);
+  configDisplay.dest_rect.height    = (int)(dy2-dy1+0.5f);
+
+  configDisplay.src_rect.x_offset   = (int)(sx1+0.5f);
+  configDisplay.src_rect.y_offset   = (int)(sy1+0.5f);
+  configDisplay.src_rect.width      = (int)(sx2-sx1+0.5f);
+  configDisplay.src_rect.height     = (int)(sy2-sy1+0.5f);
 
   m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
 

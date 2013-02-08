@@ -150,6 +150,7 @@ void print_usage()
   printf("              --align left/center       subtitle alignment (default: left)\n");
   printf("              --lines n                 number of lines to accommodate in the subtitle buffer\n");
   printf("                                        (default: 3)\n");
+  printf("              --win \"x1 y1 x2 y2\"       Set position of video window\n");
 }
 
 void PrintSubtitleInfo()
@@ -428,7 +429,7 @@ int main(int argc, char *argv[])
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
-  
+  CRect                 DestRect              = {0,0,0,0};
   TV_DISPLAY_STATE_T   tv_state;
 
   const int font_opt      = 0x100;
@@ -436,6 +437,7 @@ int main(int argc, char *argv[])
   const int align_opt     = 0x102;
   const int subtitles_opt = 0x103;
   const int lines_opt     = 0x104;
+  const int pos_opt       = 0x105;
   const int boost_on_downmix_opt = 0x200;
 
   struct option longopts[] = {
@@ -458,6 +460,7 @@ int main(int argc, char *argv[])
     { "align",        required_argument,  NULL,          align_opt },
     { "subtitles",    required_argument,  NULL,          subtitles_opt },
     { "lines",        required_argument,  NULL,          lines_opt },
+    { "win",          required_argument,  NULL,          pos_opt },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { 0, 0, 0, 0 }
   };
@@ -548,6 +551,9 @@ int main(int argc, char *argv[])
         break;
       case lines_opt:
         m_subtitle_lines = std::max(atoi(optarg), 1);
+        break;
+      case pos_opt:
+	sscanf(optarg, "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
@@ -683,7 +689,7 @@ int main(int argc, char *argv[])
         m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
+  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,  m_bMpeg,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect))
     goto do_exit;
 
@@ -935,7 +941,7 @@ int main(int argc, char *argv[])
         FlushStreams(startpts);
 
       m_player_video.Close();
-      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
+      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace, m_bMpeg,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect))
         goto do_exit;
 
