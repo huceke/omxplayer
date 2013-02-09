@@ -1089,7 +1089,7 @@ void COMXVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
   float sw = SrcRect.Width() / DestRect.Width();
   float sh = SrcRect.Height() / DestRect.Height();
 
-  if (dx2 <= dx2 || dy2 <= dy1)
+  if (dx2 <= dx1 || dy2 <= dy1)
     return;
 
   // doesn't like negative coordinates on dest_rect. So adjust by increasing src_rect
