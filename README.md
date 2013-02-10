@@ -13,6 +13,8 @@ Downloading OMXPlayer
 Compiling OMXPlayer
 -------------------
 
+GCC version 4.7 is required.
+
 ### Cross Compiling
 
 You need the content of your sdcard somewhere mounted or copied. There might be
