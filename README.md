@@ -27,7 +27,7 @@ You can also compile it on the PI the native way ;)
 Running OMXPlayer
 -----------------
 
-    make ffmpeg
+    make ffmpeg_compiled
     make
     make dist
 
