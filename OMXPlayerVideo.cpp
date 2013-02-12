@@ -131,20 +131,17 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinte
   m_Deinterlace = deinterlace;
   m_display_aspect = display_aspect;
   m_bMpeg       = mpeg;
-  m_iCurrentPts = DVD_NOPTS_VALUE;
-  m_bAbort      = false;
   m_use_thread  = use_thread;
   m_flush       = false;
   m_cached_size = 0;
   m_iVideoDelay = 0;
   m_hdmi_clock_sync = hdmi_clock_sync;
   m_pts         = 0;
-  m_syncclock   = true;
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
 
-  m_FlipTimeStamp = m_av_clock->GetAbsoluteClock();
+  Reset();
 
   if(!OpenDecoder())
   {
@@ -158,6 +155,16 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinte
   m_open        = true;
 
   return true;
+}
+
+void OMXPlayerVideo::Reset()
+{
+  m_iCurrentPts = DVD_NOPTS_VALUE;
+  m_bAbort      = false;
+  m_syncclock   = true;
+  m_FlipTimeStamp = m_av_clock->GetAbsoluteClock();
+  if(m_decoder)
+    m_decoder->Reset();
 }
 
 bool OMXPlayerVideo::Close()
@@ -245,13 +252,17 @@ void OMXPlayerVideo::Output(double pts)
 
   m_av_clock->SetPTS(m_iCurrentPts);
 
+  CLog::Log(LOGDEBUG, "PlayerVideo output pts %f(=%f) icc %f ipc %f ics %f ifs %f ifd %f\n", pts, m_iCurrentPts, iCurrentClock, iPlayingClock, iClockSleep, iFrameSleep, iFrameDuration);
+
   // timestamp when we think next picture should be displayed based on current duration
   m_FlipTimeStamp  = iCurrentClock;
   m_FlipTimeStamp += max(0.0, iSleepTime);
   m_FlipTimeStamp += iFrameDuration;
 
-  while(m_av_clock->GetAbsoluteClock(false) < (iCurrentClock + iSleepTime + DVD_MSEC_TO_TIME(500)) )
+  double absclock;
+  while((absclock = m_av_clock->GetAbsoluteClock(false)) < (iCurrentClock + iSleepTime + DVD_MSEC_TO_TIME(500)) )
   {
+    CLog::Log(LOGDEBUG, "PlayerVideo wait (absclock %f < icc %f + ist %f + 500msec)\n", absclock, iCurrentClock, iSleepTime);
     OMXClock::OMXSleep(10);
   }
 
@@ -265,11 +276,14 @@ void OMXPlayerVideo::Output(double pts)
 
   //g_renderManager.FlipPage(CThread::m_bStop, (iCurrentClock + iSleepTime) / DVD_TIME_BASE, -1, mDisplayField);
 
+  CLog::Log(LOGDEBUG, "PlayerVideo abswait\n");
   m_av_clock->WaitAbsoluteClock((iCurrentClock + iSleepTime));
+  CLog::Log(LOGDEBUG, "PlayerVideo abswait over; m_pts %lld\n", (long long) m_pts);
 
   // guess next frame pts. iDuration is always valid
   if (m_speed != 0)
     m_pts += m_frametime * m_speed / abs(m_speed);
+  CLog::Log(LOGDEBUG, "PlayerVideo final m_pts %lld\n", (long long) m_pts);
 }
 
 bool OMXPlayerVideo::Decode(OMXPacket *pkt)
@@ -279,8 +293,10 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
 
   bool ret = false;
 
-  if(!((unsigned long)m_decoder->GetFreeSpace() > pkt->size))
+  if(!((unsigned long)m_decoder->GetFreeSpace() > pkt->size)) {
+    CLog::Log(LOGDEBUG, "decoder buffer full\n");
     OMXClock::OMXSleep(10);
+  }
 
   if (pkt->dts == DVD_NOPTS_VALUE && pkt->pts == DVD_NOPTS_VALUE)
     pkt->pts = m_pts;
@@ -362,16 +378,20 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
   }
   else if((unsigned long)m_decoder->GetFreeSpace() > pkt->size)
   {
-    if(m_bMpeg)
+    if(m_bMpeg) {
       m_decoder->Decode(pkt->data, pkt->size, DVD_NOPTS_VALUE, DVD_NOPTS_VALUE);
-    else
+    } else {
+      CLog::Log(LOGDEBUG, "--- decode pts %f\n", m_pts);
       m_decoder->Decode(pkt->data, pkt->size, m_pts, m_pts);
+    }
 
     m_av_clock->SetVideoClock(m_pts);
 
     Output(m_pts);
 
     ret = true;
+  } else {
+    CLog::Log(LOGDEBUG, "--- decoder buffer full, dropping frame\n");
   }
 
   return ret;

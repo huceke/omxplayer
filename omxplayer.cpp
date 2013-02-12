@@ -381,6 +381,7 @@ int main(int argc, char *argv[])
   bool                  m_3d                  = false;
   bool                  m_refresh             = false;
   bool                  m_loop                = false;
+  bool                  m_player_init         = false;
   double                startpts              = 0;
   int                   optind_filenames;
 
@@ -532,10 +533,16 @@ play_file:
     goto do_exit;
   }
 
-  m_bMpeg         = m_omx_reader->IsMpegVideo();
-  m_has_video     = m_omx_reader->VideoStreamCount();
-  m_has_audio     = m_omx_reader->AudioStreamCount();
-  m_has_subtitle  = m_omx_reader->SubtitleStreamCount();
+  if(!m_player_init) {
+    m_bMpeg         = m_omx_reader->IsMpegVideo();
+    m_has_video     = m_omx_reader->VideoStreamCount();
+    m_has_audio     = m_omx_reader->AudioStreamCount();
+    m_has_subtitle  = m_omx_reader->SubtitleStreamCount();
+
+  } else {
+    m_av_clock->OMXStop();
+    m_av_clock->OMXStateIdle();
+  }
 
   if(!m_av_clock->OMXInitialize(m_has_video, m_has_audio)) {
     printf("avclock error. emergency exit!!!\n");
@@ -549,50 +556,70 @@ play_file:
     goto do_exit;
   }
 
-  m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
-  m_omx_reader->GetHints(OMXSTREAM_VIDEO, m_hints_video);
+  if(!m_player_init) {
+    m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
+    m_omx_reader->GetHints(OMXSTREAM_VIDEO, m_hints_video);
+	    
+    if(m_has_video && m_refresh)
+    {
+      memset(&tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
+      m_BcmHost.vc_tv_get_state(&tv_state);
+
+      if(m_filename.find("3DSBS") != string::npos)
+	m_3d = true;
+
+      SetVideoMode(m_hints_video.width, m_hints_video.height, m_hints_video.fpsrate, m_hints_video.fpsscale, m_3d);
+
+    }
+
+    // get display aspect
+    TV_GET_STATE_RESP_T current_tv_state;
+    memset(&current_tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
+    m_BcmHost.vc_tv_get_state(&current_tv_state);
+
+    if(current_tv_state.width && current_tv_state.height)
+      m_display_aspect = (float)current_tv_state.width / (float)current_tv_state.height;
+
+    if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
+					   m_hdmi_clock_sync, m_thread_player, m_display_aspect)) {
+      printf("video open error. emergency exit!!!\n");
+      m_stop = 1;
+      goto do_exit;
+    }
+
+    if(m_has_subtitle &&
+       !m_player_subtitles.Open(m_font_path, m_font_size, m_centered, m_av_clock)) {
+      printf("subtitles open error. emergency exit!!!\n");
+      m_stop = 1;
+      goto do_exit;
+    }
+
+    while(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, m_omx_reader,
+					   deviceString, m_passthrough, m_use_hw_audio,
+					   m_boost_on_downmix, m_thread_player)) {
+      printf("audio open error. emergency exit!!!\n");
+      m_stop = 1;
+      goto do_exit;
+    }
+
+    m_player_init = true;
+  } else {
+    m_player_video.Reset();
+  }
+
+  m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
+  m_av_clock->OMXStateExecute();
+  m_av_clock->OMXStart();
+
+  struct timespec starttime, endtime;
 
   if(m_audio_index_use != -1)
     m_omx_reader->SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
-          
-  if(m_has_video && m_refresh)
-  {
-    memset(&tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
-    m_BcmHost.vc_tv_get_state(&tv_state);
-
-    if(m_filename.find("3DSBS") != string::npos)
-      m_3d = true;
-
-    SetVideoMode(m_hints_video.width, m_hints_video.height, m_hints_video.fpsrate, m_hints_video.fpsscale, m_3d);
-
-  }
-
-  // get display aspect
-  TV_GET_STATE_RESP_T current_tv_state;
-  memset(&current_tv_state, 0, sizeof(TV_GET_STATE_RESP_T));
-  m_BcmHost.vc_tv_get_state(&current_tv_state);
-
-  if(current_tv_state.width && current_tv_state.height)
-    m_display_aspect = (float)current_tv_state.width / (float)current_tv_state.height;
 
   // seek on start
   if (m_seek_pos !=0 && m_omx_reader->CanSeek()) {
         printf("Seeking start of video to %i seconds\n", m_seek_pos);
         m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
-  }
-  
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, m_Deinterlace,  m_bMpeg, 
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect)) {
-    printf("video open error. emergency exit!!!\n");
-    m_stop = 1;
-    goto do_exit;
-  }
-
-  if(m_has_subtitle &&
-     !m_player_subtitles.Open(m_font_path, m_font_size, m_centered, m_av_clock)) {
-    printf("subtitles open error. emergency exit!!!\n");
-    m_stop = 1;
-    goto do_exit;
   }
 
   // This is an upper bound check on the subtitle limits. When we pulled the subtitle
@@ -610,21 +637,6 @@ play_file:
 
   m_omx_reader->GetHints(OMXSTREAM_AUDIO, m_hints_audio);
 
-  while(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, m_omx_reader, deviceString, 
-                                         m_passthrough, m_use_hw_audio,
-                                         m_boost_on_downmix, m_thread_player)) {
-    printf("audio open error. press enter to reset state\n");
-    sleep(1);
-    while (getchar() == EOF) ;
-    goto do_exit;
-  }
-
-  m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
-  m_av_clock->OMXStateExecute();
-  m_av_clock->OMXStart();
-
-  struct timespec starttime, endtime;
-
   printf("Subtitle count : %d state %s : index %d\n", 
       m_omx_reader->SubtitleStreamCount(), m_show_subtitle ? "on" : "off", 
       (m_omx_reader->SubtitleStreamCount() > 0) ? m_subtitle_index + 1 : m_subtitle_index);
@@ -634,6 +646,8 @@ play_file:
     pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind]);
   else if (m_loop)
     pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind_filenames]);
+
+  m_av_clock->OMXReset();
 
   while(!m_stop)
   {
@@ -826,7 +840,7 @@ play_file:
 
     if(m_stats)
     {
-      printf("V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \r",
+      CLog::Log(LOGDEBUG, "V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \n",
              m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(),
              m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
              m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
@@ -836,6 +850,7 @@ play_file:
     {
       if (!m_player_audio.GetCached() && !m_player_video.GetCached())
         break;
+      CLog::Log(LOGDEBUG, "waiting before eof: %d %d\n", m_player_audio.GetCached(), m_player_video.GetCached());
 
       // Abort audio buffering, now we're on our own
       if (m_buffer_empty)
@@ -884,10 +899,13 @@ play_file:
 
     if(m_has_video && m_omx_pkt && m_omx_reader->IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {
-      if(m_player_video.AddPacket(m_omx_pkt))
+      if(m_player_video.AddPacket(m_omx_pkt)) {
+	CLog::Log(LOGDEBUG, "+packet nok\n");
         m_omx_pkt = NULL;
-      else
+      } else {
+	CLog::Log(LOGDEBUG, "+packet ok\n");
         OMXClock::OMXSleep(10);
+      }
 
       if(m_tv_show_info)
       {
@@ -942,9 +960,10 @@ do_exit:
       m_player_audio.WaitCompletion();
     else if(m_has_video)
       m_player_video.WaitCompletion();
-  }
 
-  stop_player(m_refresh);
+  } else {
+    stop_player(m_refresh);
+  }
 
   if(m_omx_pkt)
   {
@@ -952,22 +971,28 @@ do_exit:
     m_omx_pkt = NULL;
   }
 
-  m_omx_reader->Close();
-  delete m_omx_reader;
-
-  stop_omx();
-
   if (!m_stop && !g_abort) {
     if (optind < argc)
     {
       goto play_file;
     }
+
     else if (m_loop)
     {
+      stop_player(m_refresh);
+      m_omx_reader->Close();
+      delete m_omx_reader;
+      stop_omx();
+      m_player_init = false;
+
       optind = optind_filenames;
       goto play_file;
     }
   }
+
+  m_omx_reader->Close();
+  delete m_omx_reader;
+  stop_omx();
 
   printf("have a nice day ;)\n");
   return 1;

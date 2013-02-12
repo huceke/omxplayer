@@ -95,6 +95,7 @@ double OMXClock::SystemToPlaying(int64_t system)
     m_pauseClock = 0;
     m_iDisc = 0;
     m_bReset = false;
+    CLog::Log(LOGDEBUG, "**** reset: m_startClock %lld\n", m_startClock);
   }
 
   if (m_pauseClock)
@@ -221,6 +222,7 @@ void OMXClock::Discontinuity(double currentPts)
     m_pauseClock = m_startClock;
   m_iDisc = currentPts;
   m_bReset = false;
+  CLog::Log(LOGDEBUG, "**** discontinuity: cpts %f m_startClock %lld\n", currentPts, m_startClock);
   UnLock();
 }
 
@@ -671,6 +673,32 @@ bool OMXClock::OMXUpdateClock(double pts, bool lock /* = true */)
     omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeCurrentVideoReference, &ts);
     if(omx_err != OMX_ErrorNone)
       CLog::Log(LOGERROR, "OMXClock::OMXUpdateClock error setting OMX_IndexConfigTimeCurrentVideoReference\n");
+  }
+
+  if(lock)
+    UnLock();
+
+  return true;
+}
+
+bool OMXClock::OMXSeek(int porti, double pts, bool lock /* = true */)
+{
+  if(m_omx_clock.GetComponent() == NULL)
+    return false;
+
+  if(lock)
+    Lock();
+
+  OMX_ERRORTYPE omx_err = OMX_ErrorNone;
+  OMX_TIME_CONFIG_TIMESTAMPTYPE ts;
+  OMX_INIT_STRUCTURE(ts);
+
+  ts.nPortIndex = m_omx_clock.GetInputPort();
+  ts.nTimestamp = ToOMXTime((uint64_t)pts);
+
+  omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeClientStartTime, &ts);
+  if(omx_err != OMX_ErrorNone) {
+    CLog::Log(LOGERROR, "OMXClock::OMXUpdateClock error setting OMX_IndexConfigTimeClientStartTime: %x\n", omx_err);
   }
 
   if(lock)

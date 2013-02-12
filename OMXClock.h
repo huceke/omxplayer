@@ -129,6 +129,7 @@ public:
   double OMXMediaTime(bool lock = true);
   bool OMXPause(bool lock = true);
   bool OMXResume(bool lock = true);
+  bool OMXSeek(int porti, double pts, bool lock = true);
   bool OMXUpdateClock(double pts, bool lock = true);
   bool OMXWaitStart(double pts, bool lock = true);
   bool OMXSpeed(int speed, bool lock = true);
