@@ -13,6 +13,8 @@ Downloading OMXPlayer
 Compiling OMXPlayer
 -------------------
 
+GCC version 4.7 is required.
+
 ### Cross Compiling
 
 You need the content of your sdcard somewhere mounted or copied. There might be
@@ -55,11 +57,14 @@ Using OMXPlayer
              -t / --sid index               show subtitle with index
              -r / --refresh                 adjust framerate/resolution to video
                   --boost-on-downmix        boost volume when downmixing
+                  --subtitles path          external subtitles in UTF-8 srt format
                   --font path               subtitle font
                                             (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
                   --font-size size          font size as thousandths of screen height
                                             (default: 55)
                   --align left/center       subtitle alignment (default: left)
+                  --lines n                 number of lines to accommodate in the subtitle buffer
+                                            (default: 3)
 
 For example:
 
@@ -80,6 +85,8 @@ While playing you can use the following keys to control omxplayer:
     n			Previous Subtitle stream
     m			Next Subtitle stream
     s			Toggle subtitles
+    d			Subtitle delay -250 ms
+    f			Subtitle delay +250 ms
     q			Exit OMXPlayer
     Space or p	Pause/Resume
     -			Decrease Volume

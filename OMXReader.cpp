@@ -500,7 +500,7 @@ OMXPacket *OMXReader::Read()
       pkt.pts = AV_NOPTS_VALUE;
   }
   // we need to get duration slightly different for matroska embedded text subtitels
-  if(m_bMatroska && pStream->codec->codec_id == CODEC_ID_TEXT && pkt.convergence_duration != 0)
+  if(m_bMatroska && pStream->codec->codec_id == AV_CODEC_ID_SUBRIP && pkt.convergence_duration != 0)
     pkt.duration = pkt.convergence_duration;
 
   if(m_bAVI && pStream->codec && pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO)
@@ -660,9 +660,9 @@ void OMXReader::AddStream(int id)
     return;
 
   AVStream *pStream = m_pFormatContext->streams[id];
-  // discard MJPEG/PNG stream as we don't support it, and it stops mp3 files playing with album art
+  // discard PNG stream as we don't support it, and it stops mp3 files playing with album art
   if (pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO && 
-    (pStream->codec->codec_id == CODEC_ID_MJPEG || pStream->codec->codec_id == CODEC_ID_MJPEGB || pStream->codec->codec_id == CODEC_ID_PNG))
+    (pStream->codec->codec_id == CODEC_ID_PNG))
     return;
 
   switch (pStream->codec->codec_type)
@@ -821,9 +821,6 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
   hints->codec         = stream->codec->codec_id;
   hints->extradata     = stream->codec->extradata;
   hints->extrasize     = stream->codec->extradata_size;
-  hints->codec         = stream->codec->codec_id;
-  hints->extradata     = stream->codec->extradata;
-  hints->extrasize     = stream->codec->extradata_size;
   hints->channels      = stream->codec->channels;
   hints->samplerate    = stream->codec->sample_rate;
   hints->blockalign    = stream->codec->block_align;
@@ -863,6 +860,8 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->aspect = av_q2d(stream->codec->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
     else
       hints->aspect = 0.0f;
+    if (m_bAVI && stream->codec->codec_id == CODEC_ID_H264)
+      hints->ptsinvalid = true;
   }
 
   return true;

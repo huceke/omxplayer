@@ -438,7 +438,7 @@ bool  OMXClock::OMXStop(bool lock /* = true */)
   return true;
 }
 
-bool OMXClock::OMXStart(bool lock /* = true */)
+bool OMXClock::OMXStart(double pts, bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
     return false;
@@ -451,6 +451,7 @@ bool OMXClock::OMXStart(bool lock /* = true */)
   OMX_INIT_STRUCTURE(clock);
 
   clock.eState = OMX_TIME_ClockStateRunning;
+  clock.nStartTime = ToOMXTime((uint64_t)pts);
 
   omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeClockState, &clock);
   if(omx_err != OMX_ErrorNone)
@@ -505,7 +506,7 @@ bool OMXClock::OMXReset(bool lock /* = true */)
       return false;
     }
 
-    OMXStart(false);
+    OMXStart(0.0, false);
   }
 
   if(lock)

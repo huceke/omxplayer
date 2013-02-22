@@ -47,7 +47,8 @@ public:
                    float margin_bottom,
                    bool centered,
                    unsigned int white_level,
-                   unsigned int box_opacity);
+                   unsigned int box_opacity,
+                   unsigned int lines);
   ~SubtitleRenderer() BOOST_NOEXCEPT;
 
   void prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT;
@@ -58,7 +59,10 @@ public:
 
   void show_next() BOOST_NOEXCEPT {
     if (prepared_)
+    {
+      // puts("Expensive show_next!");
       draw();
+    }
     swap_buffers();
   }
 
@@ -85,11 +89,15 @@ private:
                         unsigned int lightness);
 
   void destroy();
-  void initialize_fonts(const std::string& font_name, float font_size);
+  void initialize_fonts(const std::string& font_name, unsigned int font_size);
   void destroy_fonts();
-  void initialize_egl();
-  void destroy_egl();
-  void initialize_window(int layer);
+  void initialize_vg();
+  void destroy_vg();
+  void initialize_window(int layer,
+                         unsigned int x,
+                         unsigned int y,
+                         unsigned int width,
+                         unsigned int height);
   void destroy_window();
   void clear() BOOST_NOEXCEPT;
   void draw() BOOST_NOEXCEPT;
@@ -102,8 +110,6 @@ private:
   bool prepared_;
   DISPMANX_ELEMENT_HANDLE_T dispman_element_;
   DISPMANX_DISPLAY_HANDLE_T dispman_display_;
-  uint32_t screen_width_;
-  uint32_t screen_height_;
   EGLDisplay display_;
   EGLContext context_;
   EGLSurface surface_;
@@ -121,8 +127,10 @@ private:
   int line_height_;
   int box_offset_;
   int box_h_padding_;
-  float margin_left_;
-  float margin_bottom_;
+  int margin_left_;
+  int margin_bottom_;
+  int buffer_width_;
+  int buffer_height_;
   bool centered_;
   unsigned int white_level_;
   unsigned int box_opacity_;
