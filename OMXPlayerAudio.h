@@ -84,6 +84,7 @@ protected:
   unsigned int              m_cached_size;
   COMXAudioCodecOMX         *m_pAudioCodec;
   int                       m_speed;
+  long                      m_initialVolume;
   double m_error;    //last average error
 
   int64_t m_errortime; //timestamp of last time we measured
@@ -109,7 +110,7 @@ public:
   OMXPlayerAudio();
   ~OMXPlayerAudio();
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-            std::string device, bool passthrough, bool hw_decode,
+            std::string device, bool passthrough, long initialVolume, bool hw_decode,
             bool boost_on_downmix, bool use_thread);
   bool Close();
   bool Decode(OMXPacket *pkt);

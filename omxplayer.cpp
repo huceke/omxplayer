@@ -64,7 +64,8 @@ typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_T
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 bool              m_bMpeg               = false;
-bool               m_passthrough        = false;
+bool              m_passthrough         = false;
+long              m_initialVolume       = 0;
 bool              m_Deinterlace         = false;
 bool              m_HWDecode            = false;
 std::string       deviceString          = "";
@@ -142,6 +143,7 @@ void print_usage()
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -l / --pos                     start position (in seconds)\n");  
   printf("              --boost-on-downmix        boost volume when downmixing\n");
+  printf("              --vol                     Set initial volume in millibels (default 0)\n");
   printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
@@ -438,6 +440,7 @@ int main(int argc, char *argv[])
   const int subtitles_opt = 0x103;
   const int lines_opt     = 0x104;
   const int pos_opt       = 0x105;
+  const int vol_opt       = 0x106;
   const int boost_on_downmix_opt = 0x200;
 
   struct option longopts[] = {
@@ -447,6 +450,7 @@ int main(int argc, char *argv[])
     { "adev",         required_argument,  NULL,          'o' },
     { "stats",        no_argument,        NULL,          's' },
     { "passthrough",  no_argument,        NULL,          'p' },
+    { "vol",          required_argument,  NULL,          vol_opt },
     { "deinterlace",  no_argument,        NULL,          'd' },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
@@ -554,6 +558,9 @@ int main(int argc, char *argv[])
         break;
       case pos_opt:
 	sscanf(optarg, "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
+        break;
+      case vol_opt:
+	m_initialVolume = atoi(optarg);
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
@@ -740,7 +747,7 @@ int main(int argc, char *argv[])
   }
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
-                                         m_passthrough, m_use_hw_audio,
+                                         m_passthrough, m_initialVolume, m_use_hw_audio,
                                          m_boost_on_downmix, m_thread_player))
     goto do_exit;
 

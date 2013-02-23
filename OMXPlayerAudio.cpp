@@ -57,6 +57,7 @@ OMXPlayerAudio::OMXPlayerAudio()
   m_pAudioCodec   = NULL;
   m_speed         = DVD_PLAYSPEED_NORMAL;
   m_player_error  = true;
+  m_initialVolume = 0;
 
   pthread_cond_init(&m_packet_cond, NULL);
   pthread_cond_init(&m_audio_cond, NULL);
@@ -99,7 +100,7 @@ void OMXPlayerAudio::UnLockDecoder()
 }
 
 bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-                          std::string device, bool passthrough, bool hw_decode,
+                          std::string device, bool passthrough, long initialVolume, bool hw_decode,
                           bool boost_on_downmix, bool use_thread)
 {
   if(ThreadHandle())
@@ -128,6 +129,7 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_pAudioCodec = NULL;
   m_pChannelMap = NULL;
   m_speed       = DVD_PLAYSPEED_NORMAL;
+  m_initialVolume = initialVolume;
 
   m_error = 0;
   m_errorbuff = 0;
@@ -614,8 +616,8 @@ bool OMXPlayerAudio::OpenDecoder()
     if(m_passthrough)
       m_hw_decode = false;
     bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_pChannelMap,
-                                             m_hints, m_av_clock, m_passthrough, 
-                                             m_hw_decode, m_boost_on_downmix);
+                                             m_hints, m_av_clock, m_passthrough,
+                                             m_hw_decode, m_boost_on_downmix, m_initialVolume);
   }
   else
   {
@@ -627,7 +629,7 @@ bool OMXPlayerAudio::OpenDecoder()
 
     bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_hints.channels, m_pChannelMap,
                                              downmix_channels, m_hints.samplerate, m_hints.bitspersample,
-                                             false, m_boost_on_downmix, false, m_passthrough);
+                                             false, m_boost_on_downmix, false, m_passthrough, m_initialVolume);
   }
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
