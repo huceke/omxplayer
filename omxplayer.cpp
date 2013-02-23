@@ -67,7 +67,7 @@ bool              m_bMpeg               = false;
 bool               m_passthrough        = false;
 bool              m_Deinterlace         = false;
 bool              m_HWDecode            = false;
-std::string       deviceString          = "omx:local";
+std::string       deviceString          = "";
 int               m_use_hw_audio        = false;
 std::string       m_external_subtitles_path;
 bool              m_has_external_subtitles = false;
@@ -730,6 +730,14 @@ int main(int argc, char *argv[])
   }
 
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
+
+  if (deviceString == "")
+  {
+    if (m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_ePCM, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) == 0)
+      deviceString = "omx:hdmi";
+    else
+      deviceString = "omx:local";
+  }
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
                                          m_passthrough, m_use_hw_audio,
