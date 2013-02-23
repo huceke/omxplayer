@@ -911,7 +911,7 @@ int main(int argc, char *argv[])
         m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() - 300);
         printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
         break;
-      case '+':
+      case '+': case '=':
         m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 300);
         printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
         break;
