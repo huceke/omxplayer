@@ -97,9 +97,9 @@ protected:
 
   bool              m_deinterlace;
   bool              m_hdmi_clock_sync;
-  bool              m_first_frame;
   bool              m_first_text;
-  CRect             m_DestRect;
+  CRect             m_dst_rect;
+  CRect             m_src_rect;
 };
 
 #endif
