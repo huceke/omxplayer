@@ -247,9 +247,26 @@ bool OMXReader::Open(std::string filename, bool dump_format)
     }
   }
 
-  printf("file : %s result %d format %s audio streams %d video streams %d chapters %d subtitles %d length %d\n", 
-      m_filename.c_str(), result, m_pFormatContext->iformat->name, m_audio_count, m_video_count, m_chapter_count, m_subtitle_count, GetStreamLength() / 1000);
-
+  // show file info
+  printf("filename         : %s\n", m_filename.c_str());
+  printf("nb_streams       : %d\n", m_pFormatContext->nb_streams);
+  printf("video_streams    : %d\n", m_video_count);
+  printf("audio_streams    : %d\n", m_audio_count);
+  printf("nb_chapters      : %d\n", m_pFormatContext->nb_chapters);
+  printf("nb_chapters      : %d\n", m_chapter_count);
+  printf("nb_subtitles     : %d\n", m_subtitle_count);
+  printf("format_name      : %s\n", m_pFormatContext->iformat->name);
+  if (m_pFormatContext->iformat->long_name)
+    printf("format_long_name : %s\n", m_pFormatContext->iformat->long_name);
+  else
+    printf("format_long_name : unknown\n");
+  printf("start_time       : %lld\n", m_pFormatContext->start_time);
+  printf("duration         : %d\n", GetStreamLength() / 1000);
+  printf("bytelength       : %lld\n", m_pFile->GetLength());
+  if (m_pFormatContext->bit_rate > 0)
+    printf("bit_rate         : %d\n", m_pFormatContext->bit_rate);
+  else
+    printf("bit_rate         : N/A\n");
 
   m_speed       = DVD_PLAYSPEED_NORMAL;
 
