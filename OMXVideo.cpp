@@ -921,7 +921,7 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
 
       if(m_setStartTime)
       {
-	if (val > 0) m_av_clock->OMXSeek(m_omx_decoder.GetOutputPort(), val);
+	//if (val > 0) m_av_clock->OMXSeek(m_omx_decoder.GetOutputPort(), val);
         omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;
         m_setStartTime = false;
       }
