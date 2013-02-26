@@ -1068,10 +1068,12 @@ play_again:
 
     if(m_stats)
     {
+#if 0
       CLog::Log(LOGDEBUG, "V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \n",
              m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(),
              m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
              m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
+#endif
     }
 
     if(m_omx_reader->IsEof() && !m_omx_pkt)
@@ -1082,7 +1084,7 @@ play_again:
       }
       else
       {
-	CLog::Log(LOGDEBUG, "waiting before eof: %d %d\n", m_player_audio.GetCached(), m_player_video.GetCached());
+	// CLog::Log(LOGDEBUG, "waiting before eof: %d %d\n", m_player_audio.GetCached(), m_player_video.GetCached());
         // Abort audio buffering, now we're on our own
         if (m_buffer_empty)
           m_av_clock->OMXResume();
@@ -1132,10 +1134,10 @@ play_again:
     if(m_has_video && m_omx_pkt && m_omx_reader->IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {
       if(m_player_video.AddPacket(m_omx_pkt)) {
-	CLog::Log(LOGDEBUG, "+packet nok\n");
+	// CLog::Log(LOGDEBUG, "+packet nok\n");
         m_omx_pkt = NULL;
       } else {
-	CLog::Log(LOGDEBUG, "+packet ok\n");
+	// CLog::Log(LOGDEBUG, "+packet ok\n");
         OMXClock::OMXSleep(10);
       }
 

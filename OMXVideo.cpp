@@ -942,7 +942,7 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
       if(demuxer_bytes == 0)
         omx_buffer->nFlags |= OMX_BUFFERFLAG_ENDOFFRAME;
 
-      CLog::Log(LOGDEBUG, "decoder ts %llu flags %lx\n", val, omx_buffer->nFlags);
+      // CLog::Log(LOGDEBUG, "decoder ts %llu flags %lx\n", val, omx_buffer->nFlags);
 
       int nRetry = 0;
       while(true)

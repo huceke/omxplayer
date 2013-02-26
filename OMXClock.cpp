@@ -95,7 +95,7 @@ double OMXClock::SystemToPlaying(int64_t system)
     m_pauseClock = 0;
     m_iDisc = 0;
     m_bReset = false;
-    CLog::Log(LOGDEBUG, "**** reset: m_startClock %lld\n", m_startClock);
+    //CLog::Log(LOGDEBUG, "**** reset: m_startClock %lld\n", m_startClock);
   }
 
   if (m_pauseClock)
@@ -222,7 +222,7 @@ void OMXClock::Discontinuity(double currentPts)
     m_pauseClock = m_startClock;
   m_iDisc = currentPts;
   m_bReset = false;
-  CLog::Log(LOGDEBUG, "**** discontinuity: cpts %f m_startClock %lld\n", currentPts, m_startClock);
+  //CLog::Log(LOGDEBUG, "**** discontinuity: cpts %f m_startClock %lld\n", currentPts, m_startClock);
   UnLock();
 }
 
