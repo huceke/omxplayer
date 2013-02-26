@@ -262,7 +262,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
     printf("format_long_name : unknown\n");
   printf("start_time       : %lld\n", m_pFormatContext->start_time);
   printf("duration         : %d\n", GetStreamLength() / 1000);
-  printf("bytelength       : %lld\n", m_pFile->GetLength());
+  printf("bytelength       : %lld\n", m_pFile ? m_pFile->GetLength() : 0);
   if (m_pFormatContext->bit_rate > 0)
     printf("bit_rate         : %d\n", m_pFormatContext->bit_rate);
   else
