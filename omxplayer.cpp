@@ -835,6 +835,8 @@ play_file:
   else if (m_loop)
     pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind_filenames]);
 
+play_again:
+
   while(!m_stop)
   {
     int ch[8];
@@ -1065,22 +1067,6 @@ play_file:
     {
       if (!m_player_audio.GetCached() && !m_player_video.GetCached())
       {
-        if (m_loop)
-        {
-
-          if(m_has_audio)
-            m_player_audio.WaitCompletion();
-          else if(m_has_video)
-            m_player_video.WaitCompletion();
-
-          if(m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
-          {
-            FlushStreams(startpts);
-            if (m_has_video) m_player_video.UnFlush();
-          }
-
-        }
-        else
           break;
       }
       else
@@ -1184,6 +1170,17 @@ do_exit:
       m_player_audio.WaitCompletion();
     else if(m_has_video)
       m_player_video.WaitCompletion();
+  }
+
+  if (m_loop)
+  {
+    if(m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
+    {
+      FlushStreams(startpts);
+      if (m_has_video) m_player_video.UnFlush();
+      //if (m_has_audio) m_player_audio.UnFlush();
+      goto play_again;
+    }
   }
 
   stop_player(m_refresh);

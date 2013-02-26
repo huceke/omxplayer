@@ -496,6 +496,11 @@ void OMXPlayerAudio::Flush()
   UnLock();
 }
 
+void OMXPlayerAudio::UnFlush()
+{
+  m_flush = false;
+}
+
 bool OMXPlayerAudio::AddPacket(OMXPacket *pkt)
 {
   bool ret = false;

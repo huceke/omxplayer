@@ -115,6 +115,7 @@ public:
   bool Decode(OMXPacket *pkt);
   void Process();
   void Flush();
+  void UnFlush();
   bool AddPacket(OMXPacket *pkt);
   bool OpenAudioCodec();
   void CloseAudioCodec();      
