@@ -880,7 +880,7 @@ int main(int argc, char *argv[])
           PrintSubtitleInfo();
         }
         break;
-      case 'q':
+      case 'q': case 27:
         m_stop = true;
         goto do_exit;
         break;
