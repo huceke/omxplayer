@@ -1185,16 +1185,16 @@ do_exit:
       m_player_audio.WaitCompletion();
     else if(m_has_video)
       m_player_video.WaitCompletion();
-  }
 
-  if (m_loop)
-  {
-    if(m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
+    if (m_loop)
     {
-      FlushStreams(startpts);
-      if (m_has_video) m_player_video.UnFlush();
-      //if (m_has_audio) m_player_audio.UnFlush();
-      goto play_again;
+      if(m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
+      {
+	FlushStreams(startpts);
+	if (m_has_video) m_player_video.UnFlush();
+	//if (m_has_audio) m_player_audio.UnFlush();
+	goto play_again;
+      }
     }
   }
 
