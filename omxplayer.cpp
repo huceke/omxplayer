@@ -108,6 +108,7 @@ bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = false;
+bool              m_loop                = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -1063,14 +1064,34 @@ play_file:
     if(m_omx_reader->IsEof() && !m_omx_pkt)
     {
       if (!m_player_audio.GetCached() && !m_player_video.GetCached())
-        break;
+      {
+        if (m_loop)
+        {
 
-      // Abort audio buffering, now we're on our own
-      if (m_buffer_empty)
-        m_av_clock->OMXResume();
+          if(m_has_audio)
+            m_player_audio.WaitCompletion();
+          else if(m_has_video)
+            m_player_video.WaitCompletion();
 
-      OMXClock::OMXSleep(10);
-      continue;
+          if(m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
+          {
+            FlushStreams(startpts);
+            if (m_has_video) m_player_video.UnFlush();
+          }
+
+        }
+        else
+          break;
+      }
+      else
+      {
+        // Abort audio buffering, now we're on our own
+        if (m_buffer_empty)
+          m_av_clock->OMXResume();
+
+        OMXClock::OMXSleep(10);
+        continue;
+      }
     }
 
     /* when the audio buffer runs under 0.1 seconds we buffer up */

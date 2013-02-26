@@ -482,6 +482,11 @@ void OMXPlayerVideo::Flush()
   UnLock();
 }
 
+void OMXPlayerVideo::UnFlush()
+{
+  m_flush = false;
+}
+
 bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
 {
   bool ret = false;
