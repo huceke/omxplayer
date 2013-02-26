@@ -104,6 +104,7 @@ public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect);
+  void Reset();
   bool Close();
   void Output(double pts);
   bool Decode(OMXPacket *pkt);

@@ -112,9 +112,10 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   
   m_dllAvFormat.av_register_all();
 
+  SetReader(omx_reader);
+
   m_hints       = hints;
   m_av_clock    = av_clock;
-  m_omx_reader  = omx_reader;
   m_device      = device;
   m_passthrough = IAudioRenderer::ENCODED_NONE;
   m_hw_decode   = false;
@@ -123,7 +124,6 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_boost_on_downmix = boost_on_downmix;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
-  m_bMpeg       = m_omx_reader->IsMpegVideo();
   m_use_thread  = use_thread;
   m_flush       = false;
   m_cached_size = 0;
@@ -164,6 +164,12 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_open        = true;
 
   return true;
+}
+
+void OMXPlayerAudio::SetReader(OMXReader *omx_reader)
+{
+  m_omx_reader  = omx_reader;
+  m_bMpeg       = m_omx_reader->IsMpegVideo();
 }
 
 bool OMXPlayerAudio::Close()

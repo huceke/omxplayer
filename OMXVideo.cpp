@@ -921,6 +921,7 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
 
       if(m_setStartTime)
       {
+	if (val > 0) m_av_clock->OMXSeek(m_omx_decoder.GetOutputPort(), val);
         omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;
         m_setStartTime = false;
       }
@@ -940,6 +941,8 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
 
       if(demuxer_bytes == 0)
         omx_buffer->nFlags |= OMX_BUFFERFLAG_ENDOFFRAME;
+
+      CLog::Log(LOGDEBUG, "decoder ts %llu flags %lx\n", val, omx_buffer->nFlags);
 
       int nRetry = 0;
       while(true)
@@ -1045,10 +1048,10 @@ void COMXVideo::Reset(void)
   m_omx_decoder.FlushInput();
   m_omx_tunnel_decoder.Flush();
 
-  //m_setStartTime      = true;
-  //m_setStartTimeText  = true;
+  m_setStartTime      = true;
+  m_setStartTimeText  = true;
 
-  //m_first_frame = true;
+  // m_first_frame = true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1152,7 +1155,7 @@ void COMXVideo::WaitCompletion()
   omx_buffer->nFilledLen  = 0;
   omx_buffer->nTimeStamp  = ToOMXTime(0LL);
 
-  omx_buffer->nFlags = OMX_BUFFERFLAG_ENDOFFRAME | OMX_BUFFERFLAG_EOS | OMX_BUFFERFLAG_TIME_UNKNOWN;
+  omx_buffer->nFlags = OMX_BUFFERFLAG_ENDOFFRAME | OMX_BUFFERFLAG_TIME_UNKNOWN;
   
   omx_err = m_omx_decoder.EmptyThisBuffer(omx_buffer);
   if (omx_err != OMX_ErrorNone)
