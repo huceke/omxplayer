@@ -668,8 +668,8 @@ int main(int argc, char *argv[])
 
   pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind]);
 
-play_file:
   start_omx();
+play_file:
 
   /* This is now not much used variable as we look directly into argv[]
    * earlier in the process. */
@@ -845,7 +845,6 @@ play_file:
   else if (m_loop)
     pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind_filenames]);
 
-play_again:
   m_av_clock->OMXReset();
 
   while(!m_stop)
@@ -1187,20 +1186,7 @@ do_exit:
       m_player_audio.WaitCompletion();
     else if(m_has_video)
       m_player_video.WaitCompletion();
-
-    if (m_loop)
-    {
-      if(m_omx_reader->SeekTime(m_seek_pos * 1000.0f, 0, &startpts))
-      {
-	FlushStreams(startpts);
-	if (m_has_video) m_player_video.UnFlush();
-	//if (m_has_audio) m_player_audio.UnFlush();
-	goto play_again;
-      }
-    }
   }
-
-  stop_player(m_refresh);
 
   if(m_omx_pkt)
   {
@@ -1211,21 +1197,33 @@ do_exit:
   if (!m_stop && !g_abort) {
     if (optind < argc)
     {
+      FlushStreams(startpts);
+      if (m_has_video) m_player_video.UnFlush();
       goto play_file;
     }
 
     else if (m_loop)
     {
+#if 0
+      // full reset of OMX state
       stop_player(m_refresh);
       m_omx_reader->Close();
       delete m_omx_reader;
       stop_omx();
       m_player_init = false;
+      start_omx();
+#else
+      FlushStreams(startpts);
+      if (m_has_video) m_player_video.UnFlush();
+      //if (m_has_audio) m_player_audio.UnFlush();
+#endif
 
       optind = optind_filenames;
       goto play_file;
     }
   }
+
+  stop_player(m_refresh);
 
   m_omx_reader->Close();
   delete m_omx_reader;
