@@ -678,12 +678,18 @@ play_file:
   m_thread_player = true;
 
   pthread_join(m_omx_reader_thread, NULL);
-  m_omx_reader = m_omx_reader_next;
   if(!m_omx_reader_openok) {
     printf("reader not openok. emergency exit!!!\n");
     m_stop = 1;
     goto do_exit;
   }
+
+  if (m_omx_reader) {
+    m_omx_reader->Close();
+    delete m_omx_reader;
+    m_player_audio.SetReader(m_omx_reader_next);
+  }
+  m_omx_reader = m_omx_reader_next;
 
   if(!m_has_external_subtitles && !IsURL(m_filename))
   {
@@ -1207,8 +1213,6 @@ do_exit:
 #if 0
       // full reset of OMX state
       stop_player(m_refresh);
-      m_omx_reader->Close();
-      delete m_omx_reader;
       stop_omx();
       m_player_init = false;
       start_omx();
@@ -1225,8 +1229,6 @@ do_exit:
 
   stop_player(m_refresh);
 
-  m_omx_reader->Close();
-  delete m_omx_reader;
   stop_omx();
 
   printf("have a nice day ;)\n");
