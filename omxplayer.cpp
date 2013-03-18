@@ -101,6 +101,7 @@ bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = false;
+bool              m_loop                = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -143,6 +144,7 @@ void print_usage()
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -l / --pos                     start position (in seconds)\n");  
   printf("              --boost-on-downmix        boost volume when downmixing\n");
+  printf("              --loop                    repeat content\n");
   printf("              --vol                     Set initial volume in millibels (default 0)\n");
   printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
   printf("              --font path               subtitle font\n");
@@ -431,6 +433,7 @@ int main(int argc, char *argv[])
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
+  double                loop_offset           = 0;
   CRect                 DestRect              = {0,0,0,0};
   TV_DISPLAY_STATE_T   tv_state;
 
@@ -442,6 +445,7 @@ int main(int argc, char *argv[])
   const int pos_opt       = 0x105;
   const int vol_opt       = 0x106;
   const int boost_on_downmix_opt = 0x200;
+  const int loop_opt = 0x201;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -466,6 +470,7 @@ int main(int argc, char *argv[])
     { "lines",        required_argument,  NULL,          lines_opt },
     { "win",          required_argument,  NULL,          pos_opt },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
+    { "loop",         no_argument,        NULL,          loop_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -564,6 +569,9 @@ int main(int argc, char *argv[])
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
+        break;
+      case loop_opt:
+        m_loop = true;
         break;
       case 0:
         break;
@@ -943,7 +951,7 @@ int main(int argc, char *argv[])
 
       m_av_clock->OMXStop();
 
-      pts = m_av_clock->GetPTS();
+      pts = m_av_clock->GetPTS() - loop_offset;
 
       seek_pos = (pts / DVD_TIME_BASE) + m_incr;
       seek_flags = m_incr < 0.0f ? AVSEEK_FLAG_BACKWARD : 0;
@@ -964,6 +972,8 @@ int main(int argc, char *argv[])
       
       if(m_has_subtitle)
         m_player_subtitles.Resume();
+
+      loop_offset = 0;
     }
 
     /* player got in an error state */
@@ -984,14 +994,33 @@ int main(int argc, char *argv[])
     if(m_omx_reader.IsEof() && !m_omx_pkt)
     {
       if (!m_player_audio.GetCached() && !m_player_video.GetCached())
-        break;
+      {
+        if (m_loop)
+        {
 
-      // Abort audio buffering, now we're on our own
-      if (m_buffer_empty)
-        m_av_clock->OMXResume();
+          m_omx_reader.SeekTime(0 * 1000.0f, AVSEEK_FLAG_BACKWARD, &startpts);
+          if(m_has_audio)
+          {
+            loop_offset = m_player_audio.GetCurrentPTS() /* + DVD_MSEC_TO_TIME(250) */;
+            m_player_video.SetCurrentPTS(loop_offset);
+          }
+          else if(m_has_video)
+            loop_offset = m_player_video.GetCurrentPTS();
+          // printf("Loop offset : %8.02f\n", loop_offset / DVD_TIME_BASE);  
 
-      OMXClock::OMXSleep(10);
-      continue;
+        }
+        else
+          break;
+      }
+      else
+      {
+        // Abort audio buffering, now we're on our own
+        if (m_buffer_empty)
+          m_av_clock->OMXResume();
+
+        OMXClock::OMXSleep(10);
+        continue;
+      }
     }
 
     /* when the audio buffer runs under 0.1 seconds we buffer up */
@@ -1029,7 +1058,21 @@ int main(int argc, char *argv[])
     }
 
     if(!m_omx_pkt)
+    {
       m_omx_pkt = m_omx_reader.Read();
+      if (m_omx_pkt && m_loop)
+      {
+        if (m_omx_pkt->pts != DVD_NOPTS_VALUE)
+        {
+          m_omx_pkt->pts += loop_offset;
+        }
+        if (m_omx_pkt->dts != DVD_NOPTS_VALUE)
+        {
+          m_omx_pkt->dts += loop_offset;
+        }
+      }
+      //if (m_omx_pkt) printf("Pkt : pts %8.02f, pts %8.02f, type %d\n", m_omx_pkt->pts / DVD_TIME_BASE, m_omx_pkt->pts / DVD_TIME_BASE, (int)m_omx_pkt->codec_type);
+    }
 
     if(m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {
