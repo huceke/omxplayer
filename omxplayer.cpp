@@ -101,6 +101,7 @@ bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = false;
+bool              m_gen_log             = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -141,6 +142,7 @@ void print_usage()
   printf("         -z / --nohdmiclocksync         do not adjust display refresh rate to match video\n");
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
+  printf("         -g / --genlog                  generate log file\n");
   printf("         -l / --pos                     start position (in seconds)\n");  
   printf("              --boost-on-downmix        boost volume when downmixing\n");
   printf("              --vol                     Set initial volume in millibels (default 0)\n");
@@ -279,8 +281,10 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
     num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group,
         supported_modes, max_supported_modes, &prefer_group, &prefer_mode);
 
+    if(m_gen_log) {
     CLog::Log(LOGDEBUG, "EGL get supported modes (%d) = %d, prefer_group=%x, prefer_mode=%x\n",
         group, num_modes, prefer_group, prefer_mode);
+    }
   }
 
   TV_SUPPORTED_MODE_NEW_T *tv_found = NULL;
@@ -457,6 +461,7 @@ int main(int argc, char *argv[])
     { "hdmiclocksync", no_argument,       NULL,          'y' },
     { "nohdmiclocksync", no_argument,     NULL,          'z' },
     { "refresh",      no_argument,        NULL,          'r' },
+    { "genlog",       no_argument,        NULL,          'g' },
     { "sid",          required_argument,  NULL,          't' },
     { "pos",          required_argument,  NULL,          'l' },    
     { "font",         required_argument,  NULL,          font_opt },
@@ -471,12 +476,15 @@ int main(int argc, char *argv[])
 
   int c;
   std::string mode;
-  while ((c = getopt_long(argc, argv, "wihn:l:o:cslpd3:yzt:r", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wihn:l:o:cslpd3:yzt:rg", longopts, NULL)) != -1)
   {
     switch (c) 
     {
       case 'r':
         m_refresh = true;
+        break;
+      case 'g':
+        m_gen_log = true;
         break;
       case 'y':
         m_hdmi_clock_sync = true;
@@ -623,8 +631,13 @@ int main(int argc, char *argv[])
       m_has_external_subtitles = true;
     }
   }
-
-  CLog::Init("./");
+    
+  if(m_gen_log) {
+    CLog::SetLogLevel(LOG_LEVEL_DEBUG);
+    CLog::Init("./");
+  } else {
+    CLog::SetLogLevel(LOG_LEVEL_NONE);
+  }
 
   g_RBP.Initialize();
   g_OMX.Initialize();

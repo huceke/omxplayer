@@ -19,7 +19,7 @@ else
 fi
 
 if [ -e /usr/lib/omxplayer ]; then
-  export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:$LD_LIBRARY_PATH 
+  export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:$LD_LIBRARY_PATH
 else
   export LD_LIBRARY_PATH=$PWD/ffmpeg_compiled/usr/local/lib:/opt/vc/lib:$LD_LIBRARY_PATH
 fi
@@ -31,7 +31,7 @@ XRES=1600
 YRES=900
 
 if [ -e $FBSET ]; then
-  echo 0 >  /sys/class/vtconsole/vtcon1/bind
+  echo 0 > /sys/class/vtconsole/vtcon1/bind
   fbset -xres 1 -yres 1
 fi
 
@@ -39,5 +39,5 @@ $OMXPLAYER --font $FONT "$@"
 
 if [ -e $FBSET ]; then
   fbset -xres ${XRES} -yres ${YRES}
-  echo 1 >  /sys/class/vtconsole/vtcon1/bind
+  echo 1 > /sys/class/vtconsole/vtcon1/bind
 fi
