@@ -29,7 +29,7 @@ static FILE*       m_file           = NULL;
 static int         m_repeatCount    = 0;
 static int         m_repeatLogLevel = -1;
 static std::string m_repeatLine     = "";
-static int         m_logLevel       = LOG_LEVEL_DEBUG;
+static int         m_logLevel       = LOG_LEVEL_NONE;
 
 static pthread_mutex_t   m_log_mutex;
 
@@ -140,6 +140,7 @@ void CLog::Log(int loglevel, const char *format, ... )
 bool CLog::Init(const char* path)
 {
   pthread_mutex_init(&m_log_mutex, NULL);
+  if (m_logLevel > LOG_LEVEL_NONE) { 
   if (!m_file)
   {
     CStdString strLogFile, strLogFileOld;
@@ -163,12 +164,13 @@ bool CLog::Init(const char* path)
     unsigned char BOM[3] = {0xEF, 0xBB, 0xBF};
     fwrite(BOM, sizeof(BOM), 1, m_file);
   }
-
+  }
   return m_file != NULL;
 }
 
 void CLog::MemDump(char *pData, int length)
 {
+  if (m_logLevel > LOG_LEVEL_NONE) { 
   Log(LOGDEBUG, "MEM_DUMP: Dumping from %p", pData);
   for (int i = 0; i < length; i+=16)
   {
@@ -198,12 +200,14 @@ void CLog::MemDump(char *pData, int length)
     }
     Log(LOGDEBUG, "%s", strLine.c_str());
   }
+  }
 }
 
 void CLog::SetLogLevel(int level)
 {
+  if(m_logLevel > LOG_LEVEL_NONE)
+    CLog::Log(LOGNOTICE, "Log level changed to %d", m_logLevel);
   m_logLevel = level;
-  CLog::Log(LOGNOTICE, "Log level changed to %d", m_logLevel);
 }
 
 int CLog::GetLogLevel()
@@ -214,7 +218,9 @@ int CLog::GetLogLevel()
 void CLog::OutputDebugString(const std::string& line)
 {
 #if defined(_DEBUG) || defined(PROFILE)
+if(m_logLevel > LOG_LEVEL_NONE) {
   ::OutputDebugString(line.c_str());
   ::OutputDebugString("\n");
+}
 #endif
 }
