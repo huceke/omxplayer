@@ -129,7 +129,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
 
   m_dllAvFormat.av_register_all();
   m_dllAvFormat.avformat_network_init();
-  m_dllAvUtil.av_log_set_level(AV_LOG_QUIET);
+  m_dllAvUtil.av_log_set_level(dump_format ? AV_LOG_INFO:AV_LOG_QUIET);
 
   int           result    = -1;
   AVInputFormat *iformat  = NULL;
@@ -246,27 +246,6 @@ bool OMXReader::Open(std::string filename, bool dump_format)
         CLog::Log(LOGDEBUG, "COMXPlayer::OpenFile - set cache throttle rate to %u bytes per second", maxrate);
     }
   }
-
-  // show file info
-  printf("filename         : %s\n", m_filename.c_str());
-  printf("nb_streams       : %d\n", m_pFormatContext->nb_streams);
-  printf("video_streams    : %d\n", m_video_count);
-  printf("audio_streams    : %d\n", m_audio_count);
-  printf("nb_chapters      : %d\n", m_pFormatContext->nb_chapters);
-  printf("nb_chapters      : %d\n", m_chapter_count);
-  printf("nb_subtitles     : %d\n", m_subtitle_count);
-  printf("format_name      : %s\n", m_pFormatContext->iformat->name);
-  if (m_pFormatContext->iformat->long_name)
-    printf("format_long_name : %s\n", m_pFormatContext->iformat->long_name);
-  else
-    printf("format_long_name : unknown\n");
-  printf("start_time       : %lld\n", m_pFormatContext->start_time);
-  printf("duration         : %d\n", GetStreamLength() / 1000);
-  printf("bytelength       : %lld\n", m_pFile ? m_pFile->GetLength() : 0);
-  if (m_pFormatContext->bit_rate > 0)
-    printf("bit_rate         : %d\n", m_pFormatContext->bit_rate);
-  else
-    printf("bit_rate         : N/A\n");
 
   m_speed       = DVD_PLAYSPEED_NORMAL;
 
