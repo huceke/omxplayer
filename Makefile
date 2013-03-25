@@ -56,8 +56,7 @@ clean:
 	@rm -f omxplayer-dist.tar.gz
 	make -f Makefile.ffmpeg clean
 
-ffmpeg:
-	@rm -rf ffmpeg
+ffmpeg_compiled: 
 	make -f Makefile.ffmpeg
 	make -f Makefile.ffmpeg install
 

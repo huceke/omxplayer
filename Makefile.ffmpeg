@@ -60,8 +60,8 @@ clean:
 	@rm -rf ffmpeg
 
 checkout: 
-	git clone git://git.videolan.org/ffmpeg.git ffmpeg; \
-	cd ffmpeg; git checkout master;	git checkout 8c51ea54897c2d8671b38efecc1422ad4ad344f9
+	git submodule init ffmpeg
+	git submodule update ffmpeg
 
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
