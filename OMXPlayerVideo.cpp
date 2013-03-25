@@ -256,10 +256,12 @@ void OMXPlayerVideo::Output(double pts)
   m_FlipTimeStamp += max(0.0, iSleepTime);
   m_FlipTimeStamp += iFrameDuration;
 
+#if 0
   while(m_av_clock->GetAbsoluteClock(false) < (iCurrentClock + iSleepTime + DVD_MSEC_TO_TIME(500)) )
   {
     OMXClock::OMXSleep(10);
   }
+#endif
 
   /*
   printf("iPlayingClock %f iCurrentClock %f iClockSleep %f iFrameSleep %f iFrameDuration %f WaitAbsolut %f m_FlipTimeStamp %f pts %f\n", 
@@ -271,7 +273,9 @@ void OMXPlayerVideo::Output(double pts)
 
   //g_renderManager.FlipPage(CThread::m_bStop, (iCurrentClock + iSleepTime) / DVD_TIME_BASE, -1, mDisplayField);
 
+#if 0
   m_av_clock->WaitAbsoluteClock((iCurrentClock + iSleepTime));
+#endif
 
   // guess next frame pts. iDuration is always valid
   if (m_speed != 0)
@@ -379,6 +383,9 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
 
     ret = true;
   }
+  else
+    // video fifo is full, allow other tasks to run
+    OMXClock::OMXSleep(10);
 
   return ret;
 }

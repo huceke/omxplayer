@@ -1185,7 +1185,6 @@ void COMXAudio::WaitCompletion()
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
   OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_decoder.GetInputBuffer();
-  struct timespec starttime, endtime;
 
   if(omx_buffer == NULL)
   {
@@ -1206,18 +1205,10 @@ void COMXAudio::WaitCompletion()
     return;
   }
 
-  // clock_gettime(CLOCK_REALTIME, &starttime);
-
   while(true)
   {
     if(m_omx_render.IsEOS())
       break;
-    // clock_gettime(CLOCK_REALTIME, &endtime);
-    // if((endtime.tv_sec - starttime.tv_sec) > 2)
-    // {
-    //   CLog::Log(LOGERROR, "%s::%s - wait for eos timed out\n", CLASSNAME, __func__);
-    //   break;
-    // }
     OMXClock::OMXSleep(50);
   }
 

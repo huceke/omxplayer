@@ -81,7 +81,6 @@ bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = -1;
 int               m_seek_pos            = 0;
-bool              m_buffer_empty        = true;
 bool              m_thread_player       = false;
 OMXClock          *m_av_clock           = NULL;
 COMXStreamInfo    m_hints_audio;
@@ -119,7 +118,7 @@ static void restore_fl()
 
 void sig_handler(int s)
 {
-  printf("strg-c catched\n");
+  printf("strg-c caught\n");
   signal(SIGINT, SIG_DFL);
   g_abort = true;
 }
@@ -1028,7 +1027,7 @@ int main(int argc, char *argv[])
         break;
 
       // Abort audio buffering, now we're on our own
-      if (m_buffer_empty)
+      if (m_av_clock->OMXIsPaused())
         m_av_clock->OMXResume();
 
       OMXClock::OMXSleep(10);
@@ -1038,35 +1037,31 @@ int main(int argc, char *argv[])
     /* when the audio buffer runs under 0.1 seconds we buffer up */
     if(m_has_audio)
     {
-      if(m_player_audio.GetDelay() < min(0.1f, 0.1f*(audio_fifo_size ? 2.0f:audio_fifo_size)) && !m_buffer_empty)
+      if(m_player_audio.GetDelay() < min(0.1f, 0.1f*(audio_fifo_size ? 2.0f:audio_fifo_size)))
       {
         if(!m_av_clock->OMXIsPaused())
         {
           m_av_clock->OMXPause();
-          //printf("buffering start\n");
-          m_buffer_empty = true;
           clock_gettime(CLOCK_REALTIME, &starttime);
         }
       }
-      if(m_player_audio.GetDelay() > m_player_audio.GetCacheTotal() * 0.75f && m_buffer_empty)
+      if(m_player_audio.GetDelay() > m_player_audio.GetCacheTotal() * 0.75f)
       {
         if(m_av_clock->OMXIsPaused())
         {
           m_av_clock->OMXResume();
-          //printf("buffering end\n");
-          m_buffer_empty = false;
         }
       }
-      if(m_buffer_empty)
+#if 1 // not sure this happens
+      if(m_av_clock->OMXIsPaused())
       {
         clock_gettime(CLOCK_REALTIME, &endtime);
-        if((endtime.tv_sec - starttime.tv_sec) > 1)
+        if((endtime.tv_sec - starttime.tv_sec) > max(2, (int)audio_fifo_size))
         {
-          m_buffer_empty = false;
           m_av_clock->OMXResume();
-          //printf("buffering timed out\n");
         }
       }
+#endif
     }
 
     if(!m_omx_pkt)
@@ -1077,7 +1072,13 @@ int main(int argc, char *argv[])
       if(m_player_video.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
       else
+      {
+        if(m_av_clock->OMXIsPaused())
+        {
+          m_av_clock->OMXResume();
+        }
         OMXClock::OMXSleep(10);
+      }
 
       if(m_tv_show_info)
       {
