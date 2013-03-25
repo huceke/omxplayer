@@ -144,7 +144,7 @@ bool COMXVideo::NaluFormatStartCodes(enum CodecID codec, uint8_t *in_extradata, 
   return false;    
 }
 
-bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRect, float display_aspect, bool deinterlace, bool hdmi_clock_sync)
+bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRect, float display_aspect, bool deinterlace, bool hdmi_clock_sync, float fifo_size)
 {
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
   std::string decoder_name;
@@ -382,7 +382,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
   }
 
   portParam.nPortIndex = m_omx_decoder.GetInputPort();
-  portParam.nBufferCountActual = VIDEO_BUFFERS;
+  portParam.nBufferCountActual = fifo_size ? fifo_size * 1024 * 1024 / portParam.nBufferSize : 80;
 
   portParam.format.video.nFrameWidth  = m_decoded_width;
   portParam.format.video.nFrameHeight = m_decoded_height;

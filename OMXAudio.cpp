@@ -139,6 +139,7 @@ COMXAudio::COMXAudio() :
   m_eEncoding       (OMX_AUDIO_CodingPCM),
   m_extradata       (NULL   ),
   m_extrasize       (0      ),
+  m_fifo_size       (0.0    ),
   m_visBufferLength (0      ),
   m_last_pts        (DVD_NOPTS_VALUE)
 {
@@ -153,7 +154,7 @@ COMXAudio::~COMXAudio()
 
 bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode,
-                           bool boostOnDownmix, long initialVolume)
+                           bool boostOnDownmix, long initialVolume, float fifo_size)
 {
   m_HWDecode = false;
   m_Passthrough = false;
@@ -181,10 +182,11 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     memcpy(m_extradata, hints.extradata, hints.extrasize);
   }
 
-  return Initialize(pCallback, device, hints.channels, channelMap, hints.channels, hints.samplerate, hints.bitspersample, false, boostOnDownmix, false, bPassthrough, initialVolume);
+  return Initialize(pCallback, device, hints.channels, channelMap, hints.channels, hints.samplerate, hints.bitspersample,
+              false, boostOnDownmix, false, bPassthrough, initialVolume, fifo_size);
 }
 
-bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic, EEncoded bPassthrough, long initialVolume)
+bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic, EEncoded bPassthrough, long initialVolume, float fifo_size)
 {
   std::string deviceuse;
   if(device == "hdmi") {
@@ -197,6 +199,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     return false;
 
   m_Passthrough = false;
+  m_fifo_size = fifo_size;
 
   if(bPassthrough != IAudioRenderer::ENCODED_NONE)
     m_Passthrough =true;
@@ -304,7 +307,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   m_SampleRate    = uiSamplesPerSec;
   m_BitsPerSample = uiBitsPerSample;
   m_BufferLen     = m_BytesPerSec = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
-  m_BufferLen     *= AUDIO_BUFFER_SECONDS;
+  m_BufferLen     *= m_fifo_size;
   m_ChunkLen      = 6144;
   //m_ChunkLen      = 2048;
 

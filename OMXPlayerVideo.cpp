@@ -40,8 +40,6 @@
 #include "utils/BitstreamStats.h"
 #endif
 
-#define MAX_DATA_SIZE    10 * 1024 * 1024
-
 OMXPlayerVideo::OMXPlayerVideo()
 {
   m_open          = false;
@@ -59,6 +57,8 @@ OMXPlayerVideo::OMXPlayerVideo()
   m_speed         = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
+  m_max_data_size = 10 * 1024 * 1024;
+  m_fifo_size     = (float)80*1024*60 / (1024*1024);
 
   pthread_cond_init(&m_packet_cond, NULL);
   pthread_cond_init(&m_picture_cond, NULL);
@@ -114,7 +114,8 @@ void OMXPlayerVideo::UnLockSubtitles()
     pthread_mutex_unlock(&m_lock_subtitle);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect)
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread,
+                             float display_aspect, float queue_size, float fifo_size)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
@@ -144,6 +145,10 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
   m_DestRect    = DestRect;
+  if (queue_size != 0.0)
+    m_max_data_size = queue_size * 1024 * 1024;
+  if (fifo_size != 0.0)
+    m_fifo_size = fifo_size;
 
   m_FlipTimeStamp = m_av_clock->GetAbsoluteClock();
 
@@ -492,7 +497,7 @@ bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
   if(m_bStop || m_bAbort)
     return ret;
 
-  if((m_cached_size + pkt->size) < MAX_DATA_SIZE)
+  if((m_cached_size + pkt->size) < m_max_data_size)
   {
     Lock();
     m_cached_size += pkt->size;
@@ -521,7 +526,7 @@ bool OMXPlayerVideo::OpenDecoder()
   m_frametime = (double)DVD_TIME_BASE / m_fps;
 
   m_decoder = new COMXVideo();
-  if(!m_decoder->Open(m_hints, m_av_clock, m_DestRect, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync))
+  if(!m_decoder->Open(m_hints, m_av_clock, m_DestRect, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync, m_fifo_size))
   {
     CloseDecoder();
     return false;

@@ -143,9 +143,9 @@ void print_usage()
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -g / --genlog                  generate log file\n");
-  printf("         -l / --pos                     start position (in seconds)\n");  
+  printf("         -l / --pos n                   start position (in seconds)\n");
   printf("              --boost-on-downmix        boost volume when downmixing\n");
-  printf("              --vol                     Set initial volume in millibels (default 0)\n");
+  printf("              --vol n                   Set initial volume in millibels (default 0)\n");
   printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
@@ -155,6 +155,10 @@ void print_usage()
   printf("              --lines n                 number of lines to accommodate in the subtitle buffer\n");
   printf("                                        (default: 3)\n");
   printf("              --win \"x1 y1 x2 y2\"       Set position of video window\n");
+  printf("              --audio_fifo  n           Size of audio output fifo in seconds\n");
+  printf("              --video_fifo  n           Size of video output fifo in MB\n");
+  printf("              --audio_queue n           Size of audio input queue in MB\n");
+  printf("              --video_queue n           Size of video input queue in MB\n");
 }
 
 void PrintSubtitleInfo()
@@ -436,15 +440,23 @@ int main(int argc, char *argv[])
   bool                  m_refresh             = false;
   double                startpts              = 0;
   CRect                 DestRect              = {0,0,0,0};
+  float audio_fifo_size = 0.0; // zero means use default
+  float video_fifo_size = 0.0;
+  float audio_queue_size = 0.0;
+  float video_queue_size = 0.0;
   TV_DISPLAY_STATE_T   tv_state;
 
-  const int font_opt      = 0x100;
-  const int font_size_opt = 0x101;
-  const int align_opt     = 0x102;
-  const int subtitles_opt = 0x103;
-  const int lines_opt     = 0x104;
-  const int pos_opt       = 0x105;
-  const int vol_opt       = 0x106;
+  const int font_opt        = 0x100;
+  const int font_size_opt   = 0x101;
+  const int align_opt       = 0x102;
+  const int subtitles_opt   = 0x103;
+  const int lines_opt       = 0x104;
+  const int pos_opt         = 0x105;
+  const int vol_opt         = 0x106;
+  const int audio_fifo_opt  = 0x107;
+  const int video_fifo_opt  = 0x108;
+  const int audio_queue_opt = 0x109;
+  const int video_queue_opt = 0x10a;
   const int boost_on_downmix_opt = 0x200;
 
   struct option longopts[] = {
@@ -470,6 +482,10 @@ int main(int argc, char *argv[])
     { "subtitles",    required_argument,  NULL,          subtitles_opt },
     { "lines",        required_argument,  NULL,          lines_opt },
     { "win",          required_argument,  NULL,          pos_opt },
+    { "audio_fifo",   required_argument,  NULL,          audio_fifo_opt },
+    { "video_fifo",   required_argument,  NULL,          video_fifo_opt },
+    { "audio_queue",  required_argument,  NULL,          audio_queue_opt },
+    { "video_queue",  required_argument,  NULL,          video_queue_opt },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { 0, 0, 0, 0 }
   };
@@ -572,6 +588,18 @@ int main(int argc, char *argv[])
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
+        break;
+      case audio_fifo_opt:
+	audio_fifo_size = atof(optarg);
+        break;
+      case video_fifo_opt:
+	video_fifo_size = atof(optarg);
+        break;
+      case audio_queue_opt:
+	audio_queue_size = atof(optarg);
+        break;
+      case video_queue_opt:
+	video_queue_size = atof(optarg);
         break;
       case 0:
         break;
@@ -710,7 +738,7 @@ int main(int argc, char *argv[])
   }
   
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,  m_bMpeg,
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
     goto do_exit;
 
   {
@@ -761,7 +789,7 @@ int main(int argc, char *argv[])
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
                                          m_passthrough, m_initialVolume, m_use_hw_audio,
-                                         m_boost_on_downmix, m_thread_player))
+                                         m_boost_on_downmix, m_thread_player, audio_queue_size, audio_fifo_size))
     goto do_exit;
 
   m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
@@ -970,7 +998,7 @@ int main(int argc, char *argv[])
 
       m_player_video.Close();
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace, m_bMpeg,
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
         goto do_exit;
 
       m_av_clock->OMXStart(startpts);
@@ -988,10 +1016,10 @@ int main(int argc, char *argv[])
 
     if(m_stats)
     {
-      printf("V : %8.02f %8d %8d A : %8.02f %8.02f Cv : %8d Ca : %8d                            \r",
-             m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(),
-             m_player_video.GetDecoderFreeSpace(), m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, 
-             m_player_audio.GetDelay(), m_player_video.GetCached(), m_player_audio.GetCached());
+      printf("V : %8.02f %8d %8d A : %8.02f %8.02f/%8.02f Cv : %8d Ca : %8d                            \r",
+             m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(), m_player_video.GetDecoderFreeSpace(),
+             m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
+             m_player_video.GetCached(), m_player_audio.GetCached());
     }
 
     if(m_omx_reader.IsEof() && !m_omx_pkt)
@@ -1010,7 +1038,7 @@ int main(int argc, char *argv[])
     /* when the audio buffer runs under 0.1 seconds we buffer up */
     if(m_has_audio)
     {
-      if(m_player_audio.GetDelay() < 0.1f && !m_buffer_empty)
+      if(m_player_audio.GetDelay() < min(0.1f, 0.1f*(audio_fifo_size ? 2.0f:audio_fifo_size)) && !m_buffer_empty)
       {
         if(!m_av_clock->OMXIsPaused())
         {
@@ -1020,7 +1048,7 @@ int main(int argc, char *argv[])
           clock_gettime(CLOCK_REALTIME, &starttime);
         }
       }
-      if(m_player_audio.GetDelay() > (AUDIO_BUFFER_SECONDS * 0.75f) && m_buffer_empty)
+      if(m_player_audio.GetDelay() > m_player_audio.GetCacheTotal() * 0.75f && m_buffer_empty)
       {
         if(m_av_clock->OMXIsPaused())
         {
@@ -1053,12 +1081,20 @@ int main(int argc, char *argv[])
 
       if(m_tv_show_info)
       {
-        char response[80];
-        vc_gencmd(response, sizeof response, "render_bar 4 video_fifo %d %d %d %d", 
+        static unsigned count;
+        if ((count++ & 15) == 0)
+        {
+          char response[80];
+          vc_gencmd(response, sizeof response, "render_bar 4 video_fifo %d %d %d %d",
                 m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace(),
                 0 , 0, m_player_video.GetDecoderBufferSize());
-        vc_gencmd(response, sizeof response, "render_bar 5 audio_fifo %d %d %d %d", 
-                (int)(100.0*m_player_audio.GetDelay()), 0, 0, 100*AUDIO_BUFFER_SECONDS);
+          vc_gencmd(response, sizeof response, "render_bar 5 audio_fifo %d %d %d %d",
+                (int)(100.0*m_player_audio.GetDelay()), 0, 0, (int)(100.0f * m_player_audio.GetCacheTotal()));
+          vc_gencmd(response, sizeof response, "render_bar 6 video_queue %d %d %d %d",
+                m_player_video.GetLevel(), 0, 0, 100);
+          vc_gencmd(response, sizeof response, "render_bar 7 audio_queue %d %d %d %d",
+                m_player_audio.GetLevel(), 0, 0, 100);
+        }
       }
     }
     else if(m_has_audio && m_omx_pkt && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO)

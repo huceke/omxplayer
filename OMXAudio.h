@@ -43,7 +43,6 @@
 #include "OMXStreamInfo.h"
 #include "BitstreamConverter.h"
 
-#define AUDIO_BUFFER_SECONDS 2
 #define VIS_PACKET_SIZE 3840
 
 class COMXAudio : public IAudioRenderer
@@ -58,8 +57,8 @@ public:
   unsigned int GetAudioRenderingLatency();
   COMXAudio();
   bool Initialize(IAudioCallback* pCallback, const CStdString& device, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume);
-  bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic=false, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE, long initialVolume = 0);
+                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume, float fifo_size);
+  bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic=false, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
   ~COMXAudio();
 
   unsigned int AddPackets(const void* data, unsigned int len);
@@ -124,6 +123,7 @@ private:
   OMX_AUDIO_CODINGTYPE m_eEncoding;
   uint8_t       *m_extradata;
   int           m_extrasize;
+  float         m_fifo_size;
   // stuff for visualisation
   unsigned int  m_visBufferLength;
   double        m_last_pts;
