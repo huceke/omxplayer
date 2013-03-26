@@ -54,11 +54,15 @@ Using OMXPlayer
              -p / --passthrough             audio passthrough
              -d / --deinterlace             deinterlacing
              -w / --hw                      hw audio decoding
-             -3 / --3d                      switch tv into 3d mode
-             -y / --hdmiclocksync           adjust display refresh rate to match video
+             -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)
+             -y / --hdmiclocksync           adjust display refresh rate to match video (default)
+             -z / --nohdmiclocksync         do not adjust display refresh rate to match video
              -t / --sid index               show subtitle with index
              -r / --refresh                 adjust framerate/resolution to video
+             -g / --genlog                  generate log file
+             -l / --pos n                   start position (in seconds)
                   --boost-on-downmix        boost volume when downmixing
+                  --vol n                   Set initial volume in millibels (default 0)
                   --subtitles path          external subtitles in UTF-8 srt format
                   --font path               subtitle font
                                             (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
@@ -67,6 +71,11 @@ Using OMXPlayer
                   --align left/center       subtitle alignment (default: left)
                   --lines n                 number of lines to accommodate in the subtitle buffer
                                             (default: 3)
+                  --win "x1 y1 x2 y2"       Set position of video window
+                  --audio_fifo  n           Size of audio output fifo in seconds
+                  --video_fifo  n           Size of video output fifo in MB
+                  --audio_queue n           Size of audio input queue in MB
+                  --video_queue n           Size of video input queue in MB
 
 For example:
 
