@@ -22,13 +22,6 @@ development headers to install on the running Pi system for the crosscompiling.
 
 Edit Makefile.include and change the settings according your locations.
 
-### Compiling on the Pi
-
-You can also compile it on the PI the native way ;)
-
-Running OMXPlayer
------------------
-
     make ffmpeg
     make
     make dist
@@ -38,6 +31,15 @@ Installing OMXPlayer
 
 Copy over `omxplayer-dist/*` to the Pi `/`. You may want to specify a valid font
 path inside the `omxplayer` shell script.
+
+### Compiling on the Pi
+
+You can also compile it on the PI the native way ;)
+Run this script (which will install packages and update firmware)
+    ./prepare-native-raspbian.sh
+and build with
+    make ffmpeg
+    make
 
 Using OMXPlayer
 ---------------
