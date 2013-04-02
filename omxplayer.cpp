@@ -851,7 +851,7 @@ play_file:
   else if (m_loop)
     pthread_create(&m_omx_reader_thread, NULL, reader_open_thread, argv[optind_filenames]);
 
-  m_av_clock->OMXReset();
+  // m_av_clock->OMXReset();
 
   while(!m_stop)
   {
