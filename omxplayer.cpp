@@ -1143,6 +1143,7 @@ do_exit:
 
   m_av_clock->OMXStop();
   m_av_clock->OMXStateIdle();
+  m_av_clock->Deinitialize();
 
   m_player_subtitles.Close();
   m_player_video.Close();
