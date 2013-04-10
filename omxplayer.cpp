@@ -380,6 +380,8 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
     printf("ntsc_freq:%d %s%s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS":"", property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB":"");
     m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
   }
+  if (supported_modes)
+    delete[] supported_modes;
 }
 
 bool Exists(const std::string& path)
@@ -1155,6 +1157,10 @@ do_exit:
   }
 
   m_omx_reader.Close();
+
+  m_av_clock->Deinitialize();
+  if (m_av_clock)
+    delete m_av_clock;
 
   vc_tv_show_info(0);
 
