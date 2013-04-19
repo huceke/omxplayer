@@ -105,22 +105,32 @@ bool              m_gen_log             = false;
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
 static struct termios orig_termios;
-static void restore_termios()
-{
-    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
-}
-
 static int orig_fl;
-static void restore_fl()
+static void restore_term()
 {
-  fcntl(STDIN_FILENO, F_SETFL, orig_fl);
+  if (isatty(STDIN_FILENO))
+  {
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+  }
+  else
+  {
+    fcntl(STDIN_FILENO, F_SETFL, orig_fl);
+  }
 }
 
 void sig_handler(int s)
 {
-  printf("strg-c caught\n");
-  signal(SIGINT, SIG_DFL);
-  g_abort = true;
+  if (s==SIGINT && !g_abort)
+  {
+     signal(SIGINT, SIG_DFL);
+     g_abort = true;
+     return;
+  }
+  signal(SIGABRT, SIG_DFL);
+  signal(SIGSEGV, SIG_DFL);
+  signal(SIGFPE, SIG_DFL);
+  restore_term();
+  abort();
 }
 
 void print_usage()
@@ -407,6 +417,9 @@ bool IsURL(const std::string& str)
 
 int main(int argc, char *argv[])
 {
+  signal(SIGSEGV, sig_handler);
+  signal(SIGABRT, sig_handler);
+  signal(SIGFPE, sig_handler);
   signal(SIGINT, sig_handler);
 
   if (isatty(STDIN_FILENO))
@@ -420,16 +433,14 @@ int main(int argc, char *argv[])
     new_termios.c_cflag     |= HUPCL;
     new_termios.c_cc[VMIN]  = 0;
 
-
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-    atexit(restore_termios);
   }
   else
   {
     orig_fl = fcntl(STDIN_FILENO, F_GETFL);
     fcntl(STDIN_FILENO, F_SETFL, orig_fl | O_NONBLOCK);
-    atexit(restore_fl);
   }
+  atexit(restore_term);
 
   std::string            m_filename;
   double                m_incr                = 0;
