@@ -311,7 +311,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   m_BitsPerSample = uiBitsPerSample;
   m_BufferLen     = m_BytesPerSec = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
   m_BufferLen     *= m_fifo_size;
-  m_ChunkLen      = 1536 * (uiBitsPerSample >> 3) * m_InputChannels;
+  m_ChunkLen      = 2048 * (uiBitsPerSample >> 3) * m_InputChannels;
 
   m_wave_header.Samples.wValidBitsPerSample = uiBitsPerSample;
   m_wave_header.Samples.wSamplesPerBlock    = 0;
