@@ -648,8 +648,8 @@ bool OMXPlayerAudio::OpenDecoder()
   {
     if(m_passthrough)
     {
-      printf("Audio codec %s channels %d samplerate %d bitspersample %d\n",
-        m_codec_name.c_str(), 2, m_hints.samplerate, m_hints.bitspersample);
+      printf("Audio codec %s passthrough channels %d samplerate %d bitspersample %d\n",
+        m_codec_name.c_str(), m_hints.channels, m_hints.samplerate, m_hints.bitspersample);
     }
     else
     {
