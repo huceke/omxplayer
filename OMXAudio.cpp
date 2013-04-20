@@ -247,7 +247,10 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   m_wave_header.dwChannelMask     = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
 
   // set the input format, and get the channel layout so we know what we need to open
-  enum PCMChannels *outLayout = m_remap.SetInputFormat (iChannels, channelMap, uiBitsPerSample / 8, uiSamplesPerSec);;
+  enum PCMChannels *outLayout = NULL;
+
+  if (!m_Passthrough && channelMap)
+    outLayout = m_remap.SetInputFormat (iChannels, channelMap, uiBitsPerSample / 8, uiSamplesPerSec);;
 
   if (!m_Passthrough && channelMap && outLayout)
   {
@@ -299,7 +302,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   m_pcm_output.eNumData            = OMX_NumericalDataSigned;
   m_pcm_output.eEndian             = OMX_EndianLittle;
   m_pcm_output.bInterleaved        = OMX_TRUE;
-  m_pcm_output.nBitPerSample       = uiBitsPerSample;
+  m_pcm_output.nBitPerSample       = 16;
   m_pcm_output.ePCMMode            = OMX_AUDIO_PCMModeLinear;
   m_pcm_output.nChannels           = m_OutputChannels;
   m_pcm_output.nSamplingRate       = uiSamplesPerSec;
@@ -308,14 +311,14 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   m_BitsPerSample = uiBitsPerSample;
   m_BufferLen     = m_BytesPerSec = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
   m_BufferLen     *= m_fifo_size;
-  m_ChunkLen      = 6144;
-  //m_ChunkLen      = 2048;
+  m_ChunkLen      = 1536 * (uiBitsPerSample >> 3) * m_InputChannels;
 
   m_wave_header.Samples.wValidBitsPerSample = uiBitsPerSample;
   m_wave_header.Samples.wSamplesPerBlock    = 0;
   m_wave_header.Format.nChannels            = m_InputChannels;
   m_wave_header.Format.nBlockAlign          = m_InputChannels * (uiBitsPerSample >> 3);
-  m_wave_header.Format.wFormatTag           = WAVE_FORMAT_PCM;
+  // Custom format interpreted by GPU as WAVE_FORMAT_IEEE_FLOAT_PLANAR
+  m_wave_header.Format.wFormatTag           = 0x8000;
   m_wave_header.Format.nSamplesPerSec       = uiSamplesPerSec;
   m_wave_header.Format.nAvgBytesPerSec      = m_BytesPerSec;
   m_wave_header.Format.wBitsPerSample       = uiBitsPerSample;
@@ -969,15 +972,12 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
 
       if(!m_Passthrough)
       {
-        if(m_HWDecode)
+        OMX_INIT_STRUCTURE(m_pcm_input);
+        m_pcm_input.nPortIndex      = m_omx_decoder.GetOutputPort();
+        omx_err = m_omx_decoder.GetParameter(OMX_IndexParamAudioPcm, &m_pcm_input);
+        if(omx_err != OMX_ErrorNone)
         {
-          OMX_INIT_STRUCTURE(m_pcm_input);
-          m_pcm_input.nPortIndex      = m_omx_decoder.GetOutputPort();
-          omx_err = m_omx_decoder.GetParameter(OMX_IndexParamAudioPcm, &m_pcm_input);
-          if(omx_err != OMX_ErrorNone)
-          {
-            CLog::Log(LOGERROR, "COMXAudio::AddPackets error GetParameter 1 omx_err(0x%08x)\n", omx_err);
-          }
+          CLog::Log(LOGERROR, "COMXAudio::AddPackets error GetParameter 1 omx_err(0x%08x)\n", omx_err);
         }
 
         /* setup mixer input */
@@ -1054,7 +1054,7 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
 
           m_ddParam.nPortIndex      = m_omx_render.GetInputPort();
 
-          m_ddParam.nChannels       = m_InputChannels; //(m_InputChannels == 6) ? 8 : m_InputChannels;
+          m_ddParam.nChannels       = m_InputChannels;
           m_ddParam.nSampleRate     = m_SampleRate;
           m_ddParam.eBitStreamId    = OMX_AUDIO_DDPBitStreamIdAC3;
           m_ddParam.nBitRate        = 0;
@@ -1075,7 +1075,7 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
         {
           m_dtsParam.nPortIndex      = m_omx_render.GetInputPort();
 
-          m_dtsParam.nChannels       = m_InputChannels; //(m_InputChannels == 6) ? 8 : m_InputChannels;
+          m_dtsParam.nChannels       = m_InputChannels;
           m_dtsParam.nBitRate        = 0;
 
           for(unsigned int i = 0; i < OMX_MAX_CHANNELS; i++)
