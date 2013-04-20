@@ -50,7 +50,6 @@ configure:
 			--disable-neon \
 			--enable-armv6t2 \
 			--enable-armv6 \
-			--enable-armvfp \
 			--enable-hardcoded-tables \
 			--disable-runtime-cpudetect \
 			--disable-debug \
@@ -61,7 +60,7 @@ clean:
 
 checkout: 
 	git clone git://git.videolan.org/ffmpeg.git ffmpeg; \
-	cd ffmpeg; git checkout master;	git checkout 8c51ea54897c2d8671b38efecc1422ad4ad344f9
+	cd ffmpeg; git checkout master;	git checkout e820e3a2591a0d544925ff1522d2a688a647f1b0
 
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install

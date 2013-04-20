@@ -134,6 +134,7 @@ public:
 
   void Reset();
   enum PCMChannels *SetInputFormat (unsigned int channels, enum PCMChannels *channelMap, unsigned int sampleSize, unsigned int sampleRate);
+#if 0
   void SetOutputFormat(unsigned int channels, enum PCMChannels *channelMap, bool ignoreLayout = false);
   void Remap(void *data, void *out, unsigned int samples, long drc);
   void Remap(void *data, void *out, unsigned int samples, float gain = 1.0f);
@@ -141,6 +142,7 @@ public:
   int  InBytesToFrames (int bytes );
   int  FramesToOutBytes(int frames);
   int  FramesToInBytes (int frames);
+#endif
   float GetCurrentAttenuation() { return m_attenuationMin; }
 };
 

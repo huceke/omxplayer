@@ -454,7 +454,7 @@ enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChann
     memcpy(m_inMap, channelMap, sizeof(enum PCMChannels) * channels);
 
   /* fix me later */
-  assert(sampleSize == 2);
+  assert(sampleSize == sizeof(float));
 
   /* get the audio layout, and count the channels in it */
   m_channelLayout  = PCM_LAYOUT_2_0;
@@ -486,7 +486,7 @@ enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChann
 
   return m_layoutMap;
 }
-
+#if 0
 /* sets the output format supported by the audio renderer */
 void CPCMRemap::SetOutputFormat(unsigned int channels, enum PCMChannels *channelMap, bool ignoreLayout/* = false */)
 {
@@ -554,7 +554,7 @@ void CPCMRemap::ProcessInput(void* data, void* out, unsigned int samples, float 
       uint8_t* dstend = dst + samples * m_outStride;
       while (dst < dstend)
       {
-        *(int16_t*)dst = *(int16_t*)src;
+        *(float*)dst = *(float*)src;
         src += m_inStride;
         dst += m_outStride;
       }
@@ -568,7 +568,7 @@ void CPCMRemap::ProcessInput(void* data, void* out, unsigned int samples, float 
         float*   dstend = dst + samples * m_outChannels;
         while (dst < dstend)
         {
-          *dst += (float)(*(int16_t*)src) * info->level;
+          *dst += (float)(*(float*)src) * info->level;
           src += m_inStride;
           dst += m_outChannels;
         }
@@ -703,7 +703,7 @@ void CPCMRemap::ProcessOutput(void* out, unsigned int samples, float gain)
 
       while(dst < dstend)
       {
-        *(int16_t*)dst = MathUtils::round_int(std::min(std::max(*src, (float)INT16_MIN), (float)INT16_MAX));
+        *(float*)dst = MathUtils::round_int(std::min(std::max(*src, -1.0f), 1.0f));
         src += m_outChannels;
         dst += m_outStride;
       }
@@ -730,7 +730,7 @@ int CPCMRemap::FramesToInBytes(int frames)
 {
   return frames * m_inSampleSize * m_inChannels;
 }
-
+#endif
 CStdString CPCMRemap::PCMChannelStr(enum PCMChannels ename)
 {
   const char* PCMChannelName[] =
@@ -765,7 +765,7 @@ CStdString CPCMRemap::PCMChannelStr(enum PCMChannels ename)
 
   return namestr;
 }
-
+#if 0
 CStdString CPCMRemap::PCMLayoutStr(enum PCMLayout ename)
 {
   const char* PCMLayoutName[] =
@@ -792,4 +792,4 @@ CStdString CPCMRemap::PCMLayoutStr(enum PCMLayout ename)
 
   return namestr;
 }
-
+#endif
