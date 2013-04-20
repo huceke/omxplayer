@@ -456,6 +456,7 @@ int main(int argc, char *argv[])
   float video_fifo_size = 0.0;
   float audio_queue_size = 0.0;
   float video_queue_size = 0.0;
+  bool has_buffered = false;
   TV_DISPLAY_STATE_T   tv_state;
 
   const int font_opt        = 0x100;
@@ -812,10 +813,9 @@ int main(int argc, char *argv[])
     goto do_exit;
 
   m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
-  m_av_clock->OMXStateExecute();
   m_av_clock->OMXStart(0.0);
-
-  struct timespec starttime, endtime;
+  m_av_clock->OMXPause();
+  m_av_clock->OMXStateExecute();
 
   PrintSubtitleInfo();
 
@@ -1035,9 +1035,11 @@ int main(int argc, char *argv[])
 
     if(m_stats)
     {
-      printf("V : %8.02f %8d %8d A : %8.02f %8.02f/%8.02f Cv : %8d Ca : %8d                            \r",
+      static int count;
+      if ((count++ & 15) == 0)
+         printf("V : %8.02f %8d %8d A : %8.02f %8.02f/%8.02f Cv : %8d Ca : %8d                            \r",
              m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(), m_player_video.GetDecoderFreeSpace(),
-             m_player_audio.GetCurrentPTS() / DVD_TIME_BASE, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
+             m_player_audio.GetCurrentPTS() / DVD_TIME_BASE - m_av_clock->OMXMediaTime() * 1e-6, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
              m_player_video.GetCached(), m_player_audio.GetCached());
     }
 
@@ -1057,31 +1059,22 @@ int main(int argc, char *argv[])
     /* when the audio buffer runs under 0.1 seconds we buffer up */
     if(m_has_audio)
     {
-      if(m_player_audio.GetDelay() < min(0.1f, 0.1f*(audio_fifo_size ? 2.0f:audio_fifo_size)))
+      if(!m_av_clock->OMXIsPaused())
       {
-        if(!m_av_clock->OMXIsPaused())
+        if(m_player_audio.GetDelay() < m_player_audio.GetCacheTotal() * 0.1f)
         {
           m_av_clock->OMXPause();
-          clock_gettime(CLOCK_REALTIME, &starttime);
+          has_buffered = true;
         }
       }
-      if(m_player_audio.GetDelay() > m_player_audio.GetCacheTotal() * 0.75f)
+      else
       {
-        if(m_av_clock->OMXIsPaused())
+        if(m_player_audio.GetDelay() > m_player_audio.GetCacheTotal() * 0.75f &&
+           (!has_buffered || (m_player_video.GetLevel() > 75 && m_player_audio.GetLevel() > 75)))
         {
           m_av_clock->OMXResume();
         }
       }
-#if 1 // not sure this happens
-      if(m_av_clock->OMXIsPaused())
-      {
-        clock_gettime(CLOCK_REALTIME, &endtime);
-        if((endtime.tv_sec - starttime.tv_sec) > max(2, (int)audio_fifo_size))
-        {
-          m_av_clock->OMXResume();
-        }
-      }
-#endif
     }
 
     if(!m_omx_pkt)
