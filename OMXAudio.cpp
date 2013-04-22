@@ -1023,10 +1023,6 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
       }
       else
       {
-        m_pcm_output.nPortIndex      = m_omx_decoder.GetOutputPort();
-        m_omx_decoder.GetParameter(OMX_IndexParamAudioPcm, &m_pcm_output);
-        PrintPCM(&m_pcm_output);
-
         OMX_AUDIO_PARAM_PORTFORMATTYPE formatType;
         OMX_INIT_STRUCTURE(formatType);
         formatType.nPortIndex = m_omx_render.GetInputPort();
