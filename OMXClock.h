@@ -41,6 +41,9 @@
 
 #define DVD_PLAYSPEED_PAUSE       0       // frame stepping
 #define DVD_PLAYSPEED_NORMAL      1000
+#define OMX_SLOMO_MULTIPLIER      16      // Modification to create a new speed range to accomodate slow motion in video playback
+                                          // Multiplier = 16 gives 4 different speeds for slow motion: 1/2, 1/4, 1/8 and 1/16 of normal speed
+                                          // Multiplier solution was used to avoid changing the data type for all "speed" variables across the code
 
 #ifdef OMX_SKIP64BIT
 static inline OMX_TICKS ToOMXTime(int64_t pts)

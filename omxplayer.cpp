@@ -830,6 +830,10 @@ int main(int argc, char *argv[])
     while((ch[chnum] = getchar()) != EOF) chnum++;
     if (chnum > 1) ch[0] = ch[chnum - 1] | (ch[chnum - 2] << 8);
 
+    // Temporary variable to avoid multiple calls to same OMXPlaySpeed() function
+    int64_t m_av_playSpeed;
+    m_av_playSpeed = m_av_clock->OMXPlaySpeed();
+
     switch(ch[0])
     {
       case 'z':
@@ -837,10 +841,22 @@ int main(int argc, char *argv[])
         vc_tv_show_info(m_tv_show_info);
         break;
       case '1':
-        SetSpeed(m_av_clock->OMXPlaySpeed() - 1);
+        // Modification to introduce the slow motion video playback speed range.
+        if (m_av_playSpeed > OMX_SLOMO_MULTIPLIER)                      // Normal speed range
+            SetSpeed(m_av_playSpeed - OMX_SLOMO_MULTIPLIER);
+        else if (m_av_playSpeed > 1)                                    // Slow Motion speed range
+                 SetSpeed(m_av_playSpeed / 2);
+             else
+                 SetSpeed(m_av_playSpeed - 1);
         break;
       case '2':
-        SetSpeed(m_av_clock->OMXPlaySpeed() + 1);
+        // Modification to introduce the slow motion video playback speed range.
+        if (m_av_playSpeed > OMX_SLOMO_MULTIPLIER)                      // Normal speed range
+            SetSpeed(m_av_playSpeed + OMX_SLOMO_MULTIPLIER);
+        else if (m_av_playSpeed > 1)                                    // Slow Motion speed range
+                 SetSpeed(m_av_playSpeed * 2);
+             else
+                 SetSpeed(m_av_playSpeed + 1);
         break;
       case 'j':
         if(m_has_audio)

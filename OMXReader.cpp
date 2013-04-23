@@ -1100,9 +1100,11 @@ void OMXReader::SetSpeed(int iSpeed)
   m_speed = iSpeed;
 
   AVDiscard discard = AVDISCARD_NONE;
-  if(m_speed > 4*DVD_PLAYSPEED_NORMAL)
+
+  // Modification to preserve the correct calculation for discards, after the introduction of the slow motion video playback speed range.
+  if((m_speed / OMX_SLOMO_MULTIPLIER) > 4*DVD_PLAYSPEED_NORMAL)
     discard = AVDISCARD_NONKEY;
-  else if(m_speed > 2*DVD_PLAYSPEED_NORMAL)
+  else if((m_speed / OMX_SLOMO_MULTIPLIER) > 2*DVD_PLAYSPEED_NORMAL)
     discard = AVDISCARD_BIDIR;
   else if(m_speed < DVD_PLAYSPEED_PAUSE)
     discard = AVDISCARD_NONKEY;
