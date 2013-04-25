@@ -87,8 +87,8 @@ Key Bindings
 While playing you can use the following keys to control omxplayer:
 
     z			Show Info
-    1			Increase Speed
-    2			Decrease Speed
+    1			Decrease Speed
+    2			Increase Speed
     j			Previous Audio stream
     k			Next Audio stream
     i			Previous Chapter
@@ -102,7 +102,7 @@ While playing you can use the following keys to control omxplayer:
     Space or p	Pause/Resume
     -			Decrease Volume
     +			Increase Volume
-    Left Arrow	Seek -30
-    Right Arrow	Seek +30
-    Down Arrow	Seek -600
-    Up Arrow	Seek +600
+    Left Arrow	Seek -30 s
+    Right Arrow	Seek +30 s
+    Down Arrow	Seek -600 s
+    Up Arrow	Seek +600 s
