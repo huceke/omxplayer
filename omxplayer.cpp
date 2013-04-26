@@ -138,6 +138,7 @@ void print_usage()
   printf("Usage: omxplayer [OPTIONS] [FILE]\n");
   printf("Options :\n");
   printf("         -h / --help                    print this help\n");
+  printf("         -k / --keys                    print key bindings\n");
 //  printf("         -a / --alang language          audio language        : e.g. ger\n");
   printf("         -n / --aidx  index             audio stream index    : e.g. 1\n");
   printf("         -o / --adev  device            audio out device      : e.g. hdmi/local\n");
@@ -163,11 +164,36 @@ void print_usage()
   printf("              --align left/center       subtitle alignment (default: left)\n");
   printf("              --lines n                 number of lines to accommodate in the subtitle buffer\n");
   printf("                                        (default: 3)\n");
-  printf("              --win \"x1 y1 x2 y2\"       Set position of video window\n");
+  printf("              --win \"x1 y1 x2 y2\"     Set position of video window\n");
   printf("              --audio_fifo  n           Size of audio output fifo in seconds\n");
   printf("              --video_fifo  n           Size of video output fifo in MB\n");
   printf("              --audio_queue n           Size of audio input queue in MB\n");
   printf("              --video_queue n           Size of video input queue in MB\n");
+}
+
+void print_keybindings()
+{
+  printf("Key bindings :\n");
+  printf("        1                  decrease speed\n");
+  printf("        2                  increase speed\n");
+  printf("        z                  show info\n");
+  printf("        j                  previous audio stream\n");
+  printf("        k                  next audio stream\n");
+  printf("        i                  previous chapter\n");
+  printf("        o                  next chapter\n");
+  printf("        n                  previous subtitle stream\n");
+  printf("        m                  next subtitle stream\n");
+  printf("        s                  toggle subtitles\n");
+  printf("        d                  decrease subtitle delay (- 250 ms)\n");
+  printf("        f                  increase subtitle delay (+ 250 ms)\n");
+  printf("        q                  exit omxplayer\n");
+  printf("        p / space          pause/resume\n");
+  printf("        -                  decrease volume\n");
+  printf("        + / =              increase volume\n");
+  printf("        left arrow         seek -30 seconds\n");
+  printf("        right arrow        seek +30 seconds\n");
+  printf("        down arrow         seek -600 seconds\n");
+  printf("        up arrow           seek +600 seconds\n");
 }
 
 void PrintSubtitleInfo()
@@ -475,6 +501,7 @@ int main(int argc, char *argv[])
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
     { "help",         no_argument,        NULL,          'h' },
+    { "keys",         no_argument,        NULL,          'k' },
     { "aidx",         required_argument,  NULL,          'n' },
     { "adev",         required_argument,  NULL,          'o' },
     { "stats",        no_argument,        NULL,          's' },
@@ -505,7 +532,7 @@ int main(int argc, char *argv[])
 
   int c;
   std::string mode;
-  while ((c = getopt_long(argc, argv, "wihn:l:o:cslpd3:yzt:rg", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wihkn:l:o:cslpd3:yzt:rg", longopts, NULL)) != -1)
   {
     switch (c) 
     {
@@ -618,6 +645,10 @@ int main(int argc, char *argv[])
         break;
       case 'h':
         print_usage();
+        return 0;
+        break;
+      case 'k':
+        print_keybindings();
         return 0;
         break;
       case ':':
