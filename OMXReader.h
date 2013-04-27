@@ -27,20 +27,12 @@
 #include "DllAvFilter.h"
 #include "DllAvCodec.h"
 #include "OMXStreamInfo.h"
-#ifdef STANDALONE
 #include "OMXThread.h"
-#else
-#include "threads/Thread.h"
-#endif
 #include <queue>
 
 #include "OMXStreamInfo.h"
 
-#ifdef STANDALONE
 #include "File.h"
-#else
-#include "xbmc/filesystem/File.h"
-#endif
 
 #include <sys/types.h>
 #include <string>
@@ -133,10 +125,6 @@ protected:
   double                    m_iCurrentPts;
   int                       m_speed;
   unsigned int              m_program;
-//#ifdef STANDALONE
-//  void flush_packet_queue(AVFormatContext *s);
-//  void av_read_frame_flush(AVFormatContext *s);
-//#endif
   pthread_mutex_t           m_lock;
   void Lock();
   void UnLock();
@@ -197,8 +185,5 @@ public:
   std::string GetStreamName(OMXStreamType type, unsigned int index);
   std::string GetStreamType(OMXStreamType type, unsigned int index);
   bool CanSeek();
-#ifndef STANDALONE
-  int GetSourceBitrate();
-#endif
 };
 #endif

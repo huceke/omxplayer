@@ -34,11 +34,7 @@
 #include "OMXStreamInfo.h"
 #include "OMXAudio.h"
 #include "OMXAudioCodecOMX.h"
-#ifdef STANDALONE
 #include "OMXThread.h"
-#else
-#include "threads/Thread.h"
-#endif
 
 #include <deque>
 #include <string>
@@ -46,11 +42,7 @@
 
 using namespace std;
 
-#ifdef STANDALONE
 class OMXPlayerAudio : public OMXThread
-#else
-class OMXPlayerAudio : public CThread
-#endif
 {
 protected:
   AVStream                  *m_pStream;

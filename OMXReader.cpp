@@ -31,14 +31,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#ifndef STANDALONE
-#include "FileItem.h"
-#endif
-
 #include "linux/XMemUtils.h"
-#ifndef STANDALONE
-#include "utils/BitstreamStats.h"
-#endif
 
 #define MAX_DATA_SIZE_VIDEO    8 * 1024 * 1024
 #define MAX_DATA_SIZE_AUDIO    2 * 1024 * 1024
@@ -135,10 +128,6 @@ bool OMXReader::Open(std::string filename, bool dump_format)
   AVInputFormat *iformat  = NULL;
   unsigned char *buffer   = NULL;
   unsigned int  flags     = READ_TRUNCATED | READ_BITRATE | READ_CHUNKED;
-#ifndef STANDALONE
-  if( CFileItem(m_filename, false).IsInternetStream() )
-    flags |= READ_CACHED;
-#endif
 
   if(m_filename.substr(0, 8) == "shout://" )
     m_filename.replace(0, 8, "http://");
@@ -215,10 +204,8 @@ bool OMXReader::Open(std::string filename, bool dump_format)
   if (iformat && (strcmp(iformat->name, "mjpeg") == 0) && m_ioContext->seekable == 0)
     m_pFormatContext->max_analyze_duration = 500000;
 
-#ifdef STANDALONE
   if(/*m_bAVI || */m_bMatroska)
     m_pFormatContext->max_analyze_duration = 0;
-#endif
 
   result = m_dllAvFormat.avformat_find_stream_info(m_pFormatContext, NULL);
   if(result < 0)
@@ -1311,24 +1298,6 @@ std::string OMXReader::GetStreamType(OMXStreamType type, unsigned int index)
   strInfo = sInfo;
   return strInfo;
 }
-
-#ifndef STANDALONE
-int OMXReader::GetSourceBitrate()
-{
-  int ret = 0;
-
-  if(!m_pFile)
-    return 0;
-
-  if(m_pFile->GetBitstreamStats())
-  {
-    BitstreamStats *status = m_pFile->GetBitstreamStats();
-    ret = status->GetBitrate();
-  }
-
-  return ret;
-}
-#endif
 
 bool OMXReader::CanSeek()
 {

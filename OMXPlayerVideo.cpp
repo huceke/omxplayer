@@ -31,14 +31,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#ifndef STANDALONE
-#include "FileItem.h"
-#endif
-
 #include "linux/XMemUtils.h"
-#ifndef STANDALONE
-#include "utils/BitstreamStats.h"
-#endif
 
 OMXPlayerVideo::OMXPlayerVideo()
 {

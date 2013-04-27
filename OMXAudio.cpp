@@ -31,14 +31,6 @@
 
 #include "linux/XMemUtils.h"
 
-#ifndef STANDALONE
-#include "guilib/AudioContext.h"
-#include "settings/AdvancedSettings.h"
-#include "settings/GUISettings.h"
-#include "settings/Settings.h"
-#include "guilib/LocalizeStrings.h"
-#endif
-
 #ifndef VOLUME_MINIMUM
 #define VOLUME_MINIMUM -6000  // -60dB
 #endif
@@ -208,21 +200,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
 
   memset(&m_wave_header, 0x0, sizeof(m_wave_header));
 
-#ifndef STANDALONE
-  bool bAudioOnAllSpeakers(false);
-  g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
-
-  if(bPassthrough)
-  {
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
-  } else {
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
-  }
-
-  m_CurrentVolume = g_settings.m_nVolumeLevel; 
-#else
   m_CurrentVolume = initialVolume;
-#endif
 
   m_downmix_channels = downmixChannels;
   m_normalize_downmix = !boostOnDownmix;
@@ -1226,18 +1204,6 @@ void COMXAudio::SwitchChannels(int iAudioStream, bool bAudioOnAllSpeakers)
 
 void COMXAudio::EnumerateAudioSinks(AudioSinkList& vAudioSinks, bool passthrough)
 {
-#ifndef STANDALONE
-  if (!passthrough)
-  {
-    vAudioSinks.push_back(AudioSink(g_localizeStrings.Get(409) + " (OMX)", "omx:default"));
-    vAudioSinks.push_back(AudioSink("analog (OMX)" , "omx:analog"));
-    vAudioSinks.push_back(AudioSink("hdmi (OMX)"   , "omx:hdmi"));
-  }
-  else
-  {
-    vAudioSinks.push_back(AudioSink("hdmi (OMX)"   , "omx:hdmi"));
-  }
-#endif
 }
 
 bool COMXAudio::SetClock(OMXClock *clock)

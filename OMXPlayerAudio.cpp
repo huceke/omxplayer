@@ -30,16 +30,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#ifndef STANDALONE
-#include "FileItem.h"
-#endif
-
 #include "linux/XMemUtils.h"
-#ifndef STANDALONE
-#include "utils/BitstreamStats.h"
-#include "settings/GUISettings.h"
-#include "settings/Settings.h"
-#endif
 
 OMXPlayerAudio::OMXPlayerAudio()
 {
@@ -539,40 +530,6 @@ void OMXPlayerAudio::CloseAudioCodec()
 
 IAudioRenderer::EEncoded OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
 {
-#ifndef STANDALONE
-  int  m_outputmode = 0;
-  bool bitstream = false;
-  IAudioRenderer::EEncoded passthrough = IAudioRenderer::ENCODED_NONE;
-
-  m_outputmode = g_guiSettings.GetInt("audiooutput.mode");
-
-  switch(m_outputmode)
-  {
-    case 0:
-      passthrough = IAudioRenderer::ENCODED_NONE;
-      break;
-    case 1:
-      bitstream = true;
-      break;
-    case 2:
-      bitstream = true;
-      break;
-  }
-
-  if(bitstream)
-  {
-    if(hints.codec == CODEC_ID_AC3 && g_guiSettings.GetBool("audiooutput.ac3passthrough"))
-    {
-      passthrough = IAudioRenderer::ENCODED_IEC61937_AC3;
-    }
-    if(hints.codec == CODEC_ID_DTS && g_guiSettings.GetBool("audiooutput.dtspassthrough"))
-    {
-      passthrough = IAudioRenderer::ENCODED_IEC61937_DTS;
-    }
-  }
-
-  return passthrough;
-#else
   if(m_device == "omx:local")
     return IAudioRenderer::ENCODED_NONE;
 
@@ -592,7 +549,6 @@ IAudioRenderer::EEncoded OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
   }
 
   return passthrough;
-#endif
 }
 
 bool OMXPlayerAudio::OpenDecoder()

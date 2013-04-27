@@ -27,13 +27,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-//#define STANDALONE
-
-#ifdef STANDALONE
 #include "IAudioRenderer.h"
-#else
-#include "../AudioRenderers/IAudioRenderer.h"
-#endif
 #include "cores/IAudioCallback.h"
 #include "linux/PlatformDefs.h"
 #include "DllAvCodec.h"
