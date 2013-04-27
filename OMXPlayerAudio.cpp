@@ -246,10 +246,10 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
 
   if((int)m_decoder->GetSpace() > pkt->size)
   {
+    CLog::Log(LOGINFO, "CDVDPlayerAudio::Decode dts:%.0f pts:%.0f size:%d", pkt->dts, pkt->pts, pkt->size);
+
     if(pkt->dts != DVD_NOPTS_VALUE)
       m_iCurrentPts = pkt->dts;
-
-    m_av_clock->SetPTS(m_iCurrentPts);
 
     const uint8_t *data_dec = pkt->data;
     int            data_len = pkt->size;
@@ -288,7 +288,6 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
       m_decoder->AddPackets(pkt->data, pkt->size, pkt->dts, pkt->pts);
     }
 
-    m_av_clock->SetAudioClock(m_iCurrentPts);
     return true;
   }
   else

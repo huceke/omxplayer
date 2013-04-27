@@ -436,9 +436,6 @@ bool OMXPlayerVideo::OpenDecoder()
         m_decoder->GetDecoderName().c_str() , m_hints.width, m_hints.height, m_hints.profile, m_fps);
   }
 
-  if(m_av_clock)
-    m_av_clock->SetRefreshRate(m_fps);
-
   return true;
 }
 
