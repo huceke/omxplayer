@@ -69,9 +69,13 @@ void CLog::Log(int loglevel, const char *format, ... )
       return;
     }
 
+    struct timeval now;
+    gettimeofday(&now, NULL);
     SYSTEMTIME time;
-    //GetLocalTime(&time);
-
+    time.wHour=(now.tv_sec/3600) % 24;
+    time.wMinute=(now.tv_sec/60) % 60;
+    time.wSecond=now.tv_sec % 60;
+    uint64_t stamp = now.tv_usec + now.tv_sec * 1000000;
     CStdString strPrefix, strData;
 
     strData.reserve(16384);
@@ -89,10 +93,7 @@ void CLog::Log(int loglevel, const char *format, ... )
     else if (m_repeatCount)
     {
       CStdString strData2;
-      time.wHour = 0;
-      time.wMinute = 0;
-      time.wSecond = 0;
-      strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, (uint64_t)0, levelNames[m_repeatLogLevel]);
+      strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, stamp, levelNames[m_repeatLogLevel]);
 
       strData2.Format("Previous line repeats %d times." LINE_ENDING, m_repeatCount);
       fputs(strPrefix.c_str(), m_file);
@@ -125,7 +126,7 @@ void CLog::Log(int loglevel, const char *format, ... )
     strData.Replace("\n", LINE_ENDING"                                            ");
     strData += LINE_ENDING;
 
-    strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, (uint64_t)0, levelNames[loglevel]);
+    strPrefix.Format(prefixFormat, time.wHour, time.wMinute, time.wSecond, stamp, levelNames[loglevel]);
 
     fputs(strPrefix.c_str(), m_file);
     fputs(strData.c_str(), m_file);
