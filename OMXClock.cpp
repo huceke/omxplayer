@@ -49,7 +49,6 @@ OMXClock::OMXClock()
   m_systemUsed = m_systemFrequency;
   m_pauseClock = 0;
   m_bReset = true;
-  m_iDisc = 0;
   m_maxspeedadjust = 0.0;
   m_speedadjust = false;
   m_ismasterclock = true;
@@ -95,7 +94,6 @@ double OMXClock::SystemToPlaying(int64_t system)
     m_startClock = system;
     m_systemUsed = m_systemFrequency;
     m_pauseClock = 0;
-    m_iDisc = 0;
     m_bReset = false;
   }
 
@@ -104,7 +102,7 @@ double OMXClock::SystemToPlaying(int64_t system)
   else
     current = system;
 
-  return DVD_TIME_BASE * (double)(current - m_startClock) / m_systemUsed + m_iDisc;
+  return DVD_TIME_BASE * (double)(current - m_startClock) / m_systemUsed;
 }
 
 int64_t OMXClock::GetFrequency()
@@ -212,17 +210,6 @@ void OMXClock::SetSpeed(int iSpeed)
 
   m_startClock = current - (int64_t)((double)(current - m_startClock) * newfreq / m_systemUsed);
   m_systemUsed = newfreq;
-  UnLock();
-}
-
-void OMXClock::Discontinuity(double currentPts)
-{
-  Lock();
-  m_startClock = GetTime();
-  if(m_pauseClock)
-    m_pauseClock = m_startClock;
-  m_iDisc = currentPts;
-  m_bReset = false;
   UnLock();
 }
 

@@ -81,7 +81,6 @@ protected:
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
   double                    m_pts;
-  bool                      m_syncclock;
   int                       m_speed;
   double                    m_FlipTimeStamp; // time stamp of last flippage. used to play at a forced framerate
   double                    m_iSubtitleDelay;
@@ -100,7 +99,6 @@ public:
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread,
                    float display_aspect, float queue_size, float fifo_size);
   bool Close();
-  void Output(double pts);
   bool Decode(OMXPacket *pkt);
   void Process();
   void FlushSubtitles();

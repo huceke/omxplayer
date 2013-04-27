@@ -84,16 +84,7 @@ protected:
   int64_t m_errortime; //timestamp of last time we measured
   int64_t m_freq;
 
-  void   HandleSyncError(double duration, double pts);
-  double m_errorbuff; //place to store average errors
-  int    m_errorcount;//number of errors stored
-  bool   m_syncclock;
-
   bool   m_player_error;
-
-  double m_integral; //integral correction for resampler
-  int    m_skipdupcount; //counter for skip/duplicate synctype
-  bool   m_prevskipped;
 
   void Lock();
   void UnLock();

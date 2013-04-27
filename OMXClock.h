@@ -83,7 +83,6 @@ protected:
   int64_t           m_systemUsed;
   int64_t           m_startClock;
   int64_t           m_pauseClock;
-  double            m_iDisc;
   bool              m_bReset;
   static int64_t    m_systemFrequency;
   static int64_t    m_systemOffset;
@@ -110,7 +109,6 @@ public:
   void SetSpeed(int iSpeed);
   void SetMasterClock(bool ismasterclock) { m_ismasterclock = ismasterclock; }
   bool IsMasterClock()                    { return m_ismasterclock;          }
-  void Discontinuity(double currentPts = 0LL);
 
   void Reset() { m_bReset = true; }
   void Pause();

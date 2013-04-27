@@ -722,6 +722,9 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
     m_deinterlace, m_hdmi_clock_sync);
 
   m_first_text    = true;
+  // start from assuming all recent frames had valid pts
+  m_history_valid_pts = ~0;
+
   return true;
 }
 
@@ -886,6 +889,14 @@ int COMXVideo::DecodeText(uint8_t *pData, int iSize, double dts, double pts)
   return false;
 }
 
+static unsigned count_bits(int32_t value)
+{
+  unsigned bits = 0;
+  for(;value;++bits)
+    value &= value - 1;
+  return bits;
+}
+
 int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
 {
   OMX_ERRORTYPE omx_err;
@@ -915,22 +926,26 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
 
       omx_buffer->nFlags = 0;
       omx_buffer->nOffset = 0;
-
-      uint64_t val  = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;
+      // some packed bitstream AVI files set almost all pts values to DVD_NOPTS_VALUE, but have a scattering of real pts values.
+      // the valid pts values match the dts values.
+      // if a stream has had more than 4 valid pts values in the last 16, the use UNKNOWN, otherwise use dts
+      m_history_valid_pts = (m_history_valid_pts << 1) | (pts != DVD_NOPTS_VALUE);
+      if(pts == DVD_NOPTS_VALUE && count_bits(m_history_valid_pts & 0xffff) < 4)
+        pts = dts;
 
       if(m_setStartTime)
       {
-        omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;
+        // only send dts on first frame to get nearly correct starttime
+        if(pts == DVD_NOPTS_VALUE)
+          pts = dts;
+        omx_buffer->nFlags |= OMX_BUFFERFLAG_STARTTIME;
+        CLog::Log(LOGDEBUG, "OMXVideo::Decode VDec : setStartTime %f\n", (pts == DVD_NOPTS_VALUE ? 0.0 : pts) / DVD_TIME_BASE);
         m_setStartTime = false;
       }
-      else
-      {
-        if(pts == DVD_NOPTS_VALUE)
-          omx_buffer->nFlags = OMX_BUFFERFLAG_TIME_UNKNOWN;
-      }
+      if(pts == DVD_NOPTS_VALUE)
+        omx_buffer->nFlags |= OMX_BUFFERFLAG_TIME_UNKNOWN;
 
-      omx_buffer->nTimeStamp = ToOMXTime(val);
-
+      omx_buffer->nTimeStamp = ToOMXTime(pts == DVD_NOPTS_VALUE ? 0 : pts);
       omx_buffer->nFilledLen = (demuxer_bytes > omx_buffer->nAllocLen) ? omx_buffer->nAllocLen : demuxer_bytes;
       memcpy(omx_buffer->pBuffer, demuxer_content, omx_buffer->nFilledLen);
 

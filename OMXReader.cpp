@@ -381,14 +381,15 @@ bool OMXReader::SeekTime(int64_t seek_ms, int seek_flags, double *startpts)
   if(m_iCurrentPts == DVD_NOPTS_VALUE)
   {
     CLog::Log(LOGDEBUG, "OMXReader::SeekTime - unknown position after seek");
+    if(startpts)
+      *startpts = DVD_NOPTS_VALUE;
   }
   else
   {
-    CLog::Log(LOGDEBUG, "OMXReader::SeekTime - seek ended up on time %d",(int)(m_iCurrentPts / DVD_TIME_BASE * 1000));
+    CLog::Log(LOGDEBUG, "OMXReader::SeekTime(%llu) - seek ended up on time %d",seek_ms,(int)(m_iCurrentPts / DVD_TIME_BASE * 1000));
+    if(startpts)
+      *startpts = m_iCurrentPts;
   }
-
-  if(startpts)
-    *startpts = DVD_MSEC_TO_TIME(seek_ms);
 
   UnLock();
 

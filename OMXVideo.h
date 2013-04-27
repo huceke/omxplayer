@@ -98,6 +98,7 @@ protected:
   bool              m_first_text;
   CRect             m_dst_rect;
   CRect             m_src_rect;
+  uint32_t          m_history_valid_pts;
 };
 
 #endif
