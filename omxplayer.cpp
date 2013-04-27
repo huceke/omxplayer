@@ -530,6 +530,9 @@ int main(int argc, char *argv[])
     { 0, 0, 0, 0 }
   };
 
+  #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
+  int playspeeds[] = {S(0), S(1/16.0), S(1/8.0), S(1/4.0), S(1/2.0), S(0.975), S(1.0), S(1.125), S(2.0), S(4.0), S(8.0), S(16.0), S(32.0)};
+  int playspeed_current = 6;
   int c;
   std::string mode;
   while ((c = getopt_long(argc, argv, "wihkn:l:o:cslpd3:yzt:rg", longopts, NULL)) != -1)
@@ -868,10 +871,14 @@ int main(int argc, char *argv[])
         vc_tv_show_info(m_tv_show_info);
         break;
       case '1':
-        SetSpeed(m_av_clock->OMXPlaySpeed() - 1);
+        playspeed_current = std::max(playspeed_current-1, 0);
+        SetSpeed(playspeeds[playspeed_current]);
+        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
         break;
       case '2':
-        SetSpeed(m_av_clock->OMXPlaySpeed() + 1);
+        playspeed_current = std::min(playspeed_current+1, (int)(sizeof playspeeds/sizeof *playspeeds)-1);
+        SetSpeed(playspeeds[playspeed_current]);
+        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
         break;
       case 'j':
         if(m_has_audio)

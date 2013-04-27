@@ -41,7 +41,7 @@ OMXClock::OMXClock()
   m_audio_clock = DVD_NOPTS_VALUE;
   m_has_video   = false;
   m_has_audio   = false;
-  m_play_speed  = 1;
+  m_play_speed  = DVD_PLAYSPEED_NORMAL;
   m_pause       = false;
   m_iCurrentPts = DVD_NOPTS_VALUE;
 
@@ -633,7 +633,7 @@ bool OMXClock::OMXResume(bool lock /* = true */)
   OMX_TIME_CONFIG_SCALETYPE scaleType;
   OMX_INIT_STRUCTURE(scaleType);
 
-  scaleType.xScale = (1<<16); // normal speed
+  scaleType.xScale = (m_play_speed << 16) / DVD_PLAYSPEED_NORMAL;
 
   omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeScale, &scaleType);
   if(omx_err != OMX_ErrorNone)
@@ -751,9 +751,9 @@ bool OMXClock::OMXSpeed(int speed, bool lock /* = true */)
   OMX_TIME_CONFIG_SCALETYPE scaleType;
   OMX_INIT_STRUCTURE(scaleType);
 
-  scaleType.xScale = (speed << 16);
-
   m_play_speed = speed;
+
+  scaleType.xScale = (m_play_speed << 16) / DVD_PLAYSPEED_NORMAL;
 
   omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeScale, &scaleType);
   if(omx_err != OMX_ErrorNone)
