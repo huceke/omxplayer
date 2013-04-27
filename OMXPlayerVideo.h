@@ -79,7 +79,6 @@ protected:
   float                     m_fifo_size;
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
-  double                    m_pts;
   int                       m_speed;
   double                    m_FlipTimeStamp; // time stamp of last flippage. used to play at a forced framerate
   double                    m_iSubtitleDelay;
@@ -107,7 +106,7 @@ public:
   bool CloseDecoder();
   int  GetDecoderBufferSize();
   int  GetDecoderFreeSpace();
-  double GetCurrentPTS() { return m_pts; };
+  double GetCurrentPTS() { return m_iCurrentPts; };
   double GetFPS() { return m_fps; };
   unsigned int GetCached() { return m_cached_size; };
   unsigned int GetMaxCached() { return m_max_data_size; };

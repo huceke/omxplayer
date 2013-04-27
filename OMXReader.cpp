@@ -455,11 +455,12 @@ OMXPacket *OMXReader::Read()
   // lavf sometimes bugs out and gives 0 dts/pts instead of no dts/pts
   // since this could only happens on initial frame under normal
   // circomstances, let's assume it is wrong all the time
+#if 0
   if(pkt.dts == 0)
     pkt.dts = AV_NOPTS_VALUE;
   if(pkt.pts == 0)
     pkt.pts = AV_NOPTS_VALUE;
-
+#endif
   if(m_bMatroska && pStream->codec && pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO)
   { // matroska can store different timestamps
     // for different formats, for native stored

@@ -45,7 +45,7 @@ OMXPlayerVideo::OMXPlayerVideo()
   m_cached_size   = 0;
   m_hdmi_clock_sync = false;
   m_iVideoDelay   = 0;
-  m_pts           = 0;
+  m_iCurrentPts   = 0;
   m_speed         = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
@@ -130,7 +130,6 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   m_cached_size = 0;
   m_iVideoDelay = 0;
   m_hdmi_clock_sync = hdmi_clock_sync;
-  m_pts         = DVD_NOPTS_VALUE;
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
@@ -182,7 +181,6 @@ bool OMXPlayerVideo::Close()
   m_stream_id     = -1;
   m_iCurrentPts   = DVD_NOPTS_VALUE;
   m_pStream       = NULL;
-  m_pts           = 0;
   m_speed         = DVD_PLAYSPEED_NORMAL;
   m_pSubtitleCodec = NULL;
 
@@ -195,12 +193,6 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
     return false;
 
   bool ret = false;
-
-  if(!((int)m_decoder->GetFreeSpace() > pkt->size))
-    OMXClock::OMXSleep(10);
-
-  if(pkt->pts != DVD_NOPTS_VALUE)
-    m_pts = pkt->pts;
 
   if(pkt->hints.codec == CODEC_ID_TEXT ||
      pkt->hints.codec == CODEC_ID_SSA )
@@ -269,24 +261,29 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
 
     ret = true;
   }
-  else if((int)m_decoder->GetFreeSpace() > pkt->size)
-  {
-    //CLog::Log(LOGINFO, "CDVDPlayerVideo::Decode dts:%.0f pts:%.0f size:%d", pkt->dts, pkt->pts, pkt->size);
-    m_decoder->Decode(pkt->data, pkt->size, pkt->dts, pkt->pts);
-    ret = true;
-  }
   else
-    // video fifo is full, allow other tasks to run
-    OMXClock::OMXSleep(10);
+  {
+    if((int)m_decoder->GetFreeSpace() > pkt->size)
+    {
+      if(pkt->pts != DVD_NOPTS_VALUE)
+        m_iCurrentPts = pkt->pts;
+      else if(pkt->dts != DVD_NOPTS_VALUE)
+        m_iCurrentPts = pkt->dts;
 
+      CLog::Log(LOGINFO, "CDVDPlayerVideo::Decode dts:%.0f pts:%.0f cur:%.0f, size:%d", pkt->dts, pkt->pts, m_iCurrentPts, pkt->size);
+      m_decoder->Decode(pkt->data, pkt->size, pkt->dts, pkt->pts);
+      ret = true;
+    }
+    else
+      // video fifo is full, allow other tasks to run
+      OMXClock::OMXSleep(10);
+  }
   return ret;
 }
 
 void OMXPlayerVideo::Process()
 {
   OMXPacket *omx_pkt = NULL;
-
-  m_pts = DVD_NOPTS_VALUE;
 
   while(!m_bStop && !m_bAbort)
   {

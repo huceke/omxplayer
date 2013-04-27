@@ -27,7 +27,7 @@
 
 #include "OMXClock.h"
 
-#define OMX_PRE_ROLL 200
+#define OMX_PRE_ROLL 0//200
 
 int64_t OMXClock::m_systemOffset;
 int64_t OMXClock::m_systemFrequency;
@@ -533,7 +533,7 @@ double OMXClock::OMXMediaTime(bool lock /* = true */)
   }
 
   pts = (double)FromOMXTime(timeStamp.nTimestamp);
-  //CLog::Log(LOGINFO, "OMXClock::MediaTime %.0f %.0f\n", (double)FromOMXTime(timeStamp.nTimestamp), pts);
+  CLog::Log(LOGINFO, "OMXClock::MediaTime %.0f %.0f\n", (double)FromOMXTime(timeStamp.nTimestamp), pts);
   if(lock)
     UnLock();
   
@@ -575,8 +575,8 @@ bool OMXClock::OMXMediaTime(double pts, bool fixPreroll /* = true*/, bool lock /
     return false;
   }
 
-  CLog::Log(LOGDEBUG, "OMXClock::OMXMediaTime set config %s = %.2f", index == OMX_IndexConfigTimeCurrentAudioReference ?
-       "OMX_IndexConfigTimeCurrentAudioReference":"OMX_IndexConfigTimeCurrentVideoReference", pts);
+  CLog::Log(LOGDEBUG, "OMXClock::OMXMediaTime set config %s = %.2f (%.2f)", index == OMX_IndexConfigTimeCurrentAudioReference ?
+       "OMX_IndexConfigTimeCurrentAudioReference":"OMX_IndexConfigTimeCurrentVideoReference", pts, OMXMediaTime(false));
 
   if(lock)
     UnLock();
