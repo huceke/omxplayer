@@ -71,7 +71,6 @@ protected:
   bool                      m_Deinterlace;
   float                     m_display_aspect;
   CRect                     m_DestRect;
-  bool                      m_bMpeg;
   bool                      m_bAbort;
   bool                      m_use_thread;
   bool                      m_flush;
@@ -96,7 +95,7 @@ private:
 public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread,
+  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool hdmi_clock_sync, bool use_thread,
                    float display_aspect, float queue_size, float fifo_size);
   bool Close();
   bool Decode(OMXPacket *pkt);

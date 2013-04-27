@@ -106,7 +106,7 @@ void OMXPlayerVideo::UnLockSubtitles()
     pthread_mutex_unlock(&m_lock_subtitle);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread,
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool hdmi_clock_sync, bool use_thread,
                              float display_aspect, float queue_size, float fifo_size)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
@@ -123,7 +123,6 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   m_frametime   = 0;
   m_Deinterlace = deinterlace;
   m_display_aspect = display_aspect;
-  m_bMpeg       = mpeg;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
   m_use_thread  = use_thread;

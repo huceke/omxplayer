@@ -68,7 +68,6 @@ protected:
   IAudioRenderer::EEncoded  m_passthrough;
   bool                      m_hw_decode;
   bool                      m_boost_on_downmix;
-  bool                      m_bMpeg;
   bool                      m_bAbort;
   bool                      m_use_thread; 
   bool                      m_flush;

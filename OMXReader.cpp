@@ -45,7 +45,6 @@ OMXReader::OMXReader()
   m_filename    = "";
   m_bMatroska   = false;
   m_bAVI        = false;
-  m_bMpeg       = false;
   g_abort       = false;
   m_pFile       = NULL;
   m_ioContext   = NULL;
@@ -195,7 +194,6 @@ bool OMXReader::Open(std::string filename, bool dump_format)
 
   m_bMatroska = strncmp(m_pFormatContext->iformat->name, "matroska", 8) == 0; // for "matroska.webm"
   m_bAVI = strcmp(m_pFormatContext->iformat->name, "avi") == 0;
-  m_bMpeg = strcmp(m_pFormatContext->iformat->name, "mpeg") == 0;
 
   // if format can be nonblocking, let's use that
   m_pFormatContext->flags |= AVFMT_FLAG_NONBLOCK;
@@ -313,7 +311,6 @@ bool OMXReader::Close()
   m_filename        = "";
   m_bMatroska       = false;
   m_bAVI            = false;
-  m_bMpeg           = false;
   m_video_count     = 0;
   m_audio_count     = 0;
   m_subtitle_count  = 0;

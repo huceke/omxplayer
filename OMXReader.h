@@ -114,7 +114,6 @@ protected:
   std::string               m_filename;
   bool                      m_bMatroska;
   bool                      m_bAVI;
-  bool                      m_bMpeg;
   XFILE::CFile              *m_pFile;
   AVFormatContext           *m_pFormatContext;
   AVIOContext               *m_ioContext;
@@ -176,7 +175,6 @@ public:
   
   int GetStreamLength();
   static double NormalizeFrameduration(double frameduration);
-  bool IsMpegVideo() { return m_bMpeg; };
   bool IsMatroska() { return m_bMatroska; };
   std::string GetCodecName(OMXStreamType type);
   std::string GetCodecName(OMXStreamType type, unsigned int index);

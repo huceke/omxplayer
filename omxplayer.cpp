@@ -63,7 +63,6 @@ extern "C" {
 typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB } FORMAT_3D_T;
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
-bool              m_bMpeg               = false;
 bool              m_passthrough         = false;
 long              m_initialVolume       = 0;
 bool              m_Deinterlace         = false;
@@ -727,7 +726,6 @@ int main(int argc, char *argv[])
   if(m_dump_format)
     goto do_exit;
 
-  m_bMpeg         = m_omx_reader.IsMpegVideo();
   m_has_video     = m_omx_reader.VideoStreamCount();
   m_has_audio     = m_omx_reader.AudioStreamCount();
   m_has_subtitle  = m_has_external_subtitles ||
@@ -784,7 +782,7 @@ int main(int argc, char *argv[])
         m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,  m_bMpeg,
+  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
     goto do_exit;
 
@@ -1023,14 +1021,7 @@ int main(int argc, char *argv[])
       default:
         break;
     }
-
-    if(m_Pause)
-    {
-      OMXClock::OMXSleep(2);
-      continue;
-    }
-
-    if(m_incr != 0 && !m_bMpeg)
+    if(m_incr != 0)
     {
       int    seek_flags   = 0;
       double seek_pos     = 0;
@@ -1054,7 +1045,7 @@ int main(int argc, char *argv[])
         FlushStreams(startpts);
 
       m_player_video.Close();
-      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace, m_bMpeg,
+      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
         goto do_exit;
 

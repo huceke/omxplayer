@@ -113,7 +113,6 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_boost_on_downmix = boost_on_downmix;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
-  m_bMpeg       = m_omx_reader->IsMpegVideo();
   m_use_thread  = use_thread;
   m_flush       = false;
   m_cached_size = 0;
