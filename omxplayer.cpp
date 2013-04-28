@@ -779,7 +779,7 @@ int main(int argc, char *argv[])
   // seek on start
   if (m_seek_pos !=0 && m_omx_reader.CanSeek()) {
         printf("Seeking start of video to %i seconds\n", m_seek_pos);
-        m_omx_reader.SeekTime(m_seek_pos * 1000.0f, 0, &startpts);  // from seconds to DVD_TIME_BASE
+        m_omx_reader.SeekTime(m_seek_pos * 1000.0f, false, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,
@@ -1023,7 +1023,6 @@ int main(int argc, char *argv[])
     }
     if(m_incr != 0)
     {
-      int    seek_flags   = 0;
       double seek_pos     = 0;
       double pts          = 0;
 
@@ -1035,13 +1034,12 @@ int main(int argc, char *argv[])
       pts = m_av_clock->OMXMediaTime();
 
       seek_pos = (pts / DVD_TIME_BASE) + m_incr;
-      seek_flags = m_incr < 0.0f ? AVSEEK_FLAG_BACKWARD : 0;
 
-      seek_pos *= 1000.0f;
+      seek_pos *= 1000.0;
 
       m_incr = 0;
 
-      if(m_omx_reader.SeekTime(seek_pos, seek_flags, &startpts))
+      if(m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts))
         FlushStreams(startpts);
 
       m_player_video.Close();

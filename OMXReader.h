@@ -137,7 +137,7 @@ public:
   void ClearStreams();
   bool Close();
   //void FlushRead();
-  bool SeekTime(int64_t seek_ms, int seek_flags, double *startpts);
+  bool SeekTime(int time, bool backwords, double *startpts);
   AVMediaType PacketType(OMXPacket *pkt);
   OMXPacket *Read();
   void Process();
@@ -160,7 +160,6 @@ public:
   void SetSpeed(int iSpeed);
   void UpdateCurrentPTS();
   double ConvertTimestamp(int64_t pts, int den, int num);
-  double ConvertTimestamp(int64_t pts, AVRational *time_base);
   int GetChapter();
   void GetChapterName(std::string& strChapterName);
   bool SeekChapter(int chapter, double* startpts);
