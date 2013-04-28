@@ -1087,10 +1087,10 @@ int main(int argc, char *argv[])
     {
       static int count;
       if ((count++ & 15) == 0)
-         printf("M: %8.02f V : %8.02f %8d %8d A : %8.02f %8.02f/%8.02f Cv : %8d Ca : %8d                            \r", stamp,
-             audio_fifo, m_player_video.GetDecoderBufferSize(), m_player_video.GetDecoderFreeSpace(),
-             video_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-             m_player_video.GetCached(), m_player_audio.GetCached());
+         printf("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk                            \r", stamp,
+             video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
+             audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
+             m_player_video.GetCached()>>10, m_player_audio.GetCached()>>10);
     }
 
     if(m_tv_show_info)
