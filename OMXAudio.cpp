@@ -287,9 +287,10 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
 
   m_SampleRate    = uiSamplesPerSec;
   m_BitsPerSample = uiBitsPerSample;
-  m_BufferLen     = m_BytesPerSec = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
+  m_BytesPerSec   = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
+  m_BufferLen     = uiSamplesPerSec * (m_pcm_output.nBitPerSample >> 3) * (m_InputChannels > 4 ? 8:m_InputChannels);
   m_BufferLen     *= m_fifo_size;
-  m_ChunkLen      = 2048 * (uiBitsPerSample >> 3) * m_InputChannels;
+  m_ChunkLen      = 4096 * (uiBitsPerSample >> 3) * m_InputChannels;
 
   m_wave_header.Samples.wValidBitsPerSample = uiBitsPerSample;
   m_wave_header.Samples.wSamplesPerBlock    = 0;
@@ -358,27 +359,46 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
     }
   }
 
-  // set up the number/size of buffers
   OMX_PARAM_PORTDEFINITIONTYPE port_param;
+  // set up the number/size of buffers for decoder input
   OMX_INIT_STRUCTURE(port_param);
   port_param.nPortIndex = m_omx_decoder.GetInputPort();
 
   omx_err = m_omx_decoder.GetParameter(OMX_IndexParamPortDefinition, &port_param);
   if(omx_err != OMX_ErrorNone)
   {
-    CLog::Log(LOGERROR, "COMXAudio::Initialize error get OMX_IndexParamPortDefinition omx_err(0x%08x)\n", omx_err);
+    CLog::Log(LOGERROR, "COMXAudio::Initialize error get OMX_IndexParamPortDefinition (input) omx_err(0x%08x)\n", omx_err);
     return false;
   }
 
   port_param.format.audio.eEncoding = m_eEncoding;
-
   port_param.nBufferSize = m_ChunkLen;
-  port_param.nBufferCountActual = m_BufferLen / m_ChunkLen;
+  port_param.nBufferCountActual = port_param.nBufferCountMin;
 
   omx_err = m_omx_decoder.SetParameter(OMX_IndexParamPortDefinition, &port_param);
   if(omx_err != OMX_ErrorNone)
   {
-    CLog::Log(LOGERROR, "COMXAudio::Initialize error set OMX_IndexParamPortDefinition omx_err(0x%08x)\n", omx_err);
+    CLog::Log(LOGERROR, "COMXAudio::Initialize error set OMX_IndexParamPortDefinition (intput) omx_err(0x%08x)\n", omx_err);
+    return false;
+  }
+
+  // set up the number/size of buffers for decoder output
+  OMX_INIT_STRUCTURE(port_param);
+  port_param.nPortIndex = m_omx_decoder.GetOutputPort();
+
+  omx_err = m_omx_decoder.GetParameter(OMX_IndexParamPortDefinition, &port_param);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "COMXAudio::Initialize error get OMX_IndexParamPortDefinition (output) omx_err(0x%08x)\n", omx_err);
+    return false;
+  }
+
+  port_param.nBufferCountActual = std::max(1U, m_BufferLen / port_param.nBufferSize);
+
+  omx_err = m_omx_decoder.SetParameter(OMX_IndexParamPortDefinition, &port_param);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "COMXAudio::Initialize error set OMX_IndexParamPortDefinition (output) omx_err(0x%08x)\n", omx_err);
     return false;
   }
 
