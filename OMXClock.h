@@ -87,7 +87,7 @@ public:
   bool OMXPause(bool lock = true);
   bool OMXResume(bool lock = true);
   bool OMXWaitStart(double pts, bool lock = true);
-  bool OMXSpeed(int speed, bool lock = true);
+  bool OMXSpeed(int speed, bool lock = true, bool pause_resume = false);
   int  OMXPlaySpeed() { return m_play_speed; };
   COMXCoreComponent *GetOMXClock();
   bool OMXStateExecute(bool lock = true);

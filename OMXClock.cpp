@@ -365,33 +365,18 @@ bool OMXClock::OMXPause(bool lock /* = true */)
   if(m_omx_clock.GetComponent() == NULL)
     return false;
 
-  if(m_pause)
-    return true;
-
-  if(lock)
-    Lock();
-
-  OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-  OMX_TIME_CONFIG_SCALETYPE scaleType;
-  OMX_INIT_STRUCTURE(scaleType);
-
-  scaleType.xScale = 0; // pause
-
-  omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeScale, &scaleType);
-  if(omx_err != OMX_ErrorNone)
+  if(!m_pause)
   {
-    CLog::Log(LOGERROR, "OMXClock::Pause error setting OMX_IndexConfigTimeClockState\n");
+    if(lock)
+      Lock();
+
+    if (OMXSpeed(0, false, true))
+      m_pause = true;
+
     if(lock)
       UnLock();
-    return false;
   }
-
-  m_pause = true;
-
-  if(lock)
-    UnLock();
-
-  return true;
+  return m_pause == true;
 }
 
 bool OMXClock::OMXResume(bool lock /* = true */)
@@ -400,33 +385,18 @@ bool OMXClock::OMXResume(bool lock /* = true */)
   if(m_omx_clock.GetComponent() == NULL)
     return false;
 
-  if(!m_pause)
-    return true;
-
-  if(lock)
-    Lock();
-
-  OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-  OMX_TIME_CONFIG_SCALETYPE scaleType;
-  OMX_INIT_STRUCTURE(scaleType);
-
-  scaleType.xScale = (m_play_speed << 16) / DVD_PLAYSPEED_NORMAL;
-
-  omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeScale, &scaleType);
-  if(omx_err != OMX_ErrorNone)
+  if(m_pause)
   {
-    CLog::Log(LOGERROR, "OMXClock::Resume error setting OMX_IndexConfigTimeClockState\n");
+    if(lock)
+      Lock();
+
+    if (OMXSpeed(m_play_speed, false, true))
+      m_pause = false;
+
     if(lock)
       UnLock();
-    return false;
   }
-
-  m_pause = false;
-
-  if(lock)
-    UnLock();
-
-  return true;
+  return m_pause == false;
 }
 
 bool OMXClock::OMXWaitStart(double pts, bool lock /* = true */)
@@ -482,7 +452,7 @@ bool OMXClock::OMXWaitStart(double pts, bool lock /* = true */)
   return true;
 }
 
-bool OMXClock::OMXSpeed(int speed, bool lock /* = true */)
+bool OMXClock::OMXSpeed(int speed, bool lock /* = true */, bool pause_resume /* = false */)
 {
   if(m_omx_clock.GetComponent() == NULL)
     return false;
@@ -494,9 +464,7 @@ bool OMXClock::OMXSpeed(int speed, bool lock /* = true */)
   OMX_TIME_CONFIG_SCALETYPE scaleType;
   OMX_INIT_STRUCTURE(scaleType);
 
-  m_play_speed = speed;
-
-  scaleType.xScale = (m_play_speed << 16) / DVD_PLAYSPEED_NORMAL;
+  scaleType.xScale = (speed << 16) / DVD_PLAYSPEED_NORMAL;
 
   omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeScale, &scaleType);
   if(omx_err != OMX_ErrorNone)
@@ -506,6 +474,9 @@ bool OMXClock::OMXSpeed(int speed, bool lock /* = true */)
       UnLock();
     return false;
   }
+
+  if (!pause_resume)
+    m_play_speed = speed;
 
   if(lock)
     UnLock();
