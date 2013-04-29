@@ -285,7 +285,7 @@ void FlushStreams(double pts)
   }
 
   if(pts != DVD_NOPTS_VALUE)
-    m_av_clock->OMXUpdateClock(pts);
+    m_av_clock->OMXMediaTime(pts);
 
 //  if(m_av_clock)
 //  {
@@ -845,7 +845,6 @@ int main(int argc, char *argv[])
                                          m_boost_on_downmix, m_thread_player, audio_queue_size, audio_fifo_size))
     goto do_exit;
 
-  m_av_clock->SetSpeed(DVD_PLAYSPEED_NORMAL);
   m_av_clock->OMXStart(0.0);
   m_av_clock->OMXPause();
   m_av_clock->OMXStateExecute();

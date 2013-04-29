@@ -80,7 +80,6 @@ protected:
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
   int                       m_speed;
-  double                    m_FlipTimeStamp; // time stamp of last flippage. used to play at a forced framerate
   double                    m_iSubtitleDelay;
   COMXOverlayCodec          *m_pSubtitleCodec;
 

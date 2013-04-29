@@ -139,8 +139,6 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   if (fifo_size != 0.0)
     m_fifo_size = fifo_size;
 
-  m_FlipTimeStamp = m_av_clock->GetAbsoluteClock();
-
   if(!OpenDecoder())
   {
     Close();
@@ -329,7 +327,7 @@ void OMXPlayerVideo::Process()
     if(subtitle_pkt)
     {
       LockSubtitles();
-      subtitle_pkt->pts = m_av_clock->GetClock();
+      subtitle_pkt->pts = m_av_clock->OMXMediaTime();
       m_subtitle_packets.push_back(subtitle_pkt);
       UnLockSubtitles();
     }
@@ -496,7 +494,7 @@ std::string OMXPlayerVideo::GetText()
     if(!m_overlays.empty())
     {
       COMXOverlay *overlay = m_overlays.front();
-      double now = m_av_clock->GetClock();
+      double now = m_av_clock->OMXMediaTime();
       double iPTSStartTime = pkt->pts;
       double iPTSStopTime = (overlay->iPTSStartTime > 0) ? iPTSStartTime + (overlay->iPTSStopTime - overlay->iPTSStartTime) : 0LL;
 

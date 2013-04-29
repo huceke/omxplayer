@@ -78,11 +78,6 @@ protected:
   COMXAudioCodecOMX         *m_pAudioCodec;
   int                       m_speed;
   long                      m_initialVolume;
-  double m_error;    //last average error
-
-  int64_t m_errortime; //timestamp of last time we measured
-  int64_t m_freq;
-
   bool   m_player_error;
 
   void Lock();

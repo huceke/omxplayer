@@ -26,11 +26,6 @@
 
 #include "OMXCore.h"
 
-#define AV_SYNC_THRESHOLD 0.01
-#define AV_NOSYNC_THRESHOLD 10.0
-#define SAMPLE_CORRECTION_PERCENT_MAX 10
-#define AUDIO_DIFF_AVG_NB 20
-
 #define DVD_TIME_BASE 1000000
 #define DVD_NOPTS_VALUE    (-1LL<<52) // should be possible to represent in both double and __int64
 
@@ -60,12 +55,6 @@ static inline int64_t FromOMXTime(OMX_TICKS ticks)
 #define ToOMXTime(x) (x)
 #endif
 
-enum {
-  AV_SYNC_AUDIO_MASTER,
-  AV_SYNC_VIDEO_MASTER,
-  AV_SYNC_EXTERNAL_MASTER,
-};
-
 class OMXClock
 {
 protected:
@@ -76,16 +65,6 @@ protected:
   bool              m_has_audio;
   int               m_play_speed;
   pthread_mutex_t   m_lock;
-  void              CheckSystemClock();
-  double            SystemToAbsolute(int64_t system);
-  double            SystemToPlaying(int64_t system);
-  int64_t           m_systemUsed;
-  int64_t           m_startClock;
-  int64_t           m_pauseClock;
-  bool              m_bReset;
-  static int64_t    m_systemFrequency;
-  static int64_t    m_systemOffset;
-  int64_t           m_ClockOffset;
   static bool       m_ismasterclock;
 private:
   COMXCoreComponent m_omx_clock;
@@ -95,47 +74,27 @@ public:
   ~OMXClock();
   void Lock();
   void UnLock();
-  int64_t GetFrequency();
-  int64_t GetTime(bool interpolated = true);
-  double  GetAbsoluteClock(bool interpolated = true);
-  int64_t Wait(int64_t Target);
-  double  WaitAbsoluteClock(double target);
-  double GetClock(bool interpolated = true);
-  double GetClock(double& absolute, bool interpolated = true);
-  void SetSpeed(int iSpeed);
   void SetMasterClock(bool ismasterclock) { m_ismasterclock = ismasterclock; }
   bool IsMasterClock()                    { return m_ismasterclock;          }
-
-  void Reset() { m_bReset = true; }
-  void Pause();
-  void Resume();
-
   bool OMXInitialize(bool has_video, bool has_audio);
   void Deinitialize();
   bool OMXIsPaused() { return m_pause; };
   bool OMXStop(bool lock = true);
   bool OMXStart(double pts, bool lock = true);
   bool OMXReset(bool lock = true);
-  double OMXWallTime(bool lock = true);
   double OMXMediaTime(bool lock = true);
   bool OMXMediaTime(double pts, bool fixPreroll = true, bool lock = true);
   bool OMXPause(bool lock = true);
   bool OMXResume(bool lock = true);
-  bool OMXUpdateClock(double pts, bool lock = true);
   bool OMXWaitStart(double pts, bool lock = true);
   bool OMXSpeed(int speed, bool lock = true);
   int  OMXPlaySpeed() { return m_play_speed; };
   COMXCoreComponent *GetOMXClock();
-  bool OMXStatePause(bool lock = true);
   bool OMXStateExecute(bool lock = true);
   void OMXStateIdle(bool lock = true);
-  static void AddTimespecs(struct timespec &time, long millisecs);
   bool HDMIClockSync(bool lock = true);
-  static int64_t CurrentHostCounter(void);
-  static int64_t CurrentHostFrequency(void);
   bool HasVideo() { return m_has_video; };
   bool HasAudio() { return m_has_audio; };
-  static void AddTimeSpecNano(struct timespec &time, uint64_t nanoseconds);
   static void OMXSleep(unsigned int dwMilliSeconds);
 };
 
