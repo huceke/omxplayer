@@ -125,8 +125,6 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   if (fifo_size != 0.0)
     m_fifo_size = fifo_size;
 
-  m_av_clock->SetMasterClock(false);
-
   m_player_error = OpenAudioCodec();
   if(!m_player_error)
   {

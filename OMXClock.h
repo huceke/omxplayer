@@ -65,7 +65,6 @@ protected:
   bool              m_has_audio;
   int               m_play_speed;
   pthread_mutex_t   m_lock;
-  static bool       m_ismasterclock;
 private:
   COMXCoreComponent m_omx_clock;
   DllAvFormat       m_dllAvFormat;
@@ -74,8 +73,6 @@ public:
   ~OMXClock();
   void Lock();
   void UnLock();
-  void SetMasterClock(bool ismasterclock) { m_ismasterclock = ismasterclock; }
-  bool IsMasterClock()                    { return m_ismasterclock;          }
   bool OMXInitialize(bool has_video, bool has_audio);
   void Deinitialize();
   bool OMXIsPaused() { return m_pause; };
@@ -86,7 +83,6 @@ public:
   bool OMXMediaTime(double pts, bool fixPreroll = true, bool lock = true);
   bool OMXPause(bool lock = true);
   bool OMXResume(bool lock = true);
-  bool OMXWaitStart(double pts, bool lock = true);
   bool OMXSpeed(int speed, bool lock = true, bool pause_resume = false);
   int  OMXPlaySpeed() { return m_play_speed; };
   COMXCoreComponent *GetOMXClock();
