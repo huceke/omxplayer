@@ -1,6 +1,6 @@
 #pragma once
 /*
- *      Copyright (C) 2010-2012 Team XBMC
+ *      Copyright (C) 2010-2013 Team XBMC
  *      http://www.xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -71,9 +71,10 @@ public:
   ~COMXCoreTunel();
 
   void Initialize(COMXCoreComponent *src_component, unsigned int src_port, COMXCoreComponent *dst_component, unsigned int dst_port);
+  bool IsInitialized();
   OMX_ERRORTYPE Flush();
   OMX_ERRORTYPE Deestablish(bool noWait = false);
-  OMX_ERRORTYPE Establish(bool portSettingsChanged);
+  OMX_ERRORTYPE Establish(bool portSettingsChanged, bool enable_ports = true);
 private:
   pthread_mutex_t   m_lock;
   bool              m_portSettingsChanged;
@@ -85,6 +86,7 @@ private:
   bool              m_DllOMXOpen;
   void              Lock();
   void              UnLock();
+  bool              m_tunnel_set;
 };
 
 class COMXCoreComponent
@@ -99,7 +101,7 @@ public:
   std::string       GetName()        { return m_componentName; };
 
   OMX_ERRORTYPE DisableAllPorts();
-  void          Remove(OMX_EVENTTYPE eEvent, OMX_U32 nData1, OMX_U32 nData2);
+  void          RemoveEvent(OMX_EVENTTYPE eEvent, OMX_U32 nData1, OMX_U32 nData2);
   OMX_ERRORTYPE AddEvent(OMX_EVENTTYPE eEvent, OMX_U32 nData1, OMX_U32 nData2);
   OMX_ERRORTYPE WaitForEvent(OMX_EVENTTYPE event, long timeout = 300);
   OMX_ERRORTYPE WaitForCommand(OMX_U32 command, OMX_U32 nData2, long timeout = 2000);
@@ -115,7 +117,8 @@ public:
   OMX_ERRORTYPE UseEGLImage(OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, void* eglImage);
 
   bool          Initialize( const std::string &component_name, OMX_INDEXTYPE index);
-  bool          Deinitialize();
+  bool          IsInitialized();
+  bool          Deinitialize(bool free_component = false);
 
   // OMXCore Decoder delegate callback routines.
   static OMX_ERRORTYPE DecoderEventHandlerCallback(OMX_HANDLETYPE hComponent, OMX_PTR pAppData,
@@ -132,6 +135,8 @@ public:
     OMX_HANDLETYPE hComponent, OMX_PTR pAppData, OMX_BUFFERHEADERTYPE* pBuffer);
   OMX_ERRORTYPE DecoderFillBufferDone(
     OMX_HANDLETYPE hComponent, OMX_PTR pAppData, OMX_BUFFERHEADERTYPE* pBuffer);
+
+  void TransitionToStateLoaded();
 
   OMX_ERRORTYPE EmptyThisBuffer(OMX_BUFFERHEADERTYPE *omx_buffer);
   OMX_ERRORTYPE FillThisBuffer(OMX_BUFFERHEADERTYPE *omx_buffer);
@@ -153,13 +158,12 @@ public:
   OMX_ERRORTYPE AllocInputBuffers(bool use_buffers = false);
   OMX_ERRORTYPE AllocOutputBuffers(bool use_buffers = false);
 
-  OMX_ERRORTYPE FreeInputBuffers(bool wait);
-  OMX_ERRORTYPE FreeOutputBuffers(bool wait);
+  OMX_ERRORTYPE FreeInputBuffers();
+  OMX_ERRORTYPE FreeOutputBuffers();
 
   bool IsEOS() { return m_eos; };
-
-  void SetCustomDecoderFillBufferDoneHandler(OMX_ERRORTYPE (*p)(OMX_HANDLETYPE, OMX_PTR, OMX_BUFFERHEADERTYPE*)){ CustomDecoderFillBufferDoneHandler = p;};
-  void SetCustomDecoderEmptyBufferDoneHandler(OMX_ERRORTYPE (*p)(OMX_HANDLETYPE, OMX_PTR, OMX_BUFFERHEADERTYPE*)){ CustomDecoderEmptyBufferDoneHandler = p;};
+  bool BadState() { return m_resource_error; };
+  void ResetEos();
 
 private:
   OMX_HANDLETYPE m_handle;
@@ -167,14 +171,11 @@ private:
   unsigned int   m_output_port;
   std::string    m_componentName;
   pthread_mutex_t   m_omx_event_mutex;
+  pthread_mutex_t   m_omx_eos_mutex;
   pthread_mutex_t   m_lock;
   std::vector<omx_event> m_omx_events;
 
   OMX_CALLBACKTYPE  m_callbacks;
-
-  //additional event handlers
-  OMX_ERRORTYPE (*CustomDecoderFillBufferDoneHandler)(OMX_HANDLETYPE, OMX_PTR, OMX_BUFFERHEADERTYPE*);
-  OMX_ERRORTYPE (*CustomDecoderEmptyBufferDoneHandler)(OMX_HANDLETYPE, OMX_PTR, OMX_BUFFERHEADERTYPE*);
 
   // OMXCore input buffers (demuxer packets)
   pthread_mutex_t   m_omx_input_mutex;
@@ -193,7 +194,6 @@ private:
   unsigned int  m_output_buffer_size;
   unsigned int  m_output_buffer_count;
   bool          m_omx_output_use_buffers;
-  sem_t         m_omx_fill_buffer_done;
 
   bool          m_exit;
   DllOMX        *m_DllOMX;
@@ -204,6 +204,7 @@ private:
   bool          m_eos;
   bool          m_flush_input;
   bool          m_flush_output;
+  bool          m_resource_error;
   void              Lock();
   void              UnLock();
 };
