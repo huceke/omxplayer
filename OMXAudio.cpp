@@ -326,6 +326,8 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   if(!m_omx_render.Initialize(componentName, OMX_IndexParamAudioInit))
     return false;
 
+  m_omx_render.ResetEos();
+
   OMX_CONFIG_BRCMAUDIODESTINATIONTYPE audioDest;
   OMX_INIT_STRUCTURE(audioDest);
   strncpy((char *)audioDest.sName, device.c_str(), strlen(device.c_str()));
@@ -1172,7 +1174,7 @@ unsigned int COMXAudio::GetAudioRenderingLatency()
   return param.nU32;
 }
 
-void COMXAudio::WaitCompletion()
+void COMXAudio::SubmitEOS()
 {
   if(!m_Initialized || m_Pause)
     return;
@@ -1198,23 +1200,14 @@ void COMXAudio::WaitCompletion()
     CLog::Log(LOGERROR, "%s::%s - OMX_EmptyThisBuffer() failed with result(0x%x)\n", CLASSNAME, __func__, omx_err);
     return;
   }
+}
 
-  while(true)
-  {
-    if(m_omx_render.IsEOS())
-      break;
-    OMXClock::OMXSleep(50);
-  }
-
-  while(true)
-  {
-    if(!GetAudioRenderingLatency())
-      break;
-
-    OMXClock::OMXSleep(50);
-  }
-
-  return;
+bool COMXAudio::IsEOS()
+{
+  if(!m_Initialized || m_Pause)
+    return false;
+  unsigned int latency = GetAudioRenderingLatency();
+  return m_omx_render.IsEOS() && latency <= 0;
 }
 
 void COMXAudio::SwitchChannels(int iAudioStream, bool bAudioOnAllSpeakers)

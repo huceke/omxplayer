@@ -457,24 +457,17 @@ int  OMXPlayerVideo::GetDecoderFreeSpace()
     return 0;
 }
 
-void OMXPlayerVideo::WaitCompletion()
+void OMXPlayerVideo::SubmitEOS()
+{
+  if(m_decoder)
+    m_decoder->SubmitEOS();
+}
+
+bool OMXPlayerVideo::IsEOS()
 {
   if(!m_decoder)
-    return;
-
-  while(true)
-  {
-    Lock();
-    if(m_packets.empty())
-    {
-      UnLock();
-      break;
-    }
-    UnLock();
-    OMXClock::OMXSleep(50);
-  }
-
-  m_decoder->WaitCompletion();
+    return false;
+  return m_packets.empty() && (!m_decoder || m_decoder->IsEOS());
 }
 
 void OMXPlayerVideo::SetSpeed(int speed)

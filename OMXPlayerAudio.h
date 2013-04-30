@@ -105,6 +105,8 @@ public:
   double GetCacheTime();
   double GetCacheTotal();
   double GetCurrentPTS() { return m_iCurrentPts; };
+  void SubmitEOS();
+  bool IsEOS();
   void WaitCompletion();
   unsigned int GetCached() { return m_cached_size; };
   unsigned int GetMaxCached() { return m_max_data_size; };

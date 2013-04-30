@@ -74,7 +74,8 @@ public:
   virtual void SetDynamicRangeCompression(long drc) {};
   virtual float GetCurrentAttenuation() { return m_remap.GetCurrentAttenuation(); }
   virtual int SetPlaySpeed(int iSpeed) = 0;
-  virtual void WaitCompletion() = 0;
+  virtual void SubmitEOS() = 0;
+  virtual bool IsEOS() = 0;
   virtual void SwitchChannels(int iAudioStream, bool bAudioOnAllSpeakers) = 0;
 
 protected:

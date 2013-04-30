@@ -512,25 +512,40 @@ double OMXPlayerAudio::GetCacheTotal()
     return 0;
 }
 
+void OMXPlayerAudio::SubmitEOS()
+{
+  if(m_decoder)
+    m_decoder->SubmitEOS();
+}
+
+bool OMXPlayerAudio::IsEOS()
+{
+  return m_packets.empty() && (!m_decoder || m_decoder->IsEOS());
+}
+
 void OMXPlayerAudio::WaitCompletion()
 {
   if(!m_decoder)
     return;
 
-  while(true)
+  unsigned int nTimeOut = m_fifo_size * 1000;
+  while(nTimeOut)
   {
-    Lock();
-    if(m_packets.empty())
+    if(IsEOS())
     {
-      UnLock();
+      CLog::Log(LOGDEBUG, "%s::%s - got eos\n", "OMXPlayerAudio", __func__);
       break;
     }
-    UnLock();
-    OMXClock::OMXSleep(50);
-  }
 
-  m_decoder->WaitCompletion();
-}
+    if(nTimeOut == 0)
+    {
+      CLog::Log(LOGERROR, "%s::%s - wait for eos timed out\n", "OMXPlayerAudio", __func__);
+      break;
+    }
+    OMXClock::OMXSleep(50);
+    nTimeOut -= 50;
+  }
+} 
 
 void OMXPlayerAudio::RegisterAudioCallback(IAudioCallback *pCallback)
 {

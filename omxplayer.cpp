@@ -467,7 +467,8 @@ int main(int argc, char *argv[])
   }
   atexit(restore_term);
 
-  std::string            m_filename;
+  bool                  m_send_eos            = false;
+  std::string           m_filename;
   double                m_incr                = 0;
   CRBP                  g_RBP;
   COMXCore              g_OMX;
@@ -1139,11 +1140,25 @@ int main(int argc, char *argv[])
 
     if(m_omx_reader.IsEof() && !m_omx_pkt)
     {
-      if (!m_player_audio.GetCached() && !m_player_video.GetCached())
-        break;
-
-      OMXClock::OMXSleep(10);
-      continue;
+      // demuxer EOF, but may have not played out data yet
+      if ( (m_has_video && m_player_video.GetCached()) ||
+           (m_has_audio && m_player_audio.GetCached()) )
+      {
+        OMXClock::OMXSleep(10);
+        continue;
+      }
+      if (!m_send_eos && m_has_video)
+        m_player_video.SubmitEOS();
+      if (!m_send_eos && m_has_audio)
+        m_player_audio.SubmitEOS();
+      m_send_eos = true;
+      if ( (m_has_video && !m_player_video.IsEOS()) ||
+           (m_has_audio && !m_player_audio.IsEOS()) )
+      {
+        OMXClock::OMXSleep(10);
+        continue;
+      }
+      break;
     }
 
     if(!m_omx_pkt)
@@ -1186,14 +1201,6 @@ int main(int argc, char *argv[])
 do_exit:
   if (m_stats)
     printf("\n");
-
-  if(!m_stop && !g_abort)
-  {
-    if(m_has_audio)
-      m_player_audio.WaitCompletion();
-    else if(m_has_video)
-      m_player_video.WaitCompletion();
-  }
 
   if(m_has_video && m_refresh && tv_state.display.hdmi.group && tv_state.display.hdmi.mode)
   {

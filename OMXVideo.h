@@ -60,7 +60,8 @@ public:
   std::string GetDecoderName() { return m_video_codec_name; };
   void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
   int GetInputBufferSize();
-  void WaitCompletion();
+  void SubmitEOS();
+  bool IsEOS();
 protected:
   // Video format
   bool              m_drop_state;

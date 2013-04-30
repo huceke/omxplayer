@@ -1146,7 +1146,7 @@ int COMXVideo::GetInputBufferSize()
   return m_omx_decoder.GetInputBufferSize();
 }
 
-void COMXVideo::WaitCompletion()
+void COMXVideo::SubmitEOS()
 {
   if(!m_is_open)
     return;
@@ -1172,13 +1172,11 @@ void COMXVideo::WaitCompletion()
     CLog::Log(LOGERROR, "%s::%s - OMX_EmptyThisBuffer() failed with result(0x%x)\n", CLASSNAME, __func__, omx_err);
     return;
   }
+}
 
-  while(true)
-  {
-    if(m_omx_render.IsEOS())
-      break;
-    OMXClock::OMXSleep(50);
-  }
-
-  return;
+bool COMXVideo::IsEOS()
+{
+  if(!m_is_open)
+    return true;
+  return m_omx_render.IsEOS();
 }
