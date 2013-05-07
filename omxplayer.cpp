@@ -1069,7 +1069,7 @@ int main(int argc, char *argv[])
       static int count;
       if ((count++ & 15) == 0)
          printf("V : %8.02f %8d %8d A : %8.02f %8.02f/%8.02f Cv : %8d Ca : %8d                            \r",
-             m_av_clock->OMXMediaTime(), m_player_video.GetDecoderBufferSize(), m_player_video.GetDecoderFreeSpace(),
+             m_av_clock->OMXMediaTime() * 1e-6, m_player_video.GetDecoderBufferSize(), m_player_video.GetDecoderFreeSpace(),
              m_player_audio.GetCurrentPTS() / DVD_TIME_BASE - m_av_clock->OMXMediaTime() * 1e-6, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
              m_player_video.GetCached(), m_player_audio.GetCached());
     }
