@@ -106,7 +106,7 @@ void OMXPlayerVideo::UnLockSubtitles()
     pthread_mutex_unlock(&m_lock_subtitle);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool hdmi_clock_sync, bool use_thread,
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, int deinterlace, bool hdmi_clock_sync, bool use_thread,
                              float display_aspect, float queue_size, float fifo_size)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)

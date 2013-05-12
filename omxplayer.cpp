@@ -66,6 +66,7 @@ volatile sig_atomic_t g_abort           = false;
 bool              m_passthrough         = false;
 long              m_initialVolume       = 0;
 bool              m_Deinterlace         = false;
+bool              m_NoDeinterlace       = false;
 bool              m_HWDecode            = false;
 std::string       deviceString          = "";
 int               m_use_hw_audio        = false;
@@ -144,7 +145,8 @@ void print_usage()
   printf("         -i / --info                    dump stream format and exit\n");
   printf("         -s / --stats                   pts and buffer stats\n");
   printf("         -p / --passthrough             audio passthrough\n");
-  printf("         -d / --deinterlace             deinterlacing\n");
+  printf("         -d / --deinterlace             force deinterlacing\n");
+  printf("              --nodeinterlace           force no deinterlacing\n");
   printf("         -w / --hw                      hw audio decoding\n");
   printf("         -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)\n");
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video (default)\n");
@@ -495,6 +497,7 @@ int main(int argc, char *argv[])
   const int video_fifo_opt  = 0x108;
   const int audio_queue_opt = 0x109;
   const int video_queue_opt = 0x10a;
+  const int no_deinterlace_opt = 0x10b;
   const int boost_on_downmix_opt = 0x200;
 
   struct option longopts[] = {
@@ -507,6 +510,7 @@ int main(int argc, char *argv[])
     { "passthrough",  no_argument,        NULL,          'p' },
     { "vol",          required_argument,  NULL,          vol_opt },
     { "deinterlace",  no_argument,        NULL,          'd' },
+    { "nodeinterlace",no_argument,        NULL,          no_deinterlace_opt },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
     { "hdmiclocksync", no_argument,       NULL,          'y' },
@@ -564,6 +568,9 @@ int main(int argc, char *argv[])
         break;
       case 'd':
         m_Deinterlace = true;
+        break;
+      case no_deinterlace_opt:
+        m_NoDeinterlace = true;
         break;
       case 'w':
         m_use_hw_audio = true;
@@ -784,7 +791,7 @@ int main(int argc, char *argv[])
         m_omx_reader.SeekTime(m_seek_pos * 1000.0f, false, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,
+  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? 1:m_NoDeinterlace ? -1:0,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
     goto do_exit;
 
@@ -1040,7 +1047,7 @@ int main(int argc, char *argv[])
         FlushStreams(startpts);
 
       m_player_video.Close();
-      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace,
+      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? 1:m_NoDeinterlace ? -1:0,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
         goto do_exit;
 

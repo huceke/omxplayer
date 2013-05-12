@@ -46,7 +46,8 @@ public:
   // Required overrides
   bool SendDecoderConfig();
   bool NaluFormatStartCodes(enum CodecID codec, uint8_t *in_extradata, int in_extrasize);
-  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, bool deinterlace = false, bool hdmi_clock_sync = false, float fifo_size = 0.0f);
+  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, int deinterlace = 0, bool hdmi_clock_sync = false, float fifo_size = 0.0f);
+  bool PortSettingsChanged();
   void Close(void);
   unsigned int GetFreeSpace();
   unsigned int GetSize();
@@ -95,11 +96,14 @@ protected:
   std::string       m_video_codec_name;
 
   bool              m_deinterlace;
+  int               m_deinterlace_request;
   bool              m_hdmi_clock_sync;
   bool              m_first_text;
   CRect             m_dst_rect;
   CRect             m_src_rect;
   uint32_t          m_history_valid_pts;
+  float             m_pixel_aspect;
+  bool              m_settings_changed;
 };
 
 #endif
