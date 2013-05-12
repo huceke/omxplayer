@@ -377,7 +377,7 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
   if (m_pFile->IsEOF() && ret <= 0)
   {
     m_eof = true;
-    return true;
+    ret = 0;
   }
 
   CLog::Log(LOGDEBUG, "OMXReader::SeekTime(%d) - seek ended up on time %d",time,(int)(m_iCurrentPts / DVD_TIME_BASE * 1000));
