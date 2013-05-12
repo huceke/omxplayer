@@ -30,13 +30,7 @@
 #endif // _MSC_VER > 1000
 
 #include "utils/StdString.h"
-#include "cores/IAudioCallback.h"
 #include "utils/PCMRemap.h"
-extern void RegisterAudioCallback(IAudioCallback* pCallback);
-extern void UnRegisterAudioCallback();
-
-typedef std::pair<CStdString, CStdString> AudioSink;
-typedef std::vector<AudioSink> AudioSinkList;
 
 class IAudioRenderer
 {
@@ -52,9 +46,7 @@ public:
 
   IAudioRenderer() {};
   virtual ~IAudioRenderer() {};
-  virtual bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic=false, EEncoded encoded = ENCODED_NONE, long initialVolume = 0, float fifo_size = 0.0f) = 0;
-  virtual void UnRegisterAudioCallback() = 0;
-  virtual void RegisterAudioCallback(IAudioCallback* pCallback) = 0;
+  virtual bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded encoded = ENCODED_NONE, long initialVolume = 0, float fifo_size = 0.0f) = 0;
   virtual float GetDelay() = 0;
   virtual float GetCacheTime() = 0;
   virtual float GetCacheTotal() { return 1.0f; }
@@ -71,12 +63,10 @@ public:
   virtual long GetCurrentVolume() const = 0;
   virtual void Mute(bool bMute) = 0;
   virtual bool SetCurrentVolume(long nVolume) = 0;
-  virtual void SetDynamicRangeCompression(long drc) {};
   virtual float GetCurrentAttenuation() { return m_remap.GetCurrentAttenuation(); }
   virtual int SetPlaySpeed(int iSpeed) = 0;
   virtual void SubmitEOS() = 0;
   virtual bool IsEOS() = 0;
-  virtual void SwitchChannels(int iAudioStream, bool bAudioOnAllSpeakers) = 0;
 
 protected:
   CPCMRemap m_remap;

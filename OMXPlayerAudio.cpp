@@ -442,17 +442,17 @@ bool OMXPlayerAudio::OpenDecoder()
   {
     if(m_passthrough)
       m_hw_decode = false;
-    bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_pChannelMap,
-                                             m_hints, m_av_clock, m_passthrough,
+    bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_pChannelMap,
+                                             m_hints, m_passthrough,
                                              m_hw_decode, m_boost_on_downmix, m_initialVolume, m_fifo_size);
   }
   else
   {
     unsigned int downmix_channels = m_hints.channels;
 
-    bAudioRenderOpen = m_decoder->Initialize(NULL, m_device.substr(4), m_hints.channels, m_pChannelMap,
+    bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pChannelMap,
                                              downmix_channels, m_hints.samplerate, m_passthrough ? 16:32,
-                                             false, m_boost_on_downmix, false, m_passthrough, m_initialVolume, m_fifo_size);
+                                             m_boost_on_downmix, m_passthrough, m_initialVolume, m_fifo_size);
   }
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
@@ -546,21 +546,6 @@ void OMXPlayerAudio::WaitCompletion()
     nTimeOut -= 50;
   }
 } 
-
-void OMXPlayerAudio::RegisterAudioCallback(IAudioCallback *pCallback)
-{
-  if(m_decoder) m_decoder->RegisterAudioCallback(pCallback);
-
-}
-void OMXPlayerAudio::UnRegisterAudioCallback()
-{
-  if(m_decoder) m_decoder->UnRegisterAudioCallback();
-}
-
-void OMXPlayerAudio::DoAudioWork()
-{
-  if(m_decoder) m_decoder->DoAudioWork();
-}
 
 void OMXPlayerAudio::SetCurrentVolume(long nVolume)
 {

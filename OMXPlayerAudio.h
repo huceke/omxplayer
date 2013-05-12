@@ -111,9 +111,6 @@ public:
   unsigned int GetCached() { return m_cached_size; };
   unsigned int GetMaxCached() { return m_max_data_size; };
   unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
-  void  RegisterAudioCallback(IAudioCallback* pCallback);
-  void  UnRegisterAudioCallback();
-  void  DoAudioWork();
   void SetCurrentVolume(long nVolume);
   long GetCurrentVolume();
   void SetSpeed(int iSpeed);

@@ -28,7 +28,6 @@
 #endif // _MSC_VER > 1000
 
 #include "IAudioRenderer.h"
-#include "cores/IAudioCallback.h"
 #include "linux/PlatformDefs.h"
 #include "DllAvCodec.h"
 #include "DllAvUtil.h"
@@ -37,22 +36,18 @@
 #include "OMXStreamInfo.h"
 #include "BitstreamConverter.h"
 
-#define VIS_PACKET_SIZE 3840
-
 class COMXAudio : public IAudioRenderer
 {
 public:
-  void UnRegisterAudioCallback();
-  void RegisterAudioCallback(IAudioCallback* pCallback);
   unsigned int GetChunkLen();
   float GetDelay();
   float GetCacheTime();
   float GetCacheTotal();
   unsigned int GetAudioRenderingLatency();
   COMXAudio();
-  bool Initialize(IAudioCallback* pCallback, const CStdString& device, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume, float fifo_size);
-  bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool boostOnDownmix, bool bIsMusic=false, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
+  bool Initialize(const CStdString& device, enum PCMChannels *channelMap,
+                           COMXStreamInfo &hints, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume, float fifo_size);
+  bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
   ~COMXAudio();
 
   unsigned int AddPackets(const void* data, unsigned int len);
@@ -66,15 +61,11 @@ public:
   long GetCurrentVolume() const;
   void Mute(bool bMute);
   bool SetCurrentVolume(long nVolume);
-  void SetDynamicRangeCompression(long drc) { m_drc = drc; }
   int SetPlaySpeed(int iSpeed);
   void SubmitEOS();
   bool IsEOS();
-  void SwitchChannels(int iAudioStream, bool bAudioOnAllSpeakers);
 
   void Flush();
-  void DoAudioWork();
-  static void EnumerateAudioSinks(AudioSinkList& vAudioSinks, bool passthrough);
 
   void Process();
 
@@ -91,12 +82,10 @@ public:
   unsigned int SyncAC3(BYTE* pData, unsigned int iSize);
 
 private:
-  IAudioCallback* m_pCallback;
   bool          m_Initialized;
   bool          m_Pause;
   bool          m_CanPause;
   long          m_CurrentVolume;
-  long          m_drc;
   bool          m_Passthrough;
   bool          m_HWDecode;
   bool          m_normalize_downmix;
@@ -119,10 +108,6 @@ private:
   uint8_t       *m_extradata;
   int           m_extrasize;
   float         m_fifo_size;
-  // stuff for visualisation
-  unsigned int  m_visBufferLength;
-  double        m_last_pts;
-  short            m_visBuffer[VIS_PACKET_SIZE+2];
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
   OMX_AUDIO_PARAM_DTSTYPE     m_dtsParam;
