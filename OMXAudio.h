@@ -55,9 +55,6 @@ public:
   unsigned int AddPackets(const void* data, unsigned int len, double dts, double pts);
   unsigned int GetSpace();
   bool Deinitialize();
-  bool Pause();
-  bool Stop();
-  bool Resume();
 
   long GetCurrentVolume() const;
   void Mute(bool bMute);
@@ -101,7 +98,6 @@ private:
   bool          m_external_clock;
   bool          m_setStartTime;
   int           m_SampleSize;
-  bool          m_first_frame;
   bool          m_LostSync;
   int           m_SampleRate;
   OMX_AUDIO_CODINGTYPE m_eEncoding;

@@ -56,8 +56,6 @@ public:
   int  Decode(uint8_t *pData, int iSize, double dts, double pts);
   void Reset(void);
   void SetDropState(bool bDrop);
-  bool Pause();
-  bool Resume();
   std::string GetDecoderName() { return m_video_codec_name; };
   void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
   int GetInputBufferSize();
@@ -86,7 +84,6 @@ protected:
   COMXCoreTunel     m_omx_tunnel_image_fx;
   bool              m_is_open;
 
-  bool              m_Pause;
   bool              m_setStartTime;
   bool              m_setStartTimeText;
 

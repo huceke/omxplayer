@@ -55,9 +55,6 @@ public:
   virtual bool IsResampling() { return false;};
   virtual unsigned int GetSpace() = 0;
   virtual bool Deinitialize() = 0;
-  virtual bool Pause() = 0;
-  virtual bool Stop() = 0;
-  virtual bool Resume() = 0;
   virtual unsigned int GetChunkLen() = 0;
 
   virtual long GetCurrentVolume() const = 0;

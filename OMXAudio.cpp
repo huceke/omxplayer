@@ -106,8 +106,6 @@ const float downmixing_coefficients_8[16] = {
 //***********************************************************************************************
 COMXAudio::COMXAudio() :
   m_Initialized     (false  ),
-  m_Pause           (false  ),
-  m_CanPause        (false  ),
   m_CurrentVolume   (0      ),
   m_Passthrough     (false  ),
   m_HWDecode        (false  ),
@@ -667,47 +665,6 @@ void COMXAudio::Flush()
 }
 
 //***********************************************************************************************
-bool COMXAudio::Pause()
-{
-  if (!m_Initialized)
-     return -1;
-
-  if(m_Pause) return true;
-  m_Pause = true;
-
-  m_omx_decoder.SetStateForComponent(OMX_StatePause);
-
-  return true;
-}
-
-//***********************************************************************************************
-bool COMXAudio::Resume()
-{
-  if (!m_Initialized)
-     return -1;
-
-  if(!m_Pause) return true;
-  m_Pause = false;
-
-  m_omx_decoder.SetStateForComponent(OMX_StateExecuting);
-
-  return true;
-}
-
-//***********************************************************************************************
-bool COMXAudio::Stop()
-{
-  if (!m_Initialized)
-     return -1;
-
-  Flush();
-
-  m_Pause = false;
-
-  return true;
-}
-
-//***********************************************************************************************
 long COMXAudio::GetCurrentVolume() const
 {
   return m_CurrentVolume;
@@ -988,7 +945,7 @@ unsigned int COMXAudio::GetAudioRenderingLatency()
 
 void COMXAudio::SubmitEOS()
 {
-  if(!m_Initialized || m_Pause)
+  if(!m_Initialized)
     return;
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
@@ -1017,7 +974,7 @@ void COMXAudio::SubmitEOS()
 
 bool COMXAudio::IsEOS()
 {
-  if(!m_Initialized || m_Pause)
+  if(!m_Initialized)
     return false;
   unsigned int latency = GetAudioRenderingLatency();
   bool ret = m_omx_render.IsEOS() && latency <= 0;
