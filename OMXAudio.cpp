@@ -119,7 +119,6 @@ COMXAudio::COMXAudio() :
   m_BitsPerSample   (0      ),
   m_omx_clock       (NULL   ),
   m_av_clock        (NULL   ),
-  m_external_clock  (false  ),
   m_setStartTime    (false  ),
   m_SampleSize      (0      ),
   m_LostSync        (true   ),
@@ -151,22 +150,6 @@ bool COMXAudio::PortSettingsChanged()
     return true;
   }
 
-  if(m_av_clock == NULL)
-  {
-    /* no external clock set. generate one */
-    m_external_clock = false;
-
-    m_av_clock = new OMXClock();
-
-    if(!m_av_clock->OMXInitialize(false, true))
-    {
-      delete m_av_clock;
-      m_av_clock = NULL;
-      CLog::Log(LOGERROR, "COMXAudio::Initialize error creating av clock\n");
-      return false;
-    }
-  }
-
   if(!m_Passthrough)
   {
     componentName = "OMX.broadcom.audio_mixer";
@@ -178,8 +161,6 @@ bool COMXAudio::PortSettingsChanged()
   if(!m_omx_render.Initialize(componentName, OMX_IndexParamAudioInit))
     return false;
 
-  m_omx_clock = m_av_clock->GetOMXClock();
-
   m_omx_tunnel_clock.Initialize(m_omx_clock, m_omx_clock->GetInputPort(), &m_omx_render, m_omx_render.GetInputPort()+1);
 
   omx_err = m_omx_tunnel_clock.Establish(false);
@@ -187,16 +168,6 @@ bool COMXAudio::PortSettingsChanged()
   {
     CLog::Log(LOGERROR, "COMXAudio::Initialize m_omx_tunnel_clock.Establish\n");
     return false;
-  }
-
-  if(!m_external_clock)
-  {
-    omx_err = m_omx_clock->SetStateForComponent(OMX_StateExecuting);
-    if (omx_err != OMX_ErrorNone)
-    {
-      CLog::Log(LOGERROR, "COMXAudio::Initialize m_omx_clock.SetStateForComponent\n");
-      return false;
-    }
   }
 
   m_omx_render.ResetEos();
@@ -256,7 +227,7 @@ bool COMXAudio::PortSettingsChanged()
 }
 
 bool COMXAudio::Initialize(const CStdString& device, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, EEncoded bPassthrough, bool bUseHWDecode,
+                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode,
                            bool boostOnDownmix, long initialVolume, float fifo_size)
 {
   m_HWDecode = false;
@@ -284,10 +255,12 @@ bool COMXAudio::Initialize(const CStdString& device, enum PCMChannels *channelMa
   }
 
   return Initialize(device, hints.channels, channelMap, hints.channels, hints.samplerate, hints.bitspersample,
-              boostOnDownmix, bPassthrough, initialVolume, fifo_size);
+              boostOnDownmix, clock, bPassthrough, initialVolume, fifo_size);
 }
 
-bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded bPassthrough, long initialVolume, float fifo_size)
+bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
+                           unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
+                           OMXClock *clock, EEncoded bPassthrough, long initialVolume, float fifo_size)
 {
   if(device == "hdmi") {
     m_deviceuse = "hdmi";
@@ -604,9 +577,6 @@ bool COMXAudio::Deinitialize()
   if(!m_Initialized)
     return true;
 
-  if(!m_external_clock && m_av_clock != NULL)
-    m_av_clock->OMXStop();
-
   m_omx_tunnel_decoder.Flush();
   if(!m_Passthrough)
     m_omx_tunnel_mixer.Flush();
@@ -627,13 +597,6 @@ bool COMXAudio::Deinitialize()
   m_Initialized = false;
   m_BytesPerSec = 0;
   m_BufferLen   = 0;
-
-  if(!m_external_clock && m_av_clock != NULL)
-  {
-    delete m_av_clock;
-    m_av_clock  = NULL;
-    m_external_clock = false;
-  }
 
   m_omx_clock = NULL;
   m_av_clock  = NULL;
@@ -981,17 +944,6 @@ bool COMXAudio::IsEOS()
   return ret;
 }
 
-
-bool COMXAudio::SetClock(OMXClock *clock)
-{
-  if(m_av_clock != NULL)
-    return false;
-
-  m_av_clock = clock;
-  m_external_clock = true;
-  return true;
-}
- 
 void COMXAudio::SetCodingType(CodecID codec)
 {
   switch(codec)

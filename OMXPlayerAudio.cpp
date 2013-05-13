@@ -427,7 +427,6 @@ bool OMXPlayerAudio::OpenDecoder()
   bool bAudioRenderOpen = false;
 
   m_decoder = new COMXAudio();
-  m_decoder->SetClock(m_av_clock);
 
   if(m_use_passthrough)
     m_passthrough = IsPassthrough(m_hints);
@@ -440,7 +439,7 @@ bool OMXPlayerAudio::OpenDecoder()
     if(m_passthrough)
       m_hw_decode = false;
     bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_pChannelMap,
-                                             m_hints, m_passthrough,
+                                             m_hints, m_av_clock, m_passthrough,
                                              m_hw_decode, m_boost_on_downmix, m_initialVolume, m_fifo_size);
   }
   else
@@ -449,7 +448,7 @@ bool OMXPlayerAudio::OpenDecoder()
 
     bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pChannelMap,
                                              downmix_channels, m_hints.samplerate, m_passthrough ? 16:32,
-                                             m_boost_on_downmix, m_passthrough, m_initialVolume, m_fifo_size);
+                                             m_boost_on_downmix, m_av_clock, m_passthrough, m_initialVolume, m_fifo_size);
   }
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);

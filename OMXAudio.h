@@ -55,8 +55,11 @@ public:
   unsigned int GetAudioRenderingLatency();
   COMXAudio();
   bool Initialize(const CStdString& device, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume, float fifo_size);
-  bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded bPassthrough = ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
+                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode,
+                           bool boostOnDownmix, long initialVolume, float fifo_size);
+  bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
+                           unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
+                           OMXClock *clock, EEncoded bPassthrough = ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
   ~COMXAudio();
   bool PortSettingsChanged();
 
@@ -103,7 +106,6 @@ private:
   unsigned int  m_BitsPerSample;
   COMXCoreComponent *m_omx_clock;
   OMXClock       *m_av_clock;
-  bool          m_external_clock;
   bool          m_setStartTime;
   int           m_SampleSize;
   bool          m_LostSync;
