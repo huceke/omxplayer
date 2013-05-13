@@ -262,7 +262,7 @@ bool COMXAudio::Initialize(const CStdString& device, enum PCMChannels *channelMa
   m_HWDecode = false;
   m_Passthrough = false;
 
-  if(bPassthrough != IAudioRenderer::ENCODED_NONE)
+  if(bPassthrough != ENCODED_NONE)
   {
     m_Passthrough = true;
     SetCodingType(hints.codec);
@@ -298,10 +298,14 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   if(!m_dllAvUtil.Load())
     return false;
 
+  m_av_clock = clock;
+  m_omx_clock = m_av_clock->GetOMXClock();
+
+
   m_Passthrough = false;
   m_fifo_size = fifo_size;
 
-  if(bPassthrough != IAudioRenderer::ENCODED_NONE)
+  if(bPassthrough != ENCODED_NONE)
     m_Passthrough = true;
 
   memset(&m_wave_header, 0x0, sizeof(m_wave_header));
