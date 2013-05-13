@@ -46,7 +46,6 @@ OMXPlayerVideo::OMXPlayerVideo()
   m_hdmi_clock_sync = false;
   m_iVideoDelay   = 0;
   m_iCurrentPts   = 0;
-  m_speed         = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
   m_max_data_size = 10 * 1024 * 1024;
@@ -130,7 +129,6 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   m_cached_size = 0;
   m_iVideoDelay = 0;
   m_hdmi_clock_sync = hdmi_clock_sync;
-  m_speed       = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
   m_DestRect    = DestRect;
@@ -179,7 +177,6 @@ bool OMXPlayerVideo::Close()
   m_stream_id     = -1;
   m_iCurrentPts   = DVD_NOPTS_VALUE;
   m_pStream       = NULL;
-  m_speed         = DVD_PLAYSPEED_NORMAL;
   m_pSubtitleCodec = NULL;
 
   return true;
@@ -468,11 +465,6 @@ bool OMXPlayerVideo::IsEOS()
   if(!m_decoder)
     return false;
   return m_packets.empty() && (!m_decoder || m_decoder->IsEOS());
-}
-
-void OMXPlayerVideo::SetSpeed(int speed)
-{
-  m_speed = speed;
 }
 
 std::string OMXPlayerVideo::GetText()

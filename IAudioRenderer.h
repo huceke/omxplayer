@@ -61,7 +61,6 @@ public:
   virtual void Mute(bool bMute) = 0;
   virtual bool SetCurrentVolume(long nVolume) = 0;
   virtual float GetCurrentAttenuation() { return m_remap.GetCurrentAttenuation(); }
-  virtual int SetPlaySpeed(int iSpeed) = 0;
   virtual void SubmitEOS() = 0;
   virtual bool IsEOS() = 0;
 

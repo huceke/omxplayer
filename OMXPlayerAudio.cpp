@@ -44,7 +44,6 @@ OMXPlayerAudio::OMXPlayerAudio()
   m_cached_size   = 0;
   m_pChannelMap   = NULL;
   m_pAudioCodec   = NULL;
-  m_speed         = DVD_PLAYSPEED_NORMAL;
   m_player_error  = true;
   m_initialVolume = 0;
   m_max_data_size = 3 * 1024 * 1024;
@@ -118,7 +117,6 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_cached_size = 0;
   m_pAudioCodec = NULL;
   m_pChannelMap = NULL;
-  m_speed       = DVD_PLAYSPEED_NORMAL;
   m_initialVolume = initialVolume;
   if (queue_size != 0.0)
     m_max_data_size = queue_size * 1024 * 1024;
@@ -170,7 +168,6 @@ bool OMXPlayerAudio::Close()
   m_stream_id     = -1;
   m_iCurrentPts   = DVD_NOPTS_VALUE;
   m_pStream       = NULL;
-  m_speed         = DVD_PLAYSPEED_NORMAL;
 
   m_dllAvUtil.Unload();
   m_dllAvCodec.Unload();
@@ -562,10 +559,5 @@ long OMXPlayerAudio::GetCurrentVolume()
   {
     return 0;
   }
-}
-
-void OMXPlayerAudio::SetSpeed(int speed)
-{
-  m_speed = speed;
 }
 

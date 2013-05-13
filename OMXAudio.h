@@ -59,7 +59,6 @@ public:
   long GetCurrentVolume() const;
   void Mute(bool bMute);
   bool SetCurrentVolume(long nVolume);
-  int SetPlaySpeed(int iSpeed);
   void SubmitEOS();
   bool IsEOS();
 
