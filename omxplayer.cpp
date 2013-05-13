@@ -1147,6 +1147,12 @@ int main(int argc, char *argv[])
       m_av_clock->OMXPause();
     }
 
+    if(!m_omx_pkt)
+      m_omx_pkt = m_omx_reader.Read();
+
+    if(m_omx_pkt)
+      m_send_eos = false;
+
     if(m_omx_reader.IsEof() && !m_omx_pkt)
     {
       // demuxer EOF, but may have not played out data yet
@@ -1169,9 +1175,6 @@ int main(int argc, char *argv[])
       }
       break;
     }
-
-    if(!m_omx_pkt)
-      m_omx_pkt = m_omx_reader.Read();
 
     if(m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {

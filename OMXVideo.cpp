@@ -1098,11 +1098,14 @@ void COMXVideo::SubmitEOS()
     CLog::Log(LOGERROR, "%s::%s - OMX_EmptyThisBuffer() failed with result(0x%x)\n", CLASSNAME, __func__, omx_err);
     return;
   }
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
 }
 
 bool COMXVideo::IsEOS()
 {
   if(!m_is_open)
     return true;
-  return m_omx_render.IsEOS();
+  bool ret = m_omx_render.IsEOS();
+  CLog::Log(LOGDEBUG, "%s::%s = %d (%d)\n", CLASSNAME, __func__, ret, m_omx_decoder.IsEOS());
+  return ret;
 }
