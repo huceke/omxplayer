@@ -49,6 +49,7 @@ public:
                            COMXStreamInfo &hints, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume, float fifo_size);
   bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
   ~COMXAudio();
+  bool PortSettingsChanged();
 
   unsigned int AddPackets(const void* data, unsigned int len);
   unsigned int AddPackets(const void* data, unsigned int len, double dts, double pts);
@@ -89,6 +90,7 @@ private:
   bool          m_Passthrough;
   bool          m_HWDecode;
   bool          m_normalize_downmix;
+  std::string   m_deviceuse;
   unsigned int  m_BytesPerSec;
   unsigned int  m_BufferLen;
   unsigned int  m_ChunkLen;
@@ -121,6 +123,7 @@ protected:
   COMXCoreTunel     m_omx_tunnel_mixer;
   COMXCoreTunel     m_omx_tunnel_decoder;
   DllAvUtil         m_dllAvUtil;
+  bool              m_settings_changed;
 };
 #endif
 
