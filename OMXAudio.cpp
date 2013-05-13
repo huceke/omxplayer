@@ -918,11 +918,6 @@ unsigned int COMXAudio::GetChunkLen()
 {
   return m_ChunkLen;
 }
-//***********************************************************************************************
-int COMXAudio::SetPlaySpeed(int iSpeed)
-{
-  return 0;
-}
 
 unsigned int COMXAudio::GetAudioRenderingLatency()
 {

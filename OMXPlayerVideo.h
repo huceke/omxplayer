@@ -79,7 +79,6 @@ protected:
   float                     m_fifo_size;
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
-  int                       m_speed;
   double                    m_iSubtitleDelay;
   COMXOverlayCodec          *m_pSubtitleCodec;
 
@@ -114,7 +113,6 @@ public:
   bool IsEOS();
   void SetDelay(double delay) { m_iVideoDelay = delay; }
   double GetDelay() { return m_iVideoDelay; }
-  void SetSpeed(int iSpeed);
   double GetSubtitleDelay()                                { return m_iSubtitleDelay; }
   void SetSubtitleDelay(double delay)                      { m_iSubtitleDelay = delay; }
   std::string GetText();
