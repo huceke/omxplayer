@@ -27,7 +27,6 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include "IAudioRenderer.h"
 #include "linux/PlatformDefs.h"
 #include "DllAvCodec.h"
 #include "DllAvUtil.h"
@@ -35,10 +34,20 @@
 #include "OMXClock.h"
 #include "OMXStreamInfo.h"
 #include "BitstreamConverter.h"
+#include "utils/PCMRemap.h"
 
-class COMXAudio : public IAudioRenderer
+class COMXAudio
 {
 public:
+  enum EEncoded {
+    ENCODED_NONE = 0,
+    ENCODED_IEC61937_AC3,
+    ENCODED_IEC61937_EAC3,
+    ENCODED_IEC61937_DTS,
+    ENCODED_IEC61937_MPEG,
+    ENCODED_IEC61937_UNKNOWN,
+  };
+
   unsigned int GetChunkLen();
   float GetDelay();
   float GetCacheTime();
@@ -47,7 +56,7 @@ public:
   COMXAudio();
   bool Initialize(const CStdString& device, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, EEncoded bPassthrough, bool bUseHWDecode, bool boostOnDownmix, long initialVolume, float fifo_size);
-  bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded bPassthrough = IAudioRenderer::ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
+  bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix, EEncoded bPassthrough = ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
   ~COMXAudio();
   bool PortSettingsChanged();
 
@@ -117,6 +126,7 @@ protected:
   COMXCoreTunel     m_omx_tunnel_decoder;
   DllAvUtil         m_dllAvUtil;
   bool              m_settings_changed;
+  CPCMRemap         m_remap;
 };
 #endif
 
