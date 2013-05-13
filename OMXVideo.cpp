@@ -75,7 +75,6 @@
 COMXVideo::COMXVideo()
 {
   m_is_open           = false;
-  m_Pause             = false;
   m_setStartTime      = true;
   m_setStartTimeText  = true;
   m_extradata         = NULL;
@@ -988,36 +987,6 @@ void COMXVideo::Reset(void)
 
   //m_setStartTime      = true;
   //m_setStartTimeText  = true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////
-bool COMXVideo::Pause()
-{
-  if(m_omx_render.GetComponent() == NULL)
-    return false;
-
-  if(m_Pause) return true;
-  m_Pause = true;
-
-  m_omx_sched.SetStateForComponent(OMX_StatePause);
-  m_omx_render.SetStateForComponent(OMX_StatePause);
-
-  return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////
-bool COMXVideo::Resume()
-{
-  if(m_omx_render.GetComponent() == NULL)
-    return false;
-
-  if(!m_Pause) return true;
-  m_Pause = false;
-
-  m_omx_sched.SetStateForComponent(OMX_StateExecuting);
-  m_omx_render.SetStateForComponent(OMX_StateExecuting);
-
-  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
