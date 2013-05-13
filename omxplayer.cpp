@@ -1057,6 +1057,8 @@ int main(int argc, char *argv[])
       
       if(m_has_subtitle)
         m_player_subtitles.Resume();
+      unsigned t = (unsigned)(startpts*1e-6);
+      printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
     }
 
     /* player got in an error state */
