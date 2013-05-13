@@ -1012,6 +1012,7 @@ void COMXAudio::SubmitEOS()
     CLog::Log(LOGERROR, "%s::%s - OMX_EmptyThisBuffer() failed with result(0x%x)\n", CLASSNAME, __func__, omx_err);
     return;
   }
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
 }
 
 bool COMXAudio::IsEOS()
@@ -1019,7 +1020,9 @@ bool COMXAudio::IsEOS()
   if(!m_Initialized || m_Pause)
     return false;
   unsigned int latency = GetAudioRenderingLatency();
-  return m_omx_render.IsEOS() && latency <= 0;
+  bool ret = m_omx_render.IsEOS() && latency <= 0;
+  CLog::Log(LOGDEBUG, "%s::%s = %d (%d,%d)\n", CLASSNAME, __func__, ret, m_omx_decoder.IsEOS(), latency);
+  return ret;
 }
 
 
