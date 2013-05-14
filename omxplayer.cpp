@@ -225,14 +225,14 @@ void SetSpeed(int iSpeed)
   if(!m_av_clock)
     return;
 
-  if(iSpeed < OMX_PLAYSPEED_PAUSE)
+  if(iSpeed < DVD_PLAYSPEED_PAUSE)
     return;
 
   m_omx_reader.SetSpeed(iSpeed);
 
-  if(m_av_clock->OMXPlaySpeed() != OMX_PLAYSPEED_PAUSE && iSpeed == OMX_PLAYSPEED_PAUSE)
+  if(m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE && iSpeed == DVD_PLAYSPEED_PAUSE)
     m_Pause = true;
-  else if(m_av_clock->OMXPlaySpeed() == OMX_PLAYSPEED_PAUSE && iSpeed != OMX_PLAYSPEED_PAUSE)
+  else if(m_av_clock->OMXPlaySpeed() == DVD_PLAYSPEED_PAUSE && iSpeed != DVD_PLAYSPEED_PAUSE)
     m_Pause = false;
 
   m_av_clock->OMXSpeed(iSpeed);
