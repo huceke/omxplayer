@@ -211,6 +211,36 @@ bool OMXClock::OMXStart(double pts, bool lock /* = true */)
   return true;
 }
 
+bool OMXClock::OMXStep(bool lock /* = true */)
+{
+  if(m_omx_clock.GetComponent() == NULL)
+    return false;
+
+  if(lock)
+    Lock();
+
+  OMX_ERRORTYPE omx_err = OMX_ErrorNone;
+  OMX_PARAM_U32TYPE param;
+  OMX_INIT_STRUCTURE(param);
+
+  param.nPortIndex = OMX_ALL;
+  param.nU32 = 1;
+
+  omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigSingleStep, &param);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "OMXClock::Error setting OMX_IndexConfigSingleStep\n");
+    if(lock)
+      UnLock();
+    return false;
+  }
+
+  if(lock)
+    UnLock();
+
+  return true;
+}
+
 bool OMXClock::OMXReset(bool lock /* = true */)
 {
   if(lock)
@@ -253,12 +283,45 @@ double OMXClock::OMXMediaTime(bool lock /* = true */)
   }
 
   pts = (double)FromOMXTime(timeStamp.nTimestamp);
-  CLog::Log(LOGINFO, "OMXClock::MediaTime %.0f %.0f\n", (double)FromOMXTime(timeStamp.nTimestamp), pts);
+  //CLog::Log(LOGINFO, "OMXClock::MediaTime %.0f %.0f\n", (double)FromOMXTime(timeStamp.nTimestamp), pts);
   if(lock)
     UnLock();
   
   return pts;
 }
+
+double OMXClock::OMXClockAdjustment(bool lock /* = true */)
+{
+  if(m_omx_clock.GetComponent() == NULL)
+    return 0;
+
+  if(lock)
+    Lock();
+
+  OMX_ERRORTYPE omx_err = OMX_ErrorNone;
+  double pts = 0;
+
+  OMX_TIME_CONFIG_TIMESTAMPTYPE timeStamp;
+  OMX_INIT_STRUCTURE(timeStamp);
+  timeStamp.nPortIndex = m_omx_clock.GetInputPort();
+
+  omx_err = m_omx_clock.GetConfig(OMX_IndexConfigClockAdjustment, &timeStamp);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "OMXClock::MediaTime error getting OMX_IndexConfigClockAdjustment\n");
+    if(lock)
+      UnLock();
+    return 0;
+  }
+
+  pts = (double)FromOMXTime(timeStamp.nTimestamp);
+  //CLog::Log(LOGINFO, "OMXClock::ClockAdjustment %.0f %.0f\n", (double)FromOMXTime(timeStamp.nTimestamp), pts);
+  if(lock)
+    UnLock();
+  
+  return pts;
+}
+
 
 // Set the media time, so calls to get media time use the updated value,
 // useful after a seek so mediatime is updated immediately (rather than waiting for first decoded packet)
