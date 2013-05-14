@@ -60,6 +60,9 @@ extern "C" {
 #include <string>
 #include <utility>
 
+// when we repeatedly seek, rather than play continuously
+#define TRICKPLAY(speed) (speed < 0 || speed > 4 * DVD_PLAYSPEED_NORMAL)
+
 typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB } FORMAT_3D_T;
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
@@ -177,6 +180,8 @@ void print_keybindings()
   printf("Key bindings :\n");
   printf("        1                  decrease speed\n");
   printf("        2                  increase speed\n");
+  printf("        <                  rewind\n");
+  printf("        >                  fast forward\n");
   printf("        z                  show info\n");
   printf("        j                  previous audio stream\n");
   printf("        k                  next audio stream\n");
@@ -197,7 +202,7 @@ void print_keybindings()
   printf("        up arrow           seek +600 seconds\n");
 }
 
-void PrintSubtitleInfo()
+static void PrintSubtitleInfo()
 {
   auto count = m_omx_reader.SubtitleStreamCount();
   size_t index = 0;
@@ -220,20 +225,18 @@ void PrintSubtitleInfo()
          m_has_subtitle ? m_player_subtitles.GetDelay() : 0);
 }
 
-void SetSpeed(int iSpeed)
+static void FlushStreams(double pts);
+
+static void SetSpeed(int iSpeed)
 {
   if(!m_av_clock)
     return;
 
-  if(iSpeed < DVD_PLAYSPEED_PAUSE)
-    return;
-
   m_omx_reader.SetSpeed(iSpeed);
 
-  if(m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE && iSpeed == DVD_PLAYSPEED_PAUSE)
-    m_Pause = true;
-  else if(m_av_clock->OMXPlaySpeed() == DVD_PLAYSPEED_PAUSE && iSpeed != DVD_PLAYSPEED_PAUSE)
-    m_Pause = false;
+  // flush when in trickplay mode
+  if (TRICKPLAY(iSpeed) || TRICKPLAY(m_av_clock->OMXPlaySpeed()))
+    FlushStreams(DVD_NOPTS_VALUE);
 
   m_av_clock->OMXSpeed(iSpeed);
 }
@@ -266,11 +269,8 @@ static float get_display_aspect_ratio(SDTV_ASPECT_T aspect)
   return display_aspect;
 }
 
-void FlushStreams(double pts)
+static void FlushStreams(double pts)
 {
-//  if(m_av_clock)
-//    m_av_clock->OMXPause();
-
   if(m_has_video)
     m_player_video.Flush();
 
@@ -288,12 +288,6 @@ void FlushStreams(double pts)
 
   if(pts != DVD_NOPTS_VALUE)
     m_av_clock->OMXMediaTime(pts);
-
-//  if(m_av_clock)
-//  {
-//    m_av_clock->OMXReset();
-//    m_av_clock->OMXResume();
-//  }
 }
 
 void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T is3d)
@@ -470,6 +464,8 @@ int main(int argc, char *argv[])
   atexit(restore_term);
 
   bool                  m_send_eos            = false;
+  bool                  m_packet_after_seek   = false;
+  bool                  m_seek_flush          = false;
   std::string           m_filename;
   double                m_incr                = 0;
   CRBP                  g_RBP;
@@ -534,8 +530,9 @@ int main(int argc, char *argv[])
   };
 
   #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
-  int playspeeds[] = {S(0), S(1/16.0), S(1/8.0), S(1/4.0), S(1/2.0), S(0.975), S(1.0), S(1.125), S(2.0), S(4.0), S(8.0), S(16.0), S(32.0)};
-  int playspeed_current = 6;
+  int playspeeds[] = {S(0), S(1/16.0), S(1/8.0), S(1/4.0), S(1/2.0), S(0.975), S(1.0), S(1.125), S(-32.0), S(-16.0), S(-8.0), S(-4), S(-2), S(-1), S(1), S(2.0), S(4.0), S(8.0), S(16.0), S(32.0)};
+  const int playspeed_slow_min = 0, playspeed_slow_max = 7, playspeed_rew_max = 8, playspeed_rew_min = 13, playspeed_normal = 14, playspeed_ff_min = 15, playspeed_ff_max = 19;
+  int playspeed_current = playspeed_normal;
   int c;
   std::string mode;
   while ((c = getopt_long(argc, argv, "wihkn:l:o:cslpd3:yzt:rg", longopts, NULL)) != -1)
@@ -877,14 +874,52 @@ int main(int argc, char *argv[])
         vc_tv_show_info(m_tv_show_info);
         break;
       case '1':
-        playspeed_current = std::max(playspeed_current-1, 0);
+        if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
+          playspeed_current = playspeed_slow_max-1;
+        playspeed_current = std::max(playspeed_current-1, playspeed_slow_min);
         SetSpeed(playspeeds[playspeed_current]);
         printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+        m_Pause = false;
         break;
       case '2':
-        playspeed_current = std::min(playspeed_current+1, (int)(sizeof playspeeds/sizeof *playspeeds)-1);
+        if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
+          playspeed_current = playspeed_slow_max-1;
+        playspeed_current = std::min(playspeed_current+1, playspeed_slow_max);
         SetSpeed(playspeeds[playspeed_current]);
         printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+        m_Pause = false;
+        break;
+      case ',': case '<':
+        if (playspeed_current >= playspeed_ff_min && playspeed_current <= playspeed_ff_max)
+        {
+          playspeed_current = playspeed_normal;
+          m_seek_flush = true;
+        }
+        else if (playspeed_current < playspeed_rew_max || playspeed_current > playspeed_rew_min)
+          playspeed_current = playspeed_rew_min;
+        else
+          playspeed_current = std::max(playspeed_current-1, playspeed_rew_max);
+        SetSpeed(playspeeds[playspeed_current]);
+        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+        m_Pause = false;
+        break;
+      case '.': case '>':
+        if (playspeed_current >= playspeed_rew_max && playspeed_current <= playspeed_rew_min)
+        {
+          playspeed_current = playspeed_normal;
+          m_seek_flush = true;
+        }
+        else if (playspeed_current < playspeed_ff_min || playspeed_current > playspeed_ff_max)
+          playspeed_current = playspeed_ff_min;
+        else
+          playspeed_current = std::min(playspeed_current+1, playspeed_ff_max);
+        SetSpeed(playspeeds[playspeed_current]);
+        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+        m_Pause = false;
+        break;
+      case 'v':
+        m_av_clock->OMXStep(1);
+        printf("Step\n");
         break;
       case 'j':
         if(m_has_audio)
@@ -1000,9 +1035,15 @@ int main(int argc, char *argv[])
       case 0x5b42: // key down
         if(m_omx_reader.CanSeek()) m_incr = -600.0;
         break;
-      case ' ':
-      case 'p':
+      case ' ': case 'p':
         m_Pause = !m_Pause;
+        if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE)
+        {
+          printf("resume\n");
+          playspeed_current = playspeed_normal;
+          SetSpeed(playspeeds[playspeed_current]);
+          m_seek_flush = true;
+        }
         if(m_Pause)
         {
           if(m_has_subtitle)
@@ -1025,7 +1066,8 @@ int main(int argc, char *argv[])
       default:
         break;
     }
-    if(m_incr != 0)
+
+    if(m_seek_flush || m_incr != 0)
     {
       double seek_pos     = 0;
       double pts          = 0;
@@ -1053,12 +1095,35 @@ int main(int argc, char *argv[])
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
-      m_av_clock->OMXMediaTime(0, true);
+      m_av_clock->OMXMediaTime(startpts, true);
       
       if(m_has_subtitle)
         m_player_subtitles.Resume();
       unsigned t = (unsigned)(startpts*1e-6);
       printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+      m_packet_after_seek = false;
+      m_seek_flush = false;
+    }
+    else if(m_packet_after_seek && TRICKPLAY(m_av_clock->OMXPlaySpeed()))
+    {
+      double seek_pos     = 0;
+      double pts          = 0;
+      static int faket = 20*60*1e6;
+
+      pts = m_av_clock->OMXMediaTime();
+      seek_pos = (pts / DVD_TIME_BASE);
+
+      seek_pos *= 1000.0;
+
+      if(m_omx_reader.SeekTime((int)seek_pos, m_av_clock->OMXPlaySpeed() < 0, &startpts))
+        ; //FlushStreams(DVD_NOPTS_VALUE);
+
+      CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
+
+      //unsigned t = (unsigned)(startpts*1e-6);
+      unsigned t = (unsigned)(pts*1e-6);
+      printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+      m_packet_after_seek = false;
     }
 
     /* player got in an error state */
@@ -1134,15 +1199,15 @@ int main(int argc, char *argv[])
       audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo, video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo, 2.0f * m_threshold, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high,
       m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
 
-    if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || (m_av_clock->OMXIsPaused() && audio_fifo_high && video_fifo_high)))
+    if(!m_Pause && m_av_clock->OMXIsPaused() && (m_omx_reader.IsEof() || m_omx_pkt || TRICKPLAY(m_av_clock->OMXPlaySpeed()) || (audio_fifo_high && video_fifo_high)))
     {
       CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
       m_av_clock->OMXResume();
     }
     else if (!m_av_clock->OMXIsPaused() && (m_Pause || (audio_fifo_low || video_fifo_low)))
     {
-      if (!m_Pause)
-        m_threshold = std::min(2.0f*m_threshold, 8.0f);
+      //if (!m_Pause)
+      //  m_threshold = std::min(2.0f*m_threshold, 8.0f);
       CLog::Log(LOGDEBUG, "Pause %.2f,%.2f (%d,%d,%d,%d) %.2f\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_threshold);
       m_av_clock->OMXPause();
     }
@@ -1178,19 +1243,23 @@ int main(int argc, char *argv[])
 
     if(m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index))
     {
+      if (TRICKPLAY(m_av_clock->OMXPlaySpeed()))
+      {
+         m_packet_after_seek = true;
+      }
       if(m_player_video.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
       else
         OMXClock::OMXSleep(10);
     }
-    else if(m_has_audio && m_omx_pkt && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO)
+    else if(m_has_audio && m_omx_pkt && !TRICKPLAY(m_av_clock->OMXPlaySpeed()) && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO)
     {
       if(m_player_audio.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
       else
         OMXClock::OMXSleep(10);
     }
-    else if(m_has_subtitle && m_omx_pkt &&
+    else if(m_has_subtitle && m_omx_pkt && !TRICKPLAY(m_av_clock->OMXPlaySpeed()) &&
             m_omx_pkt->codec_type == AVMEDIA_TYPE_SUBTITLE)
     {
       auto result = m_player_subtitles.AddPacket(m_omx_pkt,
