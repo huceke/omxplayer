@@ -44,9 +44,6 @@ using namespace std;
 
 #define MAX_OMX_STREAMS        100
 
-#define OMX_PLAYSPEED_PAUSE  0
-#define OMX_PLAYSPEED_NORMAL 1
-
 #ifndef FFMPEG_FILE_BUFFER_SIZE
 #define FFMPEG_FILE_BUFFER_SIZE   32768 // default reading size for ffmpeg
 #endif
