@@ -1036,7 +1036,7 @@ int main(int argc, char *argv[])
 
       pts = m_av_clock->GetPTS();
 
-      seek_pos = (pts / DVD_TIME_BASE) + m_incr;
+      seek_pos =  (m_av_clock->OMXMediaTime() * 1e-6) + m_incr;
       seek_flags = m_incr < 0.0f ? AVSEEK_FLAG_BACKWARD : 0;
 
       seek_pos *= 1000.0f;
