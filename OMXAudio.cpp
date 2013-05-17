@@ -457,7 +457,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
     return false;
   }
 
-  port_param.nBufferCountActual = std::max(1U, m_BufferLen / port_param.nBufferSize);
+  port_param.nBufferCountActual = std::max(1, (int)(m_BufferLen / port_param.nBufferSize));
 
   omx_err = m_omx_decoder.SetParameter(OMX_IndexParamPortDefinition, &port_param);
   if(omx_err != OMX_ErrorNone)
