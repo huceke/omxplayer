@@ -918,7 +918,7 @@ int main(int argc, char *argv[])
         m_Pause = false;
         break;
       case 'v':
-        m_av_clock->OMXStep(1);
+        m_av_clock->OMXStep();
         printf("Step\n");
         break;
       case 'j':
@@ -1095,7 +1095,7 @@ int main(int argc, char *argv[])
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
-      m_av_clock->OMXMediaTime(startpts, true);
+      m_av_clock->OMXMediaTime(startpts);
       
       if(m_has_subtitle)
         m_player_subtitles.Resume();
@@ -1147,7 +1147,7 @@ int main(int argc, char *argv[])
         stamp = video_pts;
       if (old_stamp != stamp)
       {
-        m_av_clock->OMXMediaTime(stamp, true);
+        m_av_clock->OMXMediaTime(stamp);
         stamp = m_av_clock->OMXMediaTime();
       }
     }
@@ -1290,6 +1290,7 @@ do_exit:
 
   m_av_clock->OMXStop();
   m_av_clock->OMXStateIdle();
+  m_av_clock->OMXStateExecute();
 
   m_player_subtitles.Close();
   m_player_video.Close();
@@ -1303,7 +1304,7 @@ do_exit:
 
   m_omx_reader.Close();
 
-  m_av_clock->Deinitialize();
+  m_av_clock->OMXDeinitialize();
   if (m_av_clock)
     delete m_av_clock;
 
