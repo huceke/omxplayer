@@ -39,20 +39,6 @@
 #endif
 #define CLASSNAME "COMXVideo"
 
-#if 0
-// TODO: These are Nvidia Tegra2 dependent, need to dynamiclly find the
-// right codec matched to video format.
-#define OMX_H264BASE_DECODER    "OMX.Nvidia.h264.decode"
-// OMX.Nvidia.h264ext.decode segfaults, not sure why.
-//#define OMX_H264MAIN_DECODER  "OMX.Nvidia.h264ext.decode"
-#define OMX_H264MAIN_DECODER    "OMX.Nvidia.h264.decode"
-#define OMX_H264HIGH_DECODER    "OMX.Nvidia.h264ext.decode"
-#define OMX_MPEG4_DECODER       "OMX.Nvidia.mp4.decode"
-#define OMX_MPEG4EXT_DECODER    "OMX.Nvidia.mp4ext.decode"
-#define OMX_MPEG2V_DECODER      "OMX.Nvidia.mpeg2v.decode"
-#define OMX_VC1_DECODER         "OMX.Nvidia.vc1.decode"
-#endif
-
 #define OMX_VIDEO_DECODER       "OMX.broadcom.video_decode"
 #define OMX_H264BASE_DECODER    OMX_VIDEO_DECODER
 #define OMX_H264MAIN_DECODER    OMX_VIDEO_DECODER
