@@ -84,7 +84,7 @@ public:
   static bool HWDecode(CodecID codec);
 
   void PrintChannels(OMX_AUDIO_CHANNELTYPE eChannelMapping[]);
-  void PrintPCM(OMX_AUDIO_PARAM_PCMMODETYPE *pcm);
+  void PrintPCM(OMX_AUDIO_PARAM_PCMMODETYPE *pcm, std::string direction);
   void PrintDDP(OMX_AUDIO_PARAM_DDPTYPE *ddparm);
   void PrintDTS(OMX_AUDIO_PARAM_DTSTYPE *dtsparam);
   unsigned int SyncDTS(BYTE* pData, unsigned int iSize);

@@ -141,7 +141,6 @@ COMXAudio::~COMXAudio()
 bool COMXAudio::PortSettingsChanged()
 {
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
-  std::string componentName = "";
 
   if (m_settings_changed)
   {
@@ -152,13 +151,11 @@ bool COMXAudio::PortSettingsChanged()
 
   if(!m_Passthrough)
   {
-    componentName = "OMX.broadcom.audio_mixer";
-    if(!m_omx_mixer.Initialize(componentName, OMX_IndexParamAudioInit))
+    if(!m_omx_mixer.Initialize("OMX.broadcom.audio_mixer", OMX_IndexParamAudioInit))
       return false;
   }
 
-  componentName = "OMX.broadcom.audio_render";
-  if(!m_omx_render.Initialize(componentName, OMX_IndexParamAudioInit))
+  if(!m_omx_render.Initialize("OMX.broadcom.audio_render", OMX_IndexParamAudioInit))
     return false;
 
   m_omx_tunnel_clock.Initialize(m_omx_clock, m_omx_clock->GetInputPort(), &m_omx_render, m_omx_render.GetInputPort()+1);
@@ -401,14 +398,12 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_pcm_input.nChannels             = m_InputChannels;
   m_pcm_input.nSamplingRate         = uiSamplesPerSec;
 
-  PrintPCM(&m_pcm_input);
-  PrintPCM(&m_pcm_output);
+  PrintPCM(&m_pcm_input, "in");
+  PrintPCM(&m_pcm_output, "out");
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-  std::string componentName = "";
 
-  componentName = "OMX.broadcom.audio_decode";
-  if(!m_omx_decoder.Initialize(componentName, OMX_IndexParamAudioInit))
+  if(!m_omx_decoder.Initialize("OMX.broadcom.audio_decode", OMX_IndexParamAudioInit))
     return false;
 
   if(m_Passthrough)
@@ -589,10 +584,10 @@ bool COMXAudio::Deinitialize()
 
   m_omx_decoder.FlushInput();
 
-  m_omx_render.Deinitialize();
+  m_omx_render.Deinitialize(true);
   if(!m_Passthrough)
-    m_omx_mixer.Deinitialize();
-  m_omx_decoder.Deinitialize();
+    m_omx_mixer.Deinitialize(true);
+  m_omx_decoder.Deinitialize(true);
 
   m_Initialized = false;
   m_BytesPerSec = 0;
@@ -1088,8 +1083,9 @@ void COMXAudio::PrintChannels(OMX_AUDIO_CHANNELTYPE eChannelMapping[])
   }
 }
 
-void COMXAudio::PrintPCM(OMX_AUDIO_PARAM_PCMMODETYPE *pcm)
+void COMXAudio::PrintPCM(OMX_AUDIO_PARAM_PCMMODETYPE *pcm, std::string direction)
 {
+  CLog::Log(LOGDEBUG, "pcm->direction      : %s\n", direction.c_str());
   CLog::Log(LOGDEBUG, "pcm->nPortIndex     : %d\n", (int)pcm->nPortIndex);
   CLog::Log(LOGDEBUG, "pcm->eNumData       : %d\n", pcm->eNumData);
   CLog::Log(LOGDEBUG, "pcm->eEndian        : %d\n", pcm->eEndian);
@@ -1231,7 +1227,6 @@ unsigned int COMXAudio::SyncDTS(BYTE* pData, unsigned int iSize)
 unsigned int COMXAudio::SyncAC3(BYTE* pData, unsigned int iSize)
 {
   unsigned int skip = 0;
-  //unsigned int fSize = 0;
 
   for(skip = 0; iSize - skip > 6; ++skip, ++pData)
   {
@@ -1260,7 +1255,6 @@ unsigned int COMXAudio::SyncAC3(BYTE* pData, unsigned int iSize)
       case 2: framesize = bitrate * 4; break;
     }
 
-    //fSize = framesize * 2;
     m_SampleRate = AC3FSCod[fscod];
 
     /* dont do extensive testing if we have not lost sync */
