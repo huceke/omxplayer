@@ -238,7 +238,7 @@ static void SetSpeed(int iSpeed)
   if (TRICKPLAY(iSpeed) || TRICKPLAY(m_av_clock->OMXPlaySpeed()))
     FlushStreams(DVD_NOPTS_VALUE);
 
-  m_av_clock->OMXSpeed(iSpeed);
+  m_av_clock->OMXSetSpeed(iSpeed);
 }
 
 static float get_display_aspect_ratio(HDMI_ASPECT_T aspect)
@@ -1108,7 +1108,6 @@ int main(int argc, char *argv[])
     {
       double seek_pos     = 0;
       double pts          = 0;
-      static int faket = 20*60*1e6;
 
       pts = m_av_clock->OMXMediaTime();
       seek_pos = (pts / DVD_TIME_BASE);
