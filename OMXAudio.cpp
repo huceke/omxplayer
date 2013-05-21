@@ -194,6 +194,8 @@ bool COMXAudio::PortSettingsChanged()
             0, 0, 0, 0);
   }
 
+  SetCurrentVolume(m_CurrentVolume);
+
   omx_err = m_omx_tunnel_decoder.Establish(false);
   if(omx_err != OMX_ErrorNone)
   {
@@ -560,8 +562,6 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_Initialized   = true;
   m_setStartTime  = true;
   m_settings_changed = false;
-
-  SetCurrentVolume(m_CurrentVolume);
 
   CLog::Log(LOGDEBUG, "COMXAudio::Initialize Ouput bps %d samplerate %d channels %d device %s buffer size %d bytes per second %d passthrough %d hwdecode %d", 
       (int)m_pcm_output.nBitPerSample, (int)m_pcm_output.nSamplingRate, (int)m_pcm_output.nChannels, m_deviceuse.c_str(), m_BufferLen, m_BytesPerSec, m_Passthrough, m_HWDecode);
