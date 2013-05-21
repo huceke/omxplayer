@@ -210,7 +210,6 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
     printf("C : %d %d %d %d %d\n", m_hints.codec, m_hints.channels, m_hints.samplerate, m_hints.bitrate, m_hints.bitspersample);
     printf("N : %d %d %d %d %d\n", pkt->hints.codec, channels, pkt->hints.samplerate, pkt->hints.bitrate, pkt->hints.bitspersample);
 
-    m_av_clock->OMXPause();
 
     CloseDecoder();
     CloseAudioCodec();
@@ -224,11 +223,6 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
     m_player_error = OpenDecoder();
     if(!m_player_error)
       return false;
-
-    m_av_clock->OMXStateExecute();
-    m_av_clock->OMXReset();
-    m_av_clock->OMXResume();
-
   }
 
   if(!((int)m_decoder->GetSpace() > pkt->size))
