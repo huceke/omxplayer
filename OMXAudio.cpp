@@ -370,9 +370,10 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_SampleRate    = uiSamplesPerSec;
   m_BitsPerSample = uiBitsPerSample;
   m_BytesPerSec   = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
-  m_BufferLen     = uiSamplesPerSec * (m_pcm_output.nBitPerSample >> 3) * (m_InputChannels > 4 ? 8:m_InputChannels);
-  m_BufferLen     *= m_fifo_size;
-  m_ChunkLen      = 4096 * (uiBitsPerSample >> 3) * m_InputChannels;
+  m_BufferLen     = m_BytesPerSec*m_fifo_size;
+  // should be big enough that common formats (e.g. 6 channel DTS) fit in a single packet.
+  // we don't mind less common formats being split (e.g. ape/wma output large frames)
+  m_ChunkLen      = 32*1024;
 
   m_wave_header.Samples.wValidBitsPerSample = uiBitsPerSample;
   m_wave_header.Samples.wSamplesPerBlock    = 0;
@@ -765,14 +766,16 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
       return len;
   }
 
-  unsigned int demuxer_bytes = (unsigned int)len;
+  unsigned pitch = (m_Passthrough || m_HWDecode) ? 1:(m_BitsPerSample >> 3) * m_InputChannels;
+  unsigned int demuxer_samples = len / pitch;
+  unsigned int demuxer_samples_sent = 0;
   uint8_t *demuxer_content = (uint8_t *)data;
 
   OMX_ERRORTYPE omx_err;
 
   OMX_BUFFERHEADERTYPE *omx_buffer = NULL;
 
-  while(demuxer_bytes)
+  while(demuxer_samples_sent < demuxer_samples)
   {
     // 200ms timeout
     omx_buffer = m_omx_decoder.GetInputBuffer(200);
@@ -787,8 +790,31 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
     omx_buffer->nOffset = 0;
     omx_buffer->nFlags  = 0;
 
-    omx_buffer->nFilledLen = (demuxer_bytes > omx_buffer->nAllocLen) ? omx_buffer->nAllocLen : demuxer_bytes;
-    memcpy(omx_buffer->pBuffer, demuxer_content, omx_buffer->nFilledLen);
+    unsigned int remaining = demuxer_samples-demuxer_samples_sent;
+    unsigned int samples_space = omx_buffer->nAllocLen/pitch;
+    unsigned int samples = std::min(remaining, samples_space);
+
+    omx_buffer->nFilledLen = samples * pitch;
+
+    if (samples < demuxer_samples && m_BitsPerSample==32 && !(m_Passthrough || m_HWDecode))
+    {
+       uint8_t *dst = omx_buffer->pBuffer;
+       uint8_t *src = demuxer_content + demuxer_samples_sent * (m_BitsPerSample >> 3);
+       // we need to extract samples from an audio plane
+       for (int i=0; i<m_InputChannels; i++)
+       {
+         memcpy(dst, src, omx_buffer->nFilledLen / m_InputChannels);
+         dst += omx_buffer->nFilledLen / m_InputChannels;
+         src += demuxer_samples * (m_BitsPerSample >> 3);
+       }
+       assert(dst <= omx_buffer->pBuffer + m_ChunkLen);
+    }
+    else
+    {
+       uint8_t *dst = omx_buffer->pBuffer;
+       uint8_t *src = demuxer_content + demuxer_samples_sent * pitch;
+       memcpy(dst, src, omx_buffer->nFilledLen);
+    }
 
     /*
     if (m_SampleSize > 0 && pts != DVD_NOPTS_VALUE && !(omx_buffer->nFlags & OMX_BUFFERFLAG_TIME_UNKNOWN) && !m_Passthrough && !m_HWDecode)
@@ -814,10 +840,9 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
 
     omx_buffer->nTimeStamp = ToOMXTime(val);
 
-    demuxer_bytes -= omx_buffer->nFilledLen;
-    demuxer_content += omx_buffer->nFilledLen;
+    demuxer_samples_sent += samples;
 
-    if(demuxer_bytes == 0)
+    if(demuxer_samples_sent == demuxer_samples)
       omx_buffer->nFlags |= OMX_BUFFERFLAG_ENDOFFRAME;
 
     int nRetry = 0;
