@@ -43,7 +43,7 @@ public:
   int GetChannels();
   enum PCMChannels *GetChannelMap();
   int GetSampleRate();
-  static int GetBitsPerSample();
+  int GetBitsPerSample();
   static const char* GetName() { return "FFmpeg"; }
   int GetBufferSize() { return m_iBuffered; }
   int GetBitRate();
@@ -52,6 +52,7 @@ protected:
   AVCodecContext* m_pCodecContext;
   SwrContext*     m_pConvert;
   enum AVSampleFormat m_iSampleFormat;
+  enum AVSampleFormat m_desiredSampleFormat;
   enum PCMChannels m_channelMap[PCM_MAX_CH + 1];
 
   AVFrame* m_pFrame1;

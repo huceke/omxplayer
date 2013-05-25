@@ -441,7 +441,7 @@ bool OMXPlayerAudio::OpenDecoder()
     unsigned int downmix_channels = m_hints.channels;
 
     bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pChannelMap,
-                                             downmix_channels, m_hints.samplerate, m_passthrough ? 16:32,
+                                             downmix_channels, m_hints.samplerate, m_pAudioCodec->GetBitsPerSample(),
                                              m_boost_on_downmix, m_av_clock, m_passthrough, m_initialVolume, m_fifo_size);
   }
 
