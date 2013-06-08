@@ -1282,6 +1282,12 @@ do_exit:
   if (m_stats)
     printf("\n");
 
+  if (m_stop)
+  {
+    unsigned t = (unsigned)(m_av_clock->OMXMediaTime()*1e-6);
+    printf("Stopped at: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+  }
+
   if(m_has_video && m_refresh && tv_state.display.hdmi.group && tv_state.display.hdmi.mode)
   {
     m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)tv_state.display.hdmi.group, tv_state.display.hdmi.mode);
