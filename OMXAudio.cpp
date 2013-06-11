@@ -169,6 +169,14 @@ bool COMXAudio::PortSettingsChanged()
 
   m_omx_render.ResetEos();
 
+  OMX_CONFIG_BOOLEANTYPE configBool;
+  OMX_INIT_STRUCTURE(configBool);
+  configBool.bEnabled = OMX_FALSE;
+
+  omx_err = m_omx_render.SetConfig(OMX_IndexConfigBrcmClockReferenceSource, &configBool);
+  if (omx_err != OMX_ErrorNone)
+     return false;
+
   OMX_CONFIG_BRCMAUDIODESTINATIONTYPE audioDest;
   OMX_INIT_STRUCTURE(audioDest);
   strncpy((char *)audioDest.sName, m_deviceuse.c_str(), strlen(m_deviceuse.c_str()));
