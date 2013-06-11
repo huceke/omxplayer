@@ -173,6 +173,7 @@ void print_usage()
   printf("              --video_fifo  n           Size of video output fifo in MB\n");
   printf("              --audio_queue n           Size of audio input queue in MB\n");
   printf("              --video_queue n           Size of video input queue in MB\n");
+  printf("         -b / --threshold   n           Amount of buffered data required to come out of buffering in seconds\n");
 }
 
 void print_keybindings()
@@ -487,6 +488,7 @@ int main(int argc, char *argv[])
   float video_fifo_size = 0.0;
   float audio_queue_size = 0.0;
   float video_queue_size = 0.0;
+  float m_threshold      = 0.1f; // amount of audio/video required to come out of buffering
   TV_DISPLAY_STATE_T   tv_state;
 
   const int font_opt        = 0x100;
@@ -532,6 +534,7 @@ int main(int argc, char *argv[])
     { "video_fifo",   required_argument,  NULL,          video_fifo_opt },
     { "audio_queue",  required_argument,  NULL,          audio_queue_opt },
     { "video_queue",  required_argument,  NULL,          video_queue_opt },
+    { "threshold",    required_argument,  NULL,          'b' },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { 0, 0, 0, 0 }
   };
@@ -542,7 +545,7 @@ int main(int argc, char *argv[])
   int playspeed_current = playspeed_normal;
   int c;
   std::string mode;
-  while ((c = getopt_long(argc, argv, "wihkn:l:o:cslpd3:yzt:rg", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wihkn:l:o:cslpd3:yzt:rgb:", longopts, NULL)) != -1)
   {
     switch (c) 
     {
@@ -654,6 +657,9 @@ int main(int argc, char *argv[])
       case video_queue_opt:
 	video_queue_size = atof(optarg);
         break;
+      case 'b':
+	m_threshold = atof(optarg);
+        break;
       case 0:
         break;
       case 'h':
@@ -723,8 +729,6 @@ int main(int argc, char *argv[])
   } else {
     CLog::SetLogLevel(LOG_LEVEL_NONE);
   }
-
-  float m_threshold = 0.1f; //std::min(0.1f, audio_fifo_size * 0.1f);
 
   g_RBP.Initialize();
   g_OMX.Initialize();
@@ -1215,8 +1219,6 @@ int main(int argc, char *argv[])
     }
     else if (!m_av_clock->OMXIsPaused() && (m_Pause || (audio_fifo_low || video_fifo_low)))
     {
-      //if (!m_Pause)
-      //  m_threshold = std::min(2.0f*m_threshold, 8.0f);
       CLog::Log(LOGDEBUG, "Pause %.2f,%.2f (%d,%d,%d,%d) %.2f\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_threshold);
       m_av_clock->OMXPause();
     }
