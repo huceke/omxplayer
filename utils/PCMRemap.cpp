@@ -453,9 +453,6 @@ enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChann
   if (channelMap)
     memcpy(m_inMap, channelMap, sizeof(enum PCMChannels) * channels);
 
-  /* fix me later */
-  assert(sampleSize == sizeof(float));
-
   /* get the audio layout, and count the channels in it */
   m_channelLayout  = PCM_LAYOUT_2_0;
   if (m_channelLayout >= PCM_MAX_LAYOUT) m_channelLayout = PCM_LAYOUT_2_0;
