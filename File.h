@@ -78,6 +78,7 @@ private:
   unsigned int m_flags;
   FILE  *m_pFile;
   int64_t m_iLength;
+  bool m_bPipe;
 };
 
 };

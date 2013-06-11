@@ -41,12 +41,13 @@ CFile::CFile()
   m_pFile = NULL;
   m_flags = 0;
   m_iLength = 0;
+  m_bPipe = false;
 }
 
 //*********************************************************************************************
 CFile::~CFile()
 {
-  if (m_pFile)
+  if(m_pFile && !m_bPipe)
     fclose(m_pFile);
 }
 
@@ -54,7 +55,14 @@ CFile::~CFile()
 bool CFile::Open(const CStdString& strFileName, unsigned int flags)
 {
   m_flags = flags;
-    
+
+  if (strFileName.compare(0, 5, "pipe:") == 0)
+  {
+    m_bPipe = true;
+    m_pFile = stdin;
+    m_iLength = 0;
+    return true;
+  }
   m_pFile = fopen64(strFileName.c_str(), "r");
   if(!m_pFile)
     return false;
@@ -73,7 +81,12 @@ bool CFile::OpenForWrite(const CStdString& strFileName, bool bOverWrite)
 
 bool CFile::Exists(const CStdString& strFileName, bool bUseCache /* = true */)
 {
-  FILE *fp = fopen64(strFileName.c_str(), "r");
+  FILE *fp;
+
+  if (strFileName.compare(0, 5, "pipe:") == 0)
+    return true;
+
+  fp = fopen64(strFileName.c_str(), "r");
 
   if(!fp)
     return false;
@@ -98,7 +111,7 @@ unsigned int CFile::Read(void *lpBuf, int64_t uiBufSize)
 //*********************************************************************************************
 void CFile::Close()
 {
-  if(m_pFile)
+  if(m_pFile && !m_bPipe)
     fclose(m_pFile);
   m_pFile = NULL;
 }
@@ -137,6 +150,9 @@ int CFile::IoControl(EIoControl request, void* param)
 {
   if(request == IOCTRL_SEEK_POSSIBLE && m_pFile)
   {
+    if (m_bPipe)
+      return false;
+
     struct stat st;
     if (fstat(fileno(m_pFile), &st) == 0)
     {
@@ -151,6 +167,9 @@ bool CFile::IsEOF()
 {
   if (!m_pFile)
     return -1;
+
+  if (m_bPipe)
+    return false;
 
   return feof(m_pFile) != 0;
 }

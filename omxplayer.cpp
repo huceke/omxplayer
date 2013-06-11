@@ -436,6 +436,13 @@ bool IsURL(const std::string& str)
   return true;
 }
 
+bool IsPipe(const std::string& str)
+{
+  if (str.compare(0, 5, "pipe:") == 0)
+    return true;
+  return false;
+}
+
 int main(int argc, char *argv[])
 {
   signal(SIGSEGV, sig_handler);
@@ -680,7 +687,7 @@ int main(int argc, char *argv[])
 
   bool filename_is_URL = IsURL(m_filename);
 
-  if(!filename_is_URL && !Exists(m_filename))
+  if(!filename_is_URL && !IsPipe(m_filename) && !Exists(m_filename))
   {
     PrintFileNotFound(m_filename);
     return 0;
@@ -863,8 +870,11 @@ int main(int argc, char *argv[])
 
     if(g_abort)
       goto do_exit;
-    
-    while((ch[chnum] = getchar()) != EOF) chnum++;
+    if (IsPipe(m_filename))
+      ch[0] = EOF;
+    else
+      while((ch[chnum] = getchar()) != EOF) chnum++;
+
     if (chnum > 1) ch[0] = ch[chnum - 1] | (ch[chnum - 2] << 8);
 
     switch(ch[0])
