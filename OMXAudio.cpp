@@ -167,6 +167,13 @@ bool COMXAudio::PortSettingsChanged()
     return false;
   }
 
+  omx_err = m_omx_clock->SetStateForComponent(OMX_StateExecuting);
+  if (omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "COMXAudio::Initialize m_omx_clock.SetStateForComponent\n");
+    return false;
+  }
+
   m_omx_render.ResetEos();
 
   OMX_CONFIG_BOOLEANTYPE configBool;
