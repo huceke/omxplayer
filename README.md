@@ -1,3 +1,8 @@
+
+This tree is no longer under active delevopment. Updates will occur here:
+https://github.com/popcornmix/omxplayer
+
+
 OMXPlayer
 =========
 
