@@ -377,7 +377,8 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
 
   m_SampleRate    = uiSamplesPerSec;
   m_BitsPerSample = uiBitsPerSample;
-  m_BytesPerSec   = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
+  // the buffer is 16-bit integer and channels are rounded up
+  m_BytesPerSec   = uiSamplesPerSec * (16 >> 3) * (m_InputChannels > 4 ? 8 : m_InputChannels);
   m_BufferLen     = m_BytesPerSec*m_fifo_size;
   // should be big enough that common formats (e.g. 6 channel DTS) fit in a single packet.
   // we don't mind less common formats being split (e.g. ape/wma output large frames)
@@ -390,7 +391,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   // Custom format interpreted by GPU as WAVE_FORMAT_IEEE_FLOAT_PLANAR
   m_wave_header.Format.wFormatTag           = uiBitsPerSample == 32 ? 0x8000 : WAVE_FORMAT_PCM;
   m_wave_header.Format.nSamplesPerSec       = uiSamplesPerSec;
-  m_wave_header.Format.nAvgBytesPerSec      = m_BytesPerSec;
+  m_wave_header.Format.nAvgBytesPerSec      = uiSamplesPerSec * (uiBitsPerSample >> 3) * m_InputChannels;
   m_wave_header.Format.wBitsPerSample       = uiBitsPerSample;
   m_wave_header.Samples.wValidBitsPerSample = uiBitsPerSample;
   m_wave_header.Format.cbSize               = 0;
