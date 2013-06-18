@@ -810,7 +810,7 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
        uint8_t *dst = omx_buffer->pBuffer;
        uint8_t *src = demuxer_content + demuxer_samples_sent * (m_BitsPerSample >> 3);
        // we need to extract samples from an audio plane
-       for (int i=0; i<m_InputChannels; i++)
+       for (int i=0; i<(int)m_InputChannels; i++)
        {
          memcpy(dst, src, omx_buffer->nFilledLen / m_InputChannels);
          dst += omx_buffer->nFilledLen / m_InputChannels;
