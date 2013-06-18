@@ -138,10 +138,9 @@ bool COMXVideo::PortSettingsChanged()
   std::string componentName = "";
   float par = m_pixel_aspect;
 
-  SetVideoRect(m_src_rect, m_dst_rect);
-
   if (m_settings_changed)
   {
+    SetVideoRect(m_src_rect, m_dst_rect);
     m_omx_decoder.DisablePort(m_omx_decoder.GetOutputPort(), true);
     m_omx_decoder.EnablePort(m_omx_decoder.GetOutputPort(), true);
     return true;
@@ -185,6 +184,9 @@ bool COMXVideo::PortSettingsChanged()
     if(!m_omx_image_fx.Initialize(componentName, OMX_IndexParamImageInit))
       return false;
   }
+
+  m_settings_changed = true;
+  SetVideoRect(m_src_rect, m_dst_rect);
 
   if(m_hdmi_clock_sync)
   {
@@ -311,7 +313,6 @@ bool COMXVideo::PortSettingsChanged()
     return false;
   }
 
-  m_settings_changed = true;
   return true;
 }
 
@@ -738,6 +739,7 @@ void COMXVideo::Close()
   m_first_text        = true;
   m_setStartTime      = true;
   m_setStartTimeText  = true;
+  m_settings_changed  = false;
 }
 
 void COMXVideo::SetDropState(bool bDrop)
@@ -978,42 +980,26 @@ void COMXVideo::Reset(void)
 ///////////////////////////////////////////////////////////////////////////////////////////
 void COMXVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
 {
-  float sx1 = SrcRect.x1, sy1 = SrcRect.y1, sx2 = SrcRect.x2, sy2 = SrcRect.y2;
-  float dx1 = DestRect.x1, dy1 = DestRect.y1, dx2 = DestRect.x2, dy2 = DestRect.y2;
-  float sw = SrcRect.Width() / DestRect.Width();
-  float sh = SrcRect.Height() / DestRect.Height();
-
-  if (dx2 <= dx1 || dy2 <= dy1)
+  if (!m_settings_changed || DestRect.x2 <= DestRect.x1 || DestRect.y2 <= DestRect.y1)
     return;
 
-  // doesn't like negative coordinates on dest_rect. So adjust by increasing src_rect
-  if (dx1 < 0.0f) {
-    sx1 -= dx1 * sw;
-    dx1 -= dx1;
-  }
-  if (dy1 < 0.0f) {
-    sy1 -= dy1 * sh;
-    dy1 -= dy1;
-  }
-
   OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
+
   OMX_INIT_STRUCTURE(configDisplay);
   configDisplay.nPortIndex = m_omx_render.GetInputPort();
-
   configDisplay.fullscreen = OMX_FALSE;
   configDisplay.noaspect   = OMX_TRUE;
 
-  configDisplay.set        = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_DEST_RECT|OMX_DISPLAY_SET_SRC_RECT|OMX_DISPLAY_SET_FULLSCREEN|OMX_DISPLAY_SET_NOASPECT);
+  configDisplay.set                 = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_DEST_RECT|OMX_DISPLAY_SET_SRC_RECT|OMX_DISPLAY_SET_FULLSCREEN|OMX_DISPLAY_SET_NOASPECT);
+  configDisplay.dest_rect.x_offset  = (int)(DestRect.x1+0.5f);
+  configDisplay.dest_rect.y_offset  = (int)(DestRect.y1+0.5f);
+  configDisplay.dest_rect.width     = (int)(DestRect.Width()+0.5f);
+  configDisplay.dest_rect.height    = (int)(DestRect.Height()+0.5f);
 
-  configDisplay.dest_rect.x_offset  = (int)(dx1+0.5f);
-  configDisplay.dest_rect.y_offset  = (int)(dy1+0.5f);
-  configDisplay.dest_rect.width     = (int)(dx2-dx1+0.5f);
-  configDisplay.dest_rect.height    = (int)(dy2-dy1+0.5f);
-
-  configDisplay.src_rect.x_offset   = (int)(sx1+0.5f);
-  configDisplay.src_rect.y_offset   = (int)(sy1+0.5f);
-  configDisplay.src_rect.width      = (int)(sx2-sx1+0.5f);
-  configDisplay.src_rect.height     = (int)(sy2-sy1+0.5f);
+  configDisplay.src_rect.x_offset   = (int)(SrcRect.x1+0.5f);
+  configDisplay.src_rect.y_offset   = (int)(SrcRect.y1+0.5f);
+  configDisplay.src_rect.width      = (int)(SrcRect.Width()+0.5f);
+  configDisplay.src_rect.height     = (int)(SrcRect.Height()+0.5f);
 
   m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
 
