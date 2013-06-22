@@ -142,7 +142,21 @@ bool OMXReader::Open(std::string filename, bool dump_format)
     if(idx != string::npos)
       m_filename = m_filename.substr(0, idx);
 
-    result = m_dllAvFormat.avformat_open_input(&m_pFormatContext, m_filename.c_str(), iformat, NULL);
+    AVDictionary *d = NULL;
+    // Enable seeking if http
+    if(m_filename.substr(0,7) == "http://:")
+    {
+       av_dict_set(&d, "seekable", "1", 0);
+    }
+    CLog::Log(LOGDEBUG, "COMXPlayer::OpenFile - avformat_open_input %s ", m_filename.c_str());
+    result = m_dllAvFormat.avformat_open_input(&m_pFormatContext, m_filename.c_str(), iformat, &d);
+    if(av_dict_count(d) == 0)
+    {
+       CLog::Log(LOGDEBUG, "COMXPlayer::OpenFile - avformat_open_input enabled SEEKING ");
+       if(m_filename.substr(0,7) == "http://:")
+         m_pFormatContext->pb->seekable = AVIO_SEEKABLE_NORMAL;
+    }
+    av_dict_free(&d);
     if(result < 0)
     {
       CLog::Log(LOGERROR, "COMXPlayer::OpenFile - avformat_open_input %s ", m_filename.c_str());
@@ -342,10 +356,10 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
   if(time < 0)
     time = 0;
 
-  if(!m_pFile || !m_pFormatContext)
+  if(!m_pFormatContext)
     return false;
 
-  if(!m_pFile->IoControl(IOCTRL_SEEK_POSSIBLE, NULL))
+  if(m_pFile && !m_pFile->IoControl(IOCTRL_SEEK_POSSIBLE, NULL))
   {
     CLog::Log(LOGDEBUG, "%s - input stream reports it is not seekable", __FUNCTION__);
     return false;
@@ -374,7 +388,7 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
 
   // demuxer will return failure, if you seek to eof
   m_eof = false;
-  if (m_pFile->IsEOF() && ret <= 0)
+  if (m_pFile && m_pFile->IsEOF() && ret <= 0)
   {
     m_eof = true;
     ret = 0;
@@ -1267,6 +1281,12 @@ bool OMXReader::CanSeek()
 {
   if(m_ioContext)
     return m_ioContext->seekable;
+
+  if(!m_pFormatContext)
+    return false;
+
+  if(m_pFormatContext->pb->seekable == AVIO_SEEKABLE_NORMAL)
+    return true;
 
   return false;
 }
