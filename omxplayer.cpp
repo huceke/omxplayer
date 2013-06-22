@@ -455,6 +455,15 @@ bool IsPipe(const std::string& str)
   return false;
 }
 
+static int get_mem_gpu(void)
+{
+   char response[80] = "";
+   int gpu_mem = 0;
+   if (vc_gencmd(response, sizeof response, "get_mem gpu") == 0)
+      vc_gencmd_number_property(response, "gpu", &gpu_mem);
+   return gpu_mem;
+}
+
 int main(int argc, char *argv[])
 {
   signal(SIGSEGV, sig_handler);
@@ -748,6 +757,11 @@ int main(int argc, char *argv[])
 
   g_RBP.Initialize();
   g_OMX.Initialize();
+
+  int gpu_mem = get_mem_gpu();
+  int min_gpu_mem = 64;
+  if (gpu_mem > 0 && gpu_mem < min_gpu_mem)
+    printf("Only %dM of gpu_mem is configured. Try running \"sudo raspi-config\" and ensure that \"memory_split\" has a value of %d or greater\n", gpu_mem, min_gpu_mem);
 
   m_av_clock = new OMXClock();
 
