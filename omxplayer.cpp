@@ -161,6 +161,7 @@ void print_usage()
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -g / --genlog                  generate log file\n");
   printf("         -l / --pos n                   start position (in seconds)\n");
+  printf("         -b / --blank                   set background to black\n");
   printf("              --boost-on-downmix        boost volume when downmixing\n");
   printf("              --vol n                   Set initial volume in millibels (default 0)\n");
   printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
@@ -464,6 +465,47 @@ static int get_mem_gpu(void)
    return gpu_mem;
 }
 
+static void blank_background(bool enable)
+{
+  if (!enable)
+    return;
+  // we create a 1x1 black pixel image that is added to display just behind video
+  DISPMANX_DISPLAY_HANDLE_T   display;
+  DISPMANX_UPDATE_HANDLE_T    update;
+  DISPMANX_RESOURCE_HANDLE_T  resource;
+  DISPMANX_ELEMENT_HANDLE_T   element;
+  int             ret;
+  uint32_t vc_image_ptr;
+  VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
+  uint16_t image = 0x0000; // black
+
+  VC_RECT_T dst_rect, src_rect;
+
+  display = vc_dispmanx_display_open(0);
+  assert(display);
+
+  resource = vc_dispmanx_resource_create( type, 1 /*width*/, 1 /*height*/, &vc_image_ptr );
+  assert( resource );
+
+  vc_dispmanx_rect_set( &dst_rect, 0, 0, 1, 1);
+
+  ret = vc_dispmanx_resource_write_data( resource, type, sizeof(image), &image, &dst_rect );
+  assert(ret == 0);
+
+  vc_dispmanx_rect_set( &src_rect, 0, 0, 1<<16, 1<<16);
+  vc_dispmanx_rect_set( &dst_rect, 0, 0, 0, 0);
+
+  update = vc_dispmanx_update_start(0);
+  assert(update);
+
+  element = vc_dispmanx_element_add(update, display, -1 /*layer*/, &dst_rect, resource, &src_rect,
+                                    DISPMANX_PROTECTION_NONE, NULL, NULL, (DISPMANX_TRANSFORM_T)0 );
+  assert(element);
+
+  ret = vc_dispmanx_update_submit_sync( update );
+  assert( ret == 0 );
+}
+
 int main(int argc, char *argv[])
 {
   signal(SIGSEGV, sig_handler);
@@ -504,6 +546,7 @@ int main(int argc, char *argv[])
   bool                  m_refresh             = false;
   double                startpts              = 0;
   CRect                 DestRect              = {0,0,0,0};
+  bool                  m_blank_background    = false;
   float audio_fifo_size = 0.0; // zero means use default
   float video_fifo_size = 0.0;
   float audio_queue_size = 0.0;
@@ -523,6 +566,7 @@ int main(int argc, char *argv[])
   const int audio_queue_opt = 0x109;
   const int video_queue_opt = 0x10a;
   const int no_deinterlace_opt = 0x10b;
+  const int threshold_opt   = 0x10c;
   const int boost_on_downmix_opt = 0x200;
 
   struct option longopts[] = {
@@ -545,6 +589,7 @@ int main(int argc, char *argv[])
     { "genlog",       no_argument,        NULL,          'g' },
     { "sid",          required_argument,  NULL,          't' },
     { "pos",          required_argument,  NULL,          'l' },    
+    { "blank",        no_argument,        NULL,          'b' },
     { "font",         required_argument,  NULL,          font_opt },
     { "font-size",    required_argument,  NULL,          font_size_opt },
     { "align",        required_argument,  NULL,          align_opt },
@@ -555,7 +600,7 @@ int main(int argc, char *argv[])
     { "video_fifo",   required_argument,  NULL,          video_fifo_opt },
     { "audio_queue",  required_argument,  NULL,          audio_queue_opt },
     { "video_queue",  required_argument,  NULL,          video_queue_opt },
-    { "threshold",    required_argument,  NULL,          'b' },
+    { "threshold",    required_argument,  NULL,          threshold_opt },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { 0, 0, 0, 0 }
   };
@@ -566,7 +611,7 @@ int main(int argc, char *argv[])
   int playspeed_current = playspeed_normal;
   int c;
   std::string mode;
-  while ((c = getopt_long(argc, argv, "wihvkn:l:o:cslpd3:yzt:rgb:", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wihvkn:l:o:cslbpd3:yzt:rg", longopts, NULL)) != -1)
   {
     switch (c) 
     {
@@ -678,8 +723,11 @@ int main(int argc, char *argv[])
       case video_queue_opt:
 	video_queue_size = atof(optarg);
         break;
-      case 'b':
+      case threshold_opt:
 	m_threshold = atof(optarg);
+        break;
+      case 'b':
+        m_blank_background = true;
         break;
       case 0:
         break;
@@ -757,6 +805,8 @@ int main(int argc, char *argv[])
 
   g_RBP.Initialize();
   g_OMX.Initialize();
+
+  blank_background(m_blank_background);
 
   int gpu_mem = get_mem_gpu();
   int min_gpu_mem = 64;
