@@ -144,7 +144,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
 
     AVDictionary *d = NULL;
     // Enable seeking if http
-    if(m_filename.substr(0,7) == "http://:")
+    if(m_filename.substr(0,7) == "http://")
     {
        av_dict_set(&d, "seekable", "1", 0);
     }
@@ -153,7 +153,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
     if(av_dict_count(d) == 0)
     {
        CLog::Log(LOGDEBUG, "COMXPlayer::OpenFile - avformat_open_input enabled SEEKING ");
-       if(m_filename.substr(0,7) == "http://:")
+       if(m_filename.substr(0,7) == "http://")
          m_pFormatContext->pb->seekable = AVIO_SEEKABLE_NORMAL;
     }
     av_dict_free(&d);
