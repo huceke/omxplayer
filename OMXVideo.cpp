@@ -136,14 +136,10 @@ bool COMXVideo::PortSettingsChanged()
 {
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
   std::string componentName = "";
-  float par = m_pixel_aspect;
 
   if (m_settings_changed)
   {
-    SetVideoRect(m_src_rect, m_dst_rect);
     m_omx_decoder.DisablePort(m_omx_decoder.GetOutputPort(), true);
-    m_omx_decoder.EnablePort(m_omx_decoder.GetOutputPort(), true);
-    return true;
   }
 
   OMX_PARAM_PORTDEFINITIONTYPE port_image;
@@ -152,7 +148,26 @@ bool COMXVideo::PortSettingsChanged()
   omx_err = m_omx_decoder.GetParameter(OMX_IndexParamPortDefinition, &port_image);
   if(omx_err != OMX_ErrorNone)
   {
-    CLog::Log(LOGERROR, "%s::%s - error m_omx_decoder.GetParameter(OMX_IndexParamPortDefinition) omx_err(0x%08x)\n", CLASSNAME, __func__, omx_err);
+    CLog::Log(LOGERROR, "%s::%s - error m_omx_decoder.GetParameter(OMX_IndexParamPortDefinition) omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
+  }
+
+  OMX_CONFIG_POINTTYPE pixel_aspect;
+  OMX_INIT_STRUCTURE(pixel_aspect);
+  pixel_aspect.nPortIndex = m_omx_decoder.GetOutputPort();
+  omx_err = m_omx_decoder.GetParameter(OMX_IndexParamBrcmPixelAspectRatio, &pixel_aspect);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "%s::%s - error m_omx_decoder.GetParameter(OMX_IndexParamBrcmPixelAspectRatio) omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
+  }
+
+  if (pixel_aspect.nX && pixel_aspect.nY)
+    m_pixel_aspect = (float)pixel_aspect.nX / (float)pixel_aspect.nY;
+
+  if (m_settings_changed)
+  {
+    SetVideoRect(m_src_rect, m_dst_rect);
+    m_omx_decoder.EnablePort(m_omx_decoder.GetOutputPort(), true);
+    return true;
   }
 
   OMX_CONFIG_INTERLACETYPE interlace;
@@ -223,27 +238,6 @@ bool COMXVideo::PortSettingsChanged()
     if(omx_err != OMX_ErrorNone)
     {
       CLog::Log(LOGERROR, "COMXVideo::Open error OMX_IndexConfigCommonImageFilterParameters omx_err(0x%08x)\n", omx_err);
-      return false;
-    }
-  }
-
-  // only set aspect when we have a aspect and display doesn't match the aspect
-  if(par != 0.0f && fabs(par - 1.0f) > 0.01f)
-  {
-    OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
-    OMX_INIT_STRUCTURE(configDisplay);
-    configDisplay.nPortIndex = m_omx_render.GetInputPort();
-
-    AVRational aspect;
-    aspect = av_d2q(par, 100);
-    configDisplay.set      = OMX_DISPLAY_SET_PIXEL;
-    configDisplay.pixel_x  = aspect.num;
-    configDisplay.pixel_y  = aspect.den;
-    printf("Aspect : num %d den %d pixel aspect %f\n", aspect.num, aspect.den, par);
-    omx_err = m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
-    if(omx_err != OMX_ErrorNone)
-    {
-      CLog::Log(LOGERROR, "COMXVideo::Open error OMX_IndexConfigDisplayRegion omx_err(0x%08x)\n", omx_err);
       return false;
     }
   }
@@ -520,6 +514,20 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
   if(omx_err != OMX_ErrorNone)
   {
     CLog::Log(LOGERROR, "COMXVideo::Open error OMX_IndexParamPortDefinition omx_err(0x%08x)\n", omx_err);
+    return false;
+  }
+
+  // request portsettingschanged on aspect ratio change
+  OMX_CONFIG_REQUESTCALLBACKTYPE notifications;
+  OMX_INIT_STRUCTURE(notifications);
+  notifications.nPortIndex = m_omx_decoder.GetOutputPort();
+  notifications.nIndex = OMX_IndexParamBrcmPixelAspectRatio;
+  notifications.bEnable = OMX_TRUE;
+
+  omx_err = m_omx_decoder.SetParameter((OMX_INDEXTYPE)OMX_IndexConfigRequestCallback, &notifications);
+  if (omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "COMXVideo::Open OMX_IndexConfigRequestCallback error (0%08x)\n", omx_err);
     return false;
   }
 
@@ -959,6 +967,14 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
           CLog::Log(LOGERROR, "%s::%s - error PortSettingsChanged omx_err(0x%08x)\n", CLASSNAME, __func__, omx_err);
         }
       }
+      omx_err = m_omx_decoder.WaitForEvent(OMX_EventParamOrConfigChanged, 0);
+      if (omx_err == OMX_ErrorNone)
+      {
+        if(!PortSettingsChanged())
+        {
+          CLog::Log(LOGERROR, "%s::%s - error PortSettingsChanged (EventParamOrConfigChanged) omx_err(0x%08x)\n", CLASSNAME, __func__, omx_err);
+        }
+      }
     }
     return true;
   }
@@ -980,32 +996,47 @@ void COMXVideo::Reset(void)
 ///////////////////////////////////////////////////////////////////////////////////////////
 void COMXVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
 {
-  if (!m_settings_changed || DestRect.x2 <= DestRect.x1 || DestRect.y2 <= DestRect.y1)
+  if ( !m_settings_changed || !((DestRect.x2 > DestRect.x1 && DestRect.y2 > DestRect.y1) || m_pixel_aspect != 0.0f) )
     return;
 
+  OMX_ERRORTYPE omx_err;
   OMX_CONFIG_DISPLAYREGIONTYPE configDisplay;
-
   OMX_INIT_STRUCTURE(configDisplay);
   configDisplay.nPortIndex = m_omx_render.GetInputPort();
-  configDisplay.fullscreen = OMX_FALSE;
-  configDisplay.noaspect   = OMX_TRUE;
 
-  configDisplay.set                 = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_DEST_RECT|OMX_DISPLAY_SET_SRC_RECT|OMX_DISPLAY_SET_FULLSCREEN|OMX_DISPLAY_SET_NOASPECT);
-  configDisplay.dest_rect.x_offset  = (int)(DestRect.x1+0.5f);
-  configDisplay.dest_rect.y_offset  = (int)(DestRect.y1+0.5f);
-  configDisplay.dest_rect.width     = (int)(DestRect.Width()+0.5f);
-  configDisplay.dest_rect.height    = (int)(DestRect.Height()+0.5f);
+  // configured dest_rect takes precedence
+  if (DestRect.x2 > DestRect.x1 && DestRect.y2 > DestRect.y1)
+  {
+    configDisplay.fullscreen = OMX_FALSE;
+    configDisplay.noaspect   = OMX_TRUE;
 
-  configDisplay.src_rect.x_offset   = (int)(SrcRect.x1+0.5f);
-  configDisplay.src_rect.y_offset   = (int)(SrcRect.y1+0.5f);
-  configDisplay.src_rect.width      = (int)(SrcRect.Width()+0.5f);
-  configDisplay.src_rect.height     = (int)(SrcRect.Height()+0.5f);
+    configDisplay.set                 = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_DEST_RECT|OMX_DISPLAY_SET_SRC_RECT|OMX_DISPLAY_SET_FULLSCREEN|OMX_DISPLAY_SET_NOASPECT);
+    configDisplay.dest_rect.x_offset  = (int)(DestRect.x1+0.5f);
+    configDisplay.dest_rect.y_offset  = (int)(DestRect.y1+0.5f);
+    configDisplay.dest_rect.width     = (int)(DestRect.Width()+0.5f);
+    configDisplay.dest_rect.height    = (int)(DestRect.Height()+0.5f);
 
-  m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
+    configDisplay.src_rect.x_offset   = (int)(SrcRect.x1+0.5f);
+    configDisplay.src_rect.y_offset   = (int)(SrcRect.y1+0.5f);
+    configDisplay.src_rect.width      = (int)(SrcRect.Width()+0.5f);
+    configDisplay.src_rect.height     = (int)(SrcRect.Height()+0.5f);
+  }
+  else /* if (m_pixel_aspect != 0.0f) */
+  {
+    AVRational aspect = av_d2q(m_pixel_aspect, 100);
+    configDisplay.set      = OMX_DISPLAY_SET_PIXEL;
+    configDisplay.pixel_x  = aspect.num;
+    configDisplay.pixel_y  = aspect.den;
+  }
+  omx_err = m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
+  if(omx_err != OMX_ErrorNone)
+  {
+    CLog::Log(LOGERROR, "COMXVideo::Open error OMX_IndexConfigDisplayRegion omx_err(0x%08x)\n", omx_err);
+  }
 
-  printf("dest_rect.x_offset %d dest_rect.y_offset %d dest_rect.width %d dest_rect.height %d\n",
+  printf("dest_rect.x_offset %d dest_rect.y_offset %d dest_rect.width %d dest_rect.height %d, pixel_aspect %.2f\n",
       configDisplay.dest_rect.x_offset, configDisplay.dest_rect.y_offset, 
-      configDisplay.dest_rect.width, configDisplay.dest_rect.height);
+      configDisplay.dest_rect.width, configDisplay.dest_rect.height, m_pixel_aspect);
 }
 
 int COMXVideo::GetInputBufferSize()
