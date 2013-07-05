@@ -25,6 +25,9 @@
 #endif
 #include "utils/log.h"
 
+#ifndef AVCODEC_MAX_AUDIO_FRAME_SIZE
+#define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
+#endif
 #define MAX_AUDIO_FRAME_SIZE (AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 
 COMXAudioCodecOMX::COMXAudioCodecOMX()

@@ -25,7 +25,7 @@
   #include "config.h"
 #endif
 #ifndef _LINUX
-enum CodecID;
+enum AVCodecID;
 #else
 extern "C" {
   #include "libavcodec/avcodec.h"
@@ -43,7 +43,7 @@ public:
 
   void Clear(); // clears current information
 
-  CodecID codec;
+  enum AVCodecID codec;
   bool software;  //force software decoding
 
 

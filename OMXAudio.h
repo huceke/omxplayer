@@ -79,9 +79,9 @@ public:
   void Process();
 
   bool SetClock(OMXClock *clock);
-  void SetCodingType(CodecID codec);
-  bool CanHWDecode(CodecID codec);
-  static bool HWDecode(CodecID codec);
+  void SetCodingType(AVCodecID codec);
+  bool CanHWDecode(AVCodecID codec);
+  static bool HWDecode(AVCodecID codec);
 
   void PrintChannels(OMX_AUDIO_CHANNELTYPE eChannelMapping[]);
   void PrintPCM(OMX_AUDIO_PARAM_PCMMODETYPE *pcm, std::string direction);

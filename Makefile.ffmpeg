@@ -26,10 +26,11 @@ configure:
 			--arch=arm \
 			--cpu=arm1176jzf-s \
 			--target-os=linux \
+			--disable-hwaccels \
+			--disable-parsers \
 			--disable-muxers \
 			--disable-filters \
 			--disable-encoders \
-			--disable-decoder=mpeg_xvmc \
 			--disable-devices \
 			--disable-ffprobe \
 			--disable-ffplay \
@@ -49,8 +50,27 @@ configure:
 			--enable-hardcoded-tables \
 			--disable-runtime-cpudetect \
 			--disable-debug \
+			--disable-crystalhd \
+			--disable-decoder=h264_vda \
+			--disable-decoder=h264_crystalhd \
+			--disable-decoder=h264_vdpau \
+			--disable-decoder=libstagefright_h264 \
+			--disable-decoder=vc1_crystalhd \
+			--disable-decoder=wmv3_crystalhd \
+			--disable-decoder=wmv3_vdpau \
+			--disable-decoder=mpeg1_vdpau \
+			--disable-decoder=mpeg2_crystalhd \
+			--disable-decoder=mpeg4_crystalhd \
+			--disable-decoder=mpeg4_vdpau \
+			--disable-decoder=mpeg_vdpau \
+			--disable-decoder=mpeg_xvmc \
+			--disable-decoder=msmpeg4_crystalhd \
+			--disable-decoder=vc1_vdpau \
+			--disable-decoder=mpegvideo \
 			--disable-decoder=mpeg1video \
 			--disable-decoder=mpeg2video \
+			--disable-decoder=mvc1 \
+			--disable-decoder=mvc2 \
 			--disable-decoder=h261 \
 			--disable-decoder=h263 \
 			--disable-decoder=rv10 \
@@ -73,7 +93,7 @@ configure:
 			--disable-decoder=dvvideo \
 			--disable-decoder=huffyuv \
 			--disable-decoder=cyuv \
-			--disable-decoder=h264 \
+			--enable-decoder=h264 \
 			--disable-decoder=indeo3 \
 			--disable-decoder=vp3 \
 			--disable-decoder=theora \
@@ -176,6 +196,7 @@ configure:
 			--disable-decoder=kgv1 \
 			--disable-decoder=yop \
 			--disable-decoder=vp8 \
+			--disable-decoder=webp \
 			--disable-decoder=pictor \
 			--disable-decoder=ansi \
 			--disable-decoder=r10k \
@@ -223,8 +244,8 @@ clean:
 	@rm -rf ffmpeg
 
 checkout: 
-	git clone git://git.videolan.org/ffmpeg.git ffmpeg; \
-	cd ffmpeg; git checkout master;	git checkout e820e3a2591a0d544925ff1522d2a688a647f1b0
+	git clone git://source.ffmpeg.org/ffmpeg ffmpeg; \
+	cd ffmpeg; git checkout 4e10d87f384a11b11034349e441f76207275c756
 
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
