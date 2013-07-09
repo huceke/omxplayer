@@ -1050,7 +1050,7 @@ void COMXVideo::SubmitEOS()
     return;
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_decoder.GetInputBuffer();
+  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_decoder.GetInputBuffer(1000);
   
   if(omx_buffer == NULL)
   {
