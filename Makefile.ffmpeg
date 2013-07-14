@@ -66,9 +66,9 @@ configure:
 			--disable-decoder=mpeg_xvmc \
 			--disable-decoder=msmpeg4_crystalhd \
 			--disable-decoder=vc1_vdpau \
-			--disable-decoder=mpegvideo \
-			--disable-decoder=mpeg1video \
-			--disable-decoder=mpeg2video \
+			--enable-decoder=mpegvideo \
+			--enable-decoder=mpeg1video \
+			--enable-decoder=mpeg2video \
 			--disable-decoder=mvc1 \
 			--disable-decoder=mvc2 \
 			--disable-decoder=h261 \
@@ -79,7 +79,7 @@ configure:
 			--disable-decoder=mjpegb \
 			--disable-decoder=sp5x \
 			--disable-decoder=jpegls \
-			--disable-decoder=mpeg4 \
+			--enable-decoder=mpeg4 \
 			--disable-decoder=rawvideo \
 			--disable-decoder=msmpeg4v1 \
 			--disable-decoder=msmpeg4v2 \
@@ -96,7 +96,7 @@ configure:
 			--enable-decoder=h264 \
 			--disable-decoder=indeo3 \
 			--disable-decoder=vp3 \
-			--disable-decoder=theora \
+			--enable-decoder=theora \
 			--disable-decoder=asv1 \
 			--disable-decoder=asv2 \
 			--disable-decoder=ffv1 \
@@ -132,8 +132,8 @@ configure:
 			--disable-decoder=ffvhuff \
 			--disable-decoder=rv30 \
 			--disable-decoder=rv40 \
-			--disable-decoder=vc1 \
-			--disable-decoder=wmv3 \
+			--enable-decoder=vc1 \
+			--enable-decoder=wmv3 \
 			--disable-decoder=loco \
 			--disable-decoder=wnv1 \
 			--disable-decoder=aasc \
@@ -152,8 +152,8 @@ configure:
 			--disable-decoder=jpeg2000 \
 			--disable-decoder=vmnc \
 			--disable-decoder=vp5 \
-			--disable-decoder=vp6 \
-			--disable-decoder=vp6f \
+			--enable-decoder=vp6 \
+			--enable-decoder=vp6f \
 			--disable-decoder=targa \
 			--disable-decoder=dsicinvideo \
 			--disable-decoder=tiertexseqvideo \
@@ -195,7 +195,7 @@ configure:
 			--disable-decoder=iff_byterun1 \
 			--disable-decoder=kgv1 \
 			--disable-decoder=yop \
-			--disable-decoder=vp8 \
+			--enable-decoder=vp8 \
 			--disable-decoder=webp \
 			--disable-decoder=pictor \
 			--disable-decoder=ansi \
@@ -245,7 +245,7 @@ clean:
 
 checkout: 
 	git clone git://source.ffmpeg.org/ffmpeg ffmpeg; \
-	cd ffmpeg; git checkout 4e10d87f384a11b11034349e441f76207275c756
+	cd ffmpeg; git checkout n2.0
 
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
