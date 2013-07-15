@@ -996,6 +996,7 @@ int main(int argc, char *argv[])
           m_av_clock->OMXPause();
           if(m_has_subtitle)
             m_player_subtitles.Pause();
+          printf("Player paused");
         }
         else
         {
@@ -1003,6 +1004,7 @@ int main(int argc, char *argv[])
             m_player_subtitles.Resume();
           SetSpeed(OMX_PLAYSPEED_NORMAL);
           m_av_clock->OMXResume();
+          printf("Player resumed");
         }
         break;
       case '-':
