@@ -1,4 +1,4 @@
-USE_BUILDROOT=1
+USE_BUILDROOT=0
 FLOAT=hard
 
 ifeq ($(USE_BUILDROOT), 1)
@@ -12,9 +12,10 @@ else
 BUILDROOT	:=/opt/bcm-rootfs
 SDKSTAGE	:=/opt/bcm-rootfs
 TARGETFS	:=/opt/bcm-rootfs
-TOOLCHAIN	:=/usr/local/bcm-gcc
-HOST			:=bcm2708
-SYSROOT		:=$(TOOLCHAIN)/arm-bcm2708-linux-gnueabi/sys-root
+TOOLCHAIN	:=/home/dc4/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/
+HOST		:=arm-linux-gnueabihf
+#SYSROOT		:=$(TOOLCHAIN)/arm-bcm2708hardfp-linux-gnueabi/sysroot
+SYSROOT		:=/opt/bcm-rootfs
 endif
 
 JOBS=7
@@ -33,6 +34,7 @@ AR 					:= $(TOOLCHAIN)/bin/$(HOST)-ar
 CXXCP 			:= $(CXX) -E
 PATH 				:= $(PREFIX)/bin:$(BUILDROOT)/output/host/usr/bin:$(PATH)
 
-CFLAGS			+= -pipe -mfloat-abi=$(FLOAT) -mcpu=arm1176jzf-s -fomit-frame-pointer -mabi=aapcs-linux -mtune=arm1176jzf-s -mfpu=vfp -Wno-psabi -mno-apcs-stack-check -O3 -mstructure-size-boundary=32 -mno-sched-prolog
-LDFLAGS			+= -L$(SDKSTAGE)/lib -L$(SDKSTAGE)/usr/lib -L$(SDKSTAGE)/opt/vc/lib/
-INCLUDES		+= -isystem$(SDKSTAGE)/usr/include -isystem$(SDKSTAGE)/opt/vc/include -isystem$(SYSROOT)/usr/include -isystem$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads -isystem$(SDKSTAGE)/usr/include/freetype2
+CFLAGS			+= -pipe -mfloat-abi=$(FLOAT) -mcpu=arm1176jzf-s -fomit-frame-pointer -mabi=aapcs-linux -mtune=arm1176jzf-s -mfpu=vfp -Wno-psabi -mno-apcs-stack-check -g -mstructure-size-boundary=32 -mno-sched-prolog
+LDFLAGS			+= -L$(SDKSTAGE)/lib -L$(SDKSTAGE)/usr/lib -L$(SDKSTAGE)/opt/vc/lib/ -Lpcre/build
+#INCLUDES		+= -isystem$(SDKSTAGE)/usr/include -isystem$(SDKSTAGE)/opt/vc/include -isystem$(SYSROOT)/usr/include -isystem$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads -isystem$(SDKSTAGE)/usr/include/freetype2
+INCLUDES		+= -isystem$(SDKSTAGE)/opt/vc/include -isystem$(SYSROOT)/usr/include -isystem$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads -Ipcre/build -Iboost-trunk -Ifreetype2/include
