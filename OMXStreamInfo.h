@@ -24,7 +24,7 @@
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
 #endif
-#ifndef _LINUX
+#ifndef TARGET_LINUX
 enum AVCodecID;
 #else
 extern "C" {

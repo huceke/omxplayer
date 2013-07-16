@@ -872,7 +872,7 @@ inline const Type& SSMAX(const Type& arg1, const Type& arg2)
       res            = conv.in(st,
                     pSrcA, pSrcA + nSrc, pNextSrcA,
                     pDstW, pDstW + nDst, pNextDstW);
-#ifdef _LINUX
+#ifdef TARGET_LINUX
 #define ASSERT2(a) if (!(a)) {fprintf(stderr, "StdString: Assertion Failed on line %d\n", __LINE__);}
 #else
 #define ASSERT2 ASSERT
@@ -919,7 +919,7 @@ inline const Type& SSMAX(const Type& arg1, const Type& arg2)
       res            = conv.out(st,
                     pSrcW, pSrcW + nSrc, pNextSrcW,
                     pDstA, pDstA + nDst, pNextDstA);
-#ifdef _LINUX
+#ifdef TARGET_LINUX
 #define ASSERT2(a) if (!(a)) {fprintf(stderr, "StdString: Assertion Failed on line %d\n", __LINE__);}
 #else
 #define ASSERT2 ASSERT

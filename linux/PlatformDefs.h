@@ -22,7 +22,7 @@
  *
  */
 
-#ifdef _LINUX
+#ifdef TARGET_LINUX
 
 #define LINE_ENDING "\n"
 
@@ -121,7 +121,7 @@
 #define PRIuS "zu"
 #endif
 
-#ifdef _LINUX
+#ifdef TARGET_LINUX
 
 #define XXLog(a,b) printf("%s", (b))
 

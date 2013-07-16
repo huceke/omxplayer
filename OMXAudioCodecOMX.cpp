@@ -20,7 +20,7 @@
  */
 
 #include "OMXAudioCodecOMX.h"
-#ifdef _LINUX
+#ifdef TARGET_LINUX
 #include "XMemUtils.h"
 #endif
 #include "utils/log.h"

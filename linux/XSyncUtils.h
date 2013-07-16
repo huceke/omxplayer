@@ -25,7 +25,7 @@
 #include "PlatformDefs.h"
 #include "XHandlePublic.h"
 
-#ifdef _LINUX
+#ifdef TARGET_LINUX
 
 #define STATUS_WAIT_0 ((DWORD   )0x00000000L)
 #define WAIT_FAILED   ((DWORD)0xFFFFFFFF)
