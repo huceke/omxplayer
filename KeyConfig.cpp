@@ -150,6 +150,11 @@ map<int, int> KeyConfig::parseConfigFile(string filepath){
             else if(key.substr(0,3) == "esc"){
                 keymap[KEY_ESC] = key_action;
             }
+            else if(key.substr(0,3) == "hex"){
+              const char *hex = key.substr(4).c_str();
+              if (hex)
+                keymap[strtoul(hex,0,0)] = key_action;
+            }
             else keymap[key[0]] = key_action;
         }
     }

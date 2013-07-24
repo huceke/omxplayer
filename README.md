@@ -151,6 +151,7 @@ Valid [key]s include all alpha-numeric characters and most symbols, as well as:
     up
     down
     esc
+    hex [keycode]
 
 For example:
 
@@ -159,4 +160,5 @@ For example:
     #Note that this next line has a space after the :
     PAUSE: 
     REWIND:left
+    SEEK_FORWARD_SMALL:hex 0x4f43
     EXIT:q
