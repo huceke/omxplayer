@@ -167,13 +167,6 @@ bool COMXAudio::PortSettingsChanged()
     return false;
   }
 
-  omx_err = m_omx_clock->SetStateForComponent(OMX_StateExecuting);
-  if (omx_err != OMX_ErrorNone)
-  {
-    CLog::Log(LOGERROR, "COMXAudio::Initialize m_omx_clock.SetStateForComponent\n");
-    return false;
-  }
-
   m_omx_render.ResetEos();
 
   OMX_CONFIG_BOOLEANTYPE configBool;
@@ -832,21 +825,13 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
        memcpy(dst, src, omx_buffer->nFilledLen);
     }
 
-    /*
-    if (m_SampleSize > 0 && pts != DVD_NOPTS_VALUE && !(omx_buffer->nFlags & OMX_BUFFERFLAG_TIME_UNKNOWN) && !m_Passthrough && !m_HWDecode)
-    {
-      pts += ((double)omx_buffer->nFilledLen * DVD_TIME_BASE) / m_SampleSize;
-    }
-    printf("ADec : pts %f omx_buffer 0x%08x buffer 0x%08x number %d\n", 
-          (float)pts / AV_TIME_BASE, omx_buffer, omx_buffer->pBuffer, (int)omx_buffer->pAppPrivate);
-    */
-
     uint64_t val  = (uint64_t)(pts == DVD_NOPTS_VALUE) ? 0 : pts;
 
     if(m_setStartTime)
     {
       omx_buffer->nFlags = OMX_BUFFERFLAG_STARTTIME;
 
+      CLog::Log(LOGDEBUG, "COMXAudio::Decode ADec : setStartTime %f\n", (float)val / DVD_TIME_BASE);
       m_setStartTime = false;
     }
     else if(pts == DVD_NOPTS_VALUE)

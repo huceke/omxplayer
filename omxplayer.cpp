@@ -562,6 +562,7 @@ int main(int argc, char *argv[])
   double                startpts              = 0;
   CRect                 DestRect              = {0,0,0,0};
   bool                  m_blank_background    = false;
+  bool sentStarted = false;
   float audio_fifo_size = 0.0; // zero means use default
   float video_fifo_size = 0.0;
   float audio_queue_size = 0.0;
@@ -887,11 +888,11 @@ int main(int argc, char *argv[])
   if (m_refresh && !m_no_hdmi_clock_sync)
     m_hdmi_clock_sync = true;
 
-  if(!m_av_clock->OMXInitialize(m_has_video, m_has_audio))
+  if(!m_av_clock->OMXInitialize())
     goto do_exit;
 
   if(m_hdmi_clock_sync && !m_av_clock->HDMIClockSync())
-      goto do_exit;
+    goto do_exit;
 
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
   m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_hints_video);
@@ -989,7 +990,6 @@ int main(int argc, char *argv[])
                                          m_boost_on_downmix, m_thread_player, audio_queue_size, audio_fifo_size))
     goto do_exit;
 
-  m_av_clock->OMXStart(0.0);
   m_av_clock->OMXPause();
   m_av_clock->OMXStateExecute();
 
@@ -1266,7 +1266,8 @@ int main(int argc, char *argv[])
       double seek_pos     = 0;
       double pts          = 0;
 
-      m_av_clock->OMXPause();
+      if(m_has_subtitle)
+        m_player_subtitles.Pause();
 
       pts = m_av_clock->OMXMediaTime();
 
@@ -1289,12 +1290,20 @@ int main(int argc, char *argv[])
       }
 
       m_player_video.Close();
+
+      sentStarted = false;
+
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? 1:m_NoDeinterlace ? -1:0,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
         goto do_exit;
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
+      m_av_clock->OMXPause();
+      m_av_clock->OMXStateExecute();
+
+      if(m_has_subtitle)
+        m_player_subtitles.Resume();
       m_packet_after_seek = false;
       m_seek_flush = false;
     }
@@ -1381,6 +1390,13 @@ int main(int argc, char *argv[])
         vc_gencmd(response, sizeof response, "render_bar 7 audio_queue %d %d %d %d",
               m_player_audio.GetLevel(), 0, 0, 100);
       }
+    }
+
+    if (!sentStarted)
+    {
+      CLog::Log(LOGDEBUG, "COMXPlayer::HandleMessages - player started RESET");
+      m_av_clock->OMXReset(m_has_video, m_has_audio);
+      sentStarted = true;
     }
 
     if (audio_pts != DVD_NOPTS_VALUE)
@@ -1498,7 +1514,6 @@ do_exit:
 
   m_av_clock->OMXStop();
   m_av_clock->OMXStateIdle();
-  m_av_clock->OMXStateExecute();
 
   m_player_subtitles.Close();
   m_player_video.Close();
