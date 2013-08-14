@@ -32,6 +32,14 @@
 
 #include "guilib/Geometry.h"
 
+#define VIDEO_BUFFERS 60
+
+enum EDEINTERLACEMODE
+{
+  VS_DEINTERLACEMODE_OFF=0,
+  VS_DEINTERLACEMODE_AUTO=1,
+  VS_DEINTERLACEMODE_FORCE=2
+};
 
 #define CLASSNAME "COMXVideo"
 
@@ -46,14 +54,14 @@ public:
   // Required overrides
   bool SendDecoderConfig();
   bool NaluFormatStartCodes(enum AVCodecID codec, uint8_t *in_extradata, int in_extrasize);
-  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, int deinterlace = 0, bool hdmi_clock_sync = false, float fifo_size = 0.0f);
+  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, EDEINTERLACEMODE deinterlace = VS_DEINTERLACEMODE_OFF, bool hdmi_clock_sync = false, float fifo_size = 0.0f);
   bool PortSettingsChanged();
   void Close(void);
   unsigned int GetFreeSpace();
   unsigned int GetSize();
   OMXPacket *GetText();
   int  DecodeText(uint8_t *pData, int iSize, double dts, double pts);
-  int  Decode(uint8_t *pData, int iSize, double dts, double pts);
+  int  Decode(uint8_t *pData, int iSize, double pts);
   void Reset(void);
   void SetDropState(bool bDrop);
   std::string GetDecoderName() { return m_video_codec_name; };
@@ -61,6 +69,8 @@ public:
   int GetInputBufferSize();
   void SubmitEOS();
   bool IsEOS();
+  bool SubmittedEOS() { return m_submitted_eos; }
+  bool BadState() { return m_omx_decoder.BadState(); };
 protected:
   // Video format
   bool              m_drop_state;
@@ -93,13 +103,14 @@ protected:
   std::string       m_video_codec_name;
 
   bool              m_deinterlace;
-  int               m_deinterlace_request;
+  EDEINTERLACEMODE  m_deinterlace_request;
   bool              m_hdmi_clock_sync;
   bool              m_first_text;
   CRect             m_dst_rect;
   CRect             m_src_rect;
-  uint32_t          m_history_valid_pts;
   float             m_pixel_aspect;
+  bool              m_submitted_eos;
+  OMX_DISPLAYTRANSFORMTYPE m_transform;
   bool              m_settings_changed;
 };
 

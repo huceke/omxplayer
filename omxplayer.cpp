@@ -926,7 +926,7 @@ int main(int argc, char *argv[])
         m_omx_reader.SeekTime(m_seek_pos * 1000.0f, false, &startpts);  // from seconds to DVD_TIME_BASE
   }
   
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? 1:m_NoDeinterlace ? -1:0,
+  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
     goto do_exit;
 
@@ -1293,7 +1293,7 @@ int main(int argc, char *argv[])
 
       sentStarted = false;
 
-      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? 1:m_NoDeinterlace ? -1:0,
+      if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
                                          m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
         goto do_exit;
 
