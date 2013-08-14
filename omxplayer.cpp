@@ -843,6 +843,15 @@ int main(int argc, char *argv[])
     }
   }
     
+  bool m_audio_extension = false;
+  const CStdString m_musicExtensions = ".nsv|.m4a|.flac|.aac|.strm|.pls|.rm|.rma|.mpa|.wav|.wma|.ogg|.mp3|.mp2|.m3u|.mod|.amf|.669|.dmf|.dsm|.far|.gdm|"
+                 ".imf|.it|.m15|.med|.okt|.s3m|.stm|.sfx|.ult|.uni|.xm|.sid|.ac3|.dts|.cue|.aif|.aiff|.wpl|.ape|.mac|.mpc|.mp+|.mpp|.shn|.zip|.rar|"
+                 ".wv|.nsf|.spc|.gym|.adx|.dsp|.adp|.ymf|.ast|.afc|.hps|.xsp|.xwav|.waa|.wvs|.wam|.gcm|.idsp|.mpdsp|.mss|.spt|.rsd|.mid|.kar|.sap|"
+                 ".cmc|.cmr|.dmc|.mpt|.mpd|.rmt|.tmc|.tm8|.tm2|.oga|.url|.pxml|.tta|.rss|.cm3|.cms|.dlt|.brstm|.wtv|.mka";
+  CStdString extension = m_filename.substr(m_filename.find_last_of("."));
+  if (!extension.IsEmpty() && m_musicExtensions.Find(extension.ToLower()) != -1)
+    m_audio_extension = true;
+
   if(m_gen_log) {
     CLog::SetLogLevel(LOG_LEVEL_DEBUG);
     CLog::Init("./");
@@ -874,6 +883,12 @@ int main(int argc, char *argv[])
   m_has_audio     = m_omx_reader.AudioStreamCount();
   m_has_subtitle  = m_has_external_subtitles ||
                     m_omx_reader.SubtitleStreamCount();
+
+  if (m_audio_extension)
+  {
+    CLog::Log(LOGWARNING, "%s - Ignoring video in audio filetype:%s", __FUNCTION__, m_filename.c_str());
+    m_has_video = false;
+  }
 
   if(m_filename.find("3DSBS") != string::npos || m_filename.find("HSBS") != string::npos)
     m_3d = CONF_FLAGS_FORMAT_SBS;
