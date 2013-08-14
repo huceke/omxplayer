@@ -299,6 +299,9 @@ static float get_display_aspect_ratio(SDTV_ASPECT_T aspect)
 
 static void FlushStreams(double pts)
 {
+  m_av_clock->OMXStop();
+  m_av_clock->OMXPause();
+
   if(m_has_video)
     m_player_video.Flush();
 
@@ -306,7 +309,7 @@ static void FlushStreams(double pts)
     m_player_audio.Flush();
 
   if(pts != DVD_NOPTS_VALUE)
-    m_av_clock->OMXMediaTime(pts);
+    m_av_clock->OMXMediaTime(0.0);
 
   if(m_has_subtitle)
     m_player_subtitles.Flush();
