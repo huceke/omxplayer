@@ -76,7 +76,7 @@ typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_T
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 bool              m_passthrough         = false;
-long              m_initialVolume       = 0;
+long              m_Volume              = 0;
 bool              m_Deinterlace         = false;
 bool              m_NoDeinterlace       = false;
 bool              m_HWDecode            = false;
@@ -744,7 +744,7 @@ int main(int argc, char *argv[])
 	sscanf(optarg, "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
         break;
       case vol_opt:
-	m_initialVolume = atoi(optarg);
+	m_Volume = atoi(optarg);
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
@@ -986,9 +986,12 @@ int main(int argc, char *argv[])
     m_passthrough = false;
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
-                                         m_passthrough, m_initialVolume, m_use_hw_audio,
+                                         m_passthrough, m_use_hw_audio,
                                          m_boost_on_downmix, m_thread_player, audio_queue_size, audio_fifo_size))
     goto do_exit;
+
+  if(m_has_audio)
+    m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
 
   m_av_clock->OMXPause();
   m_av_clock->OMXStateExecute();
@@ -1246,16 +1249,18 @@ int main(int argc, char *argv[])
         }
         break;
       case KeyConfig::ACTION_DECREASE_VOLUME:
-        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() - 300);
+        m_Volume -= 300;
+        m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
         DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
-          m_player_audio.GetCurrentVolume() / 100.0f));
-        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+          m_Volume / 100.0f));
+        printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
         break;
       case KeyConfig::ACTION_INCREASE_VOLUME:
-        m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 300);
+        m_Volume += 300;
+        m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
         DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
-          m_player_audio.GetCurrentVolume() / 100.0f));
-        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+          m_Volume / 100.0f));
+        printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
         break;
       default:
         break;

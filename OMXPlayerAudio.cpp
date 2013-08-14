@@ -45,7 +45,6 @@ OMXPlayerAudio::OMXPlayerAudio()
   m_pChannelMap   = NULL;
   m_pAudioCodec   = NULL;
   m_player_error  = true;
-  m_initialVolume = 0;
   m_max_data_size = 3 * 1024 * 1024;
   m_fifo_size     = 2.0f;
 
@@ -90,7 +89,7 @@ void OMXPlayerAudio::UnLockDecoder()
 }
 
 bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-                          std::string device, bool passthrough, long initialVolume, bool hw_decode,
+                          std::string device, bool passthrough, bool hw_decode,
                           bool boost_on_downmix, bool use_thread, float queue_size, float fifo_size)
 {
   if(ThreadHandle())
@@ -105,7 +104,7 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_av_clock    = av_clock;
   m_omx_reader  = omx_reader;
   m_device      = device;
-  m_passthrough = COMXAudio::ENCODED_NONE;
+  m_passthrough = false;
   m_hw_decode   = false;
   m_use_passthrough = passthrough;
   m_use_hw_decode   = hw_decode;
@@ -117,7 +116,6 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_cached_size = 0;
   m_pAudioCodec = NULL;
   m_pChannelMap = NULL;
-  m_initialVolume = initialVolume;
   if (queue_size != 0.0)
     m_max_data_size = queue_size * 1024 * 1024;
   if (fifo_size != 0.0)
@@ -393,24 +391,24 @@ void OMXPlayerAudio::CloseAudioCodec()
   m_pAudioCodec = NULL;
 }
 
-COMXAudio::EEncoded OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
+bool OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
 {
   if(m_device == "omx:local")
-    return COMXAudio::ENCODED_NONE;
+    return false;
 
-  COMXAudio::EEncoded passthrough = COMXAudio::ENCODED_NONE;
+  bool passthrough = false;
 
   if(hints.codec == CODEC_ID_AC3)
   {
-    passthrough = COMXAudio::ENCODED_IEC61937_AC3;
+    passthrough = true;
   }
   if(hints.codec == CODEC_ID_EAC3)
   {
-    passthrough = COMXAudio::ENCODED_IEC61937_EAC3;
+    passthrough = true;
   }
   if(hints.codec == CODEC_ID_DTS)
   {
-    passthrough = COMXAudio::ENCODED_IEC61937_DTS;
+    passthrough = true;
   }
 
   return passthrough;
@@ -428,22 +426,13 @@ bool OMXPlayerAudio::OpenDecoder()
   if(!m_passthrough && m_use_hw_decode)
     m_hw_decode = COMXAudio::HWDecode(m_hints.codec);
 
-  if(m_passthrough || m_use_hw_decode)
-  {
-    if(m_passthrough)
-      m_hw_decode = false;
-    bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_pChannelMap,
-                                             m_hints, m_av_clock, m_passthrough,
-                                             m_hw_decode, m_boost_on_downmix, m_initialVolume, m_fifo_size);
-  }
-  else
-  {
-    unsigned int downmix_channels = m_hints.channels;
+  if(m_passthrough)
+    m_hw_decode = false;
 
-    bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pChannelMap,
-                                             downmix_channels, m_hints.samplerate, m_pAudioCodec->GetBitsPerSample(),
-                                             m_boost_on_downmix, m_av_clock, m_passthrough, m_initialVolume, m_fifo_size);
-  }
+  unsigned int downmix_channels = m_hints.channels;
+  bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pChannelMap,
+                           m_hints, downmix_channels, m_hints.samplerate, m_pAudioCodec->GetBitsPerSample(), m_boost_on_downmix,
+                           m_av_clock, m_passthrough, m_hw_decode, m_fifo_size);
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
   
@@ -537,20 +526,8 @@ void OMXPlayerAudio::WaitCompletion()
   }
 } 
 
-void OMXPlayerAudio::SetCurrentVolume(long nVolume)
+void OMXPlayerAudio::SetVolume(float nVolume)
 {
-  if(m_decoder) m_decoder->SetCurrentVolume(nVolume);
-}
-
-long OMXPlayerAudio::GetCurrentVolume()
-{
-  if(m_decoder)
-  {
-    return m_decoder->GetCurrentVolume();
-  }
-  else
-  {
-    return 0;
-  }
+  if(m_decoder) m_decoder->SetVolume(nVolume);
 }
 

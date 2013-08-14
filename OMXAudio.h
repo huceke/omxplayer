@@ -54,12 +54,9 @@ public:
   float GetCacheTotal();
   unsigned int GetAudioRenderingLatency();
   COMXAudio();
-  bool Initialize(const CStdString& device, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, OMXClock *clock, EEncoded bPassthrough, bool bUseHWDecode,
-                           bool boostOnDownmix, long initialVolume, float fifo_size);
   bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
-                           unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
-                           OMXClock *clock, EEncoded bPassthrough = ENCODED_NONE, long initialVolume = 0, float fifo_size = 0);
+                           COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
+                           OMXClock *clock, bool bUsePassthrough = false, bool bUseHWDecode = false, float fifo_size = 0);
   ~COMXAudio();
   bool PortSettingsChanged();
 
@@ -68,9 +65,10 @@ public:
   unsigned int GetSpace();
   bool Deinitialize();
 
-  long GetCurrentVolume() const;
-  void Mute(bool bMute);
-  bool SetCurrentVolume(long nVolume);
+  void SetVolume(float nVolume);
+  void SetMute(bool bOnOff);
+  void SetDynamicRangeCompression(long drc);
+  bool ApplyVolume();
   void SubmitEOS();
   bool IsEOS();
 
@@ -92,13 +90,12 @@ public:
 
 private:
   bool          m_Initialized;
-  bool          m_Pause;
-  bool          m_CanPause;
-  long          m_CurrentVolume;
+  float         m_CurrentVolume;
+  bool          m_Mute;
+  long          m_drc;
   bool          m_Passthrough;
   bool          m_HWDecode;
   bool          m_normalize_downmix;
-  std::string   m_deviceuse;
   unsigned int  m_BytesPerSec;
   unsigned int  m_BufferLen;
   unsigned int  m_ChunkLen;
@@ -107,14 +104,17 @@ private:
   unsigned int  m_downmix_channels;
   unsigned int  m_BitsPerSample;
   COMXCoreComponent *m_omx_clock;
-  OMXClock       *m_av_clock;
+  OMXClock      *m_av_clock;
+  bool          m_settings_changed;
   bool          m_setStartTime;
-  int           m_SampleSize;
   bool          m_LostSync;
   int           m_SampleRate;
   OMX_AUDIO_CODINGTYPE m_eEncoding;
   uint8_t       *m_extradata;
   int           m_extrasize;
+  std::string   m_deviceuse;
+  double        m_last_pts;
+  bool          m_submitted_eos;
   float         m_fifo_size;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
@@ -129,7 +129,7 @@ protected:
   COMXCoreTunel     m_omx_tunnel_mixer;
   COMXCoreTunel     m_omx_tunnel_decoder;
   DllAvUtil         m_dllAvUtil;
-  bool              m_settings_changed;
+  OMX_AUDIO_CHANNELTYPE m_input_channels[OMX_AUDIO_MAXCHANNELS];
   CPCMRemap         m_remap;
 };
 #endif
