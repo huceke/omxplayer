@@ -195,7 +195,7 @@ bool COMXVideo::PortSettingsChanged()
       port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
       port_image.format.video.xFramerate / (float)(1<<16), interlace.eMode, m_deinterlace);
 
-  printf("%s::%s - %dx%d@%.2f interlace:%d deinterlace:%d", CLASSNAME, __func__,
+  printf("V:PortSettingsChanged: %dx%d@%.2f interlace:%d deinterlace:%d\n",
       port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
       port_image.format.video.xFramerate / (float)(1<<16), interlace.eMode, m_deinterlace);
 
