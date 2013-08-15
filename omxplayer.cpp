@@ -851,10 +851,12 @@ int main(int argc, char *argv[])
                  ".imf|.it|.m15|.med|.okt|.s3m|.stm|.sfx|.ult|.uni|.xm|.sid|.ac3|.dts|.cue|.aif|.aiff|.wpl|.ape|.mac|.mpc|.mp+|.mpp|.shn|.zip|.rar|"
                  ".wv|.nsf|.spc|.gym|.adx|.dsp|.adp|.ymf|.ast|.afc|.hps|.xsp|.xwav|.waa|.wvs|.wam|.gcm|.idsp|.mpdsp|.mss|.spt|.rsd|.mid|.kar|.sap|"
                  ".cmc|.cmr|.dmc|.mpt|.mpd|.rmt|.tmc|.tm8|.tm2|.oga|.url|.pxml|.tta|.rss|.cm3|.cms|.dlt|.brstm|.wtv|.mka";
-  CStdString extension = m_filename.substr(m_filename.find_last_of("."));
-  if (!extension.IsEmpty() && m_musicExtensions.Find(extension.ToLower()) != -1)
-    m_audio_extension = true;
-
+  if (m_filename.find_last_of(".") != string::npos)
+  {
+    CStdString extension = m_filename.substr(m_filename.find_last_of("."));
+    if (!extension.IsEmpty() && m_musicExtensions.Find(extension.ToLower()) != -1)
+      m_audio_extension = true;
+  }
   if(m_gen_log) {
     CLog::SetLogLevel(LOG_LEVEL_DEBUG);
     CLog::Init("./");
