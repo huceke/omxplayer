@@ -73,6 +73,15 @@ void Keyboard::restore_term()
   }
 }
 
+void Keyboard::Sleep(unsigned int dwMilliSeconds)
+{
+  struct timespec req;
+  req.tv_sec = dwMilliSeconds / 1000;
+  req.tv_nsec = (dwMilliSeconds % 1000) * 1000000;
+
+  while ( nanosleep(&req, &req) == -1 && errno == EINTR && (req.tv_nsec > 0 || req.tv_sec > 0));
+}
+
 void Keyboard::Process() 
 {
   while(!m_bStop && conn && dbus_connection_read_write_dispatch(conn, 0)) 
@@ -86,6 +95,8 @@ void Keyboard::Process()
 
     if (m_keymap[ch[0]] != 0)
           send_action(m_keymap[ch[0]]);
+    else
+      Sleep(20);
   }
 }
 
