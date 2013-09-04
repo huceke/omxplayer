@@ -551,13 +551,12 @@ static int64_t CurrentHostFrequency(void)
 
 int64_t OMXClock::GetAbsoluteClock()
 {
-  return CurrentHostCounter();
+  return CurrentHostCounter()/1000;
 }
 
 double OMXClock::GetClock(bool interpolated /*= true*/)
 {
-  return CurrentHostCounter();
-  //return OMXMediaTime();
+  return GetAbsoluteClock();
 }
 #endif
 

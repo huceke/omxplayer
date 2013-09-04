@@ -605,6 +605,7 @@ int main(int argc, char *argv[])
   int playspeeds[] = {S(0), S(1/16.0), S(1/8.0), S(1/4.0), S(1/2.0), S(0.975), S(1.0), S(1.125), S(-32.0), S(-16.0), S(-8.0), S(-4), S(-2), S(-1), S(1), S(2.0), S(4.0), S(8.0), S(16.0), S(32.0)};
   const int playspeed_slow_min = 0, playspeed_slow_max = 7, playspeed_rew_max = 8, playspeed_rew_min = 13, playspeed_normal = 14, playspeed_ff_min = 15, playspeed_ff_max = 19;
   int playspeed_current = playspeed_normal;
+  double m_last_check_time = 0.0;
   int c;
   std::string mode;
 
@@ -991,11 +992,15 @@ int main(int argc, char *argv[])
 
   while(!m_stop)
   {
-
     if(g_abort)
       goto do_exit;
 
-     if (!IsPipe(m_filename)) {
+    double now = m_av_clock->GetAbsoluteClock();
+    bool update = false;
+    if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now)
+      update = true;
+
+     if (update) {
     switch(m_omxcontrol.getEvent())
     {
       case KeyConfig::ACTION_SHOW_INFO:
@@ -1325,99 +1330,101 @@ int main(int argc, char *argv[])
       goto do_exit;
     }
 
-    /* when the video/audio fifos are low, we pause clock, when high we resume */
-    double stamp = m_av_clock->OMXMediaTime();
-    double audio_pts = m_player_audio.GetCurrentPTS();
-    double video_pts = m_player_video.GetCurrentPTS();
-
-    if (0 && m_av_clock->OMXIsPaused())
+    if (update)
     {
-      double old_stamp = stamp;
-      if (audio_pts != DVD_NOPTS_VALUE && (stamp == 0 || audio_pts < stamp))
-        stamp = audio_pts;
-      if (video_pts != DVD_NOPTS_VALUE && (stamp == 0 || video_pts < stamp))
-        stamp = video_pts;
-      if (old_stamp != stamp)
+      /* when the video/audio fifos are low, we pause clock, when high we resume */
+      double stamp = m_av_clock->OMXMediaTime();
+      double audio_pts = m_player_audio.GetCurrentPTS();
+      double video_pts = m_player_video.GetCurrentPTS();
+
+      if (0 && m_av_clock->OMXIsPaused())
       {
-        m_av_clock->OMXMediaTime(stamp);
-        stamp = m_av_clock->OMXMediaTime();
+        double old_stamp = stamp;
+        if (audio_pts != DVD_NOPTS_VALUE && (stamp == 0 || audio_pts < stamp))
+          stamp = audio_pts;
+        if (video_pts != DVD_NOPTS_VALUE && (stamp == 0 || video_pts < stamp))
+          stamp = video_pts;
+        if (old_stamp != stamp)
+        {
+          m_av_clock->OMXMediaTime(stamp);
+          stamp = m_av_clock->OMXMediaTime();
+        }
+      }
+
+      float audio_fifo = audio_pts == DVD_NOPTS_VALUE ? 0.0f : audio_pts / DVD_TIME_BASE - stamp * 1e-6;
+      float video_fifo = video_pts == DVD_NOPTS_VALUE ? 0.0f : video_pts / DVD_TIME_BASE - stamp * 1e-6;
+      float threshold = std::min(0.1f, (float)m_player_audio.GetCacheTotal() * 0.1f);
+      bool audio_fifo_low = false, video_fifo_low = false, audio_fifo_high = false, video_fifo_high = false;
+
+      if(m_stats)
+      {
+        static int count;
+        if ((count++ & 7) == 0)
+           printf("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk                            \r", stamp,
+               video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
+               audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
+               m_player_video.GetCached()>>10, m_player_audio.GetCached()>>10);
+      }
+
+      if(m_tv_show_info)
+      {
+        static unsigned count;
+        if ((count++ & 7) == 0)
+        {
+          char response[80];
+          if (m_player_video.GetDecoderBufferSize() && m_player_audio.GetCacheTotal())
+            vc_gencmd(response, sizeof response, "render_bar 4 video_fifo %d %d %d %d",
+                (int)(100.0*m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())/m_player_video.GetDecoderBufferSize(),
+                (int)(100.0*video_fifo/m_player_audio.GetCacheTotal()),
+                0, 100);
+          if (m_player_audio.GetCacheTotal())
+            vc_gencmd(response, sizeof response, "render_bar 5 audio_fifo %d %d %d %d",
+                (int)(100.0*audio_fifo/m_player_audio.GetCacheTotal()),
+                (int)(100.0*m_player_audio.GetDelay()/m_player_audio.GetCacheTotal()),
+                0, 100);
+          vc_gencmd(response, sizeof response, "render_bar 6 video_queue %d %d %d %d",
+                m_player_video.GetLevel(), 0, 0, 100);
+          vc_gencmd(response, sizeof response, "render_bar 7 audio_queue %d %d %d %d",
+                m_player_audio.GetLevel(), 0, 0, 100);
+        }
+      }
+
+      if (audio_pts != DVD_NOPTS_VALUE)
+      {
+        audio_fifo_low = m_has_audio && audio_fifo < threshold;
+        audio_fifo_high = !m_has_audio || (audio_pts != DVD_NOPTS_VALUE && audio_fifo > 2.0f * m_threshold);
+      }
+      if (video_pts != DVD_NOPTS_VALUE)
+      {
+        video_fifo_low = m_has_video && video_fifo < threshold;
+        video_fifo_high = !m_has_video || (video_pts != DVD_NOPTS_VALUE && video_fifo > 2.0f * m_threshold);
+      }
+      CLog::Log(LOGDEBUG, "Normal M:%.0f (A:%.0f V:%.0f) P:%d A:%.2f V:%.2f/T:%.2f (%d,%d,%d,%d) A:%d%% V:%d%% (%.2f,%.2f)\n", stamp, audio_pts, video_pts, m_av_clock->OMXIsPaused(),
+        audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo, video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo, 2.0f * m_threshold, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high,
+        m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
+
+      if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || TRICKPLAY(m_av_clock->OMXPlaySpeed()) || (audio_fifo_high && video_fifo_high)))
+      {
+        if (m_av_clock->OMXIsPaused())
+        {
+          CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
+          m_av_clock->OMXResume();
+        }
+      }
+      else if (m_Pause || audio_fifo_low || video_fifo_low)
+      {
+        if (!m_av_clock->OMXIsPaused())
+        {
+          CLog::Log(LOGDEBUG, "Pause %.2f,%.2f (%d,%d,%d,%d) %.2f\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_threshold);
+          m_av_clock->OMXPause();
+        }
       }
     }
-
-    float audio_fifo = audio_pts == DVD_NOPTS_VALUE ? 0.0f : audio_pts / DVD_TIME_BASE - stamp * 1e-6;
-    float video_fifo = video_pts == DVD_NOPTS_VALUE ? 0.0f : video_pts / DVD_TIME_BASE - stamp * 1e-6;
-    float threshold = std::min(0.1f, (float)m_player_audio.GetCacheTotal() * 0.1f);
-    bool audio_fifo_low = false, video_fifo_low = false, audio_fifo_high = false, video_fifo_high = false;
-
-    if(m_stats)
-    {
-      static int count;
-      if ((count++ & 15) == 0)
-         printf("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk                            \r", stamp,
-             video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
-             audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-             m_player_video.GetCached()>>10, m_player_audio.GetCached()>>10);
-    }
-
-    if(m_tv_show_info)
-    {
-      static unsigned count;
-      if ((count++ & 15) == 0)
-      {
-        char response[80];
-        if (m_player_video.GetDecoderBufferSize() && m_player_audio.GetCacheTotal())
-          vc_gencmd(response, sizeof response, "render_bar 4 video_fifo %d %d %d %d",
-              (int)(100.0*m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())/m_player_video.GetDecoderBufferSize(),
-              (int)(100.0*video_fifo/m_player_audio.GetCacheTotal()),
-              0, 100);
-        if (m_player_audio.GetCacheTotal())
-          vc_gencmd(response, sizeof response, "render_bar 5 audio_fifo %d %d %d %d",
-              (int)(100.0*audio_fifo/m_player_audio.GetCacheTotal()),
-              (int)(100.0*m_player_audio.GetDelay()/m_player_audio.GetCacheTotal()),
-              0, 100);
-        vc_gencmd(response, sizeof response, "render_bar 6 video_queue %d %d %d %d",
-              m_player_video.GetLevel(), 0, 0, 100);
-        vc_gencmd(response, sizeof response, "render_bar 7 audio_queue %d %d %d %d",
-              m_player_audio.GetLevel(), 0, 0, 100);
-      }
-    }
-
     if (!sentStarted)
     {
       CLog::Log(LOGDEBUG, "COMXPlayer::HandleMessages - player started RESET");
       m_av_clock->OMXReset(m_has_video, m_has_audio);
       sentStarted = true;
-    }
-
-    if (audio_pts != DVD_NOPTS_VALUE)
-    {
-      audio_fifo_low = m_has_audio && audio_fifo < threshold;
-      audio_fifo_high = !m_has_audio || (audio_pts != DVD_NOPTS_VALUE && audio_fifo > 2.0f * m_threshold);
-    }
-    if (video_pts != DVD_NOPTS_VALUE)
-    {
-      video_fifo_low = m_has_video && video_fifo < threshold;
-      video_fifo_high = !m_has_video || (video_pts != DVD_NOPTS_VALUE && video_fifo > 2.0f * m_threshold);
-    }
-    CLog::Log(LOGDEBUG, "Normal M:%.0f (A:%.0f V:%.0f) P:%d A:%.2f V:%.2f/T:%.2f (%d,%d,%d,%d) A:%d%% V:%d%% (%.2f,%.2f)\n", stamp, audio_pts, video_pts, m_av_clock->OMXIsPaused(), 
-      audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo, video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo, 2.0f * m_threshold, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high,
-      m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
-
-    if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || TRICKPLAY(m_av_clock->OMXPlaySpeed()) || (audio_fifo_high && video_fifo_high)))
-    {
-      if (m_av_clock->OMXIsPaused())
-      {
-        CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
-        m_av_clock->OMXResume();
-      }
-    }
-    else if (m_Pause || audio_fifo_low || video_fifo_low)
-    {
-      if (!m_av_clock->OMXIsPaused())
-      {
-        CLog::Log(LOGDEBUG, "Pause %.2f,%.2f (%d,%d,%d,%d) %.2f\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_threshold);
-        m_av_clock->OMXPause();
-      }
     }
 
     if(!m_omx_pkt)
