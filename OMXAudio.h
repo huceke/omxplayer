@@ -35,6 +35,7 @@
 #include "OMXStreamInfo.h"
 #include "BitstreamConverter.h"
 #include "utils/PCMRemap.h"
+#include "utils/SingleLock.h"
 
 class COMXAudio
 {
@@ -132,6 +133,7 @@ protected:
   DllAvUtil         m_dllAvUtil;
   OMX_AUDIO_CHANNELTYPE m_input_channels[OMX_AUDIO_MAXCHANNELS];
   CPCMRemap         m_remap;
+  CCriticalSection m_critSection;
 };
 #endif
 

@@ -128,6 +128,7 @@ COMXAudio::~COMXAudio()
 
 bool COMXAudio::PortSettingsChanged()
 {
+  CSingleLock lock (m_critSection);
   OMX_ERRORTYPE omx_err   = OMX_ErrorNone;
 
   if (m_settings_changed)
@@ -260,6 +261,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
                            COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSampleRate, unsigned int uiBitsPerSample, bool boostOnDownmix,
                            OMXClock *clock, bool bUsePassthrough, bool bUseHWDecode, float fifo_size)
 {
+  CSingleLock lock (m_critSection);
   OMX_ERRORTYPE omx_err;
 
   Deinitialize();
@@ -566,7 +568,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
 //***********************************************************************************************
 bool COMXAudio::Deinitialize()
 {
-  //CSingleLock lock (m_critSection);
+  CSingleLock lock (m_critSection);
 
   m_omx_tunnel_decoder.Flush();
   if(!m_Passthrough)
@@ -609,6 +611,7 @@ bool COMXAudio::Deinitialize()
 
 void COMXAudio::Flush()
 {
+  CSingleLock lock (m_critSection);
   if(!m_Initialized)
     return;
 
@@ -630,6 +633,7 @@ void COMXAudio::SetDynamicRangeCompression(long drc)
 //***********************************************************************************************
 void COMXAudio::SetMute(bool bMute)
 {
+  CSingleLock lock (m_critSection);
   m_Mute = bMute;
   if (m_settings_changed)
     ApplyVolume();
@@ -638,6 +642,7 @@ void COMXAudio::SetMute(bool bMute)
 //***********************************************************************************************
 void COMXAudio::SetVolume(float fVolume)
 {
+  CSingleLock lock (m_critSection);
   m_CurrentVolume = fVolume;
   if (m_settings_changed)
     ApplyVolume();
@@ -652,7 +657,7 @@ float COMXAudio::GetVolume()
 bool COMXAudio::ApplyVolume(void)
 {
   float m_ac3Gain = 12.0f;
-  //CSingleLock lock (m_critSection);
+  CSingleLock lock (m_critSection);
 
   if(!m_Initialized || m_Passthrough)
     return false;
@@ -741,7 +746,7 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len)
 //***********************************************************************************************
 unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dts, double pts)
 {
-  //CSingleLock lock (m_critSection);
+  CSingleLock lock (m_critSection);
 
   if(!m_Initialized)
   {
@@ -923,7 +928,7 @@ unsigned int COMXAudio::GetChunkLen()
 
 unsigned int COMXAudio::GetAudioRenderingLatency()
 {
-  //CSingleLock lock (m_critSection);
+  CSingleLock lock (m_critSection);
 
   if(!m_Initialized)
     return 0;
@@ -947,7 +952,7 @@ unsigned int COMXAudio::GetAudioRenderingLatency()
 
 void COMXAudio::SubmitEOS()
 {
-  //CSingleLock lock (m_critSection);
+  CSingleLock lock (m_critSection);
 
   if(!m_Initialized)
     return;
@@ -983,7 +988,7 @@ bool COMXAudio::IsEOS()
   if(!m_Initialized)
     return true;
   unsigned int latency = GetAudioRenderingLatency();
-  //CSingleLock lock (m_critSection);
+  CSingleLock lock (m_critSection);
 
   if (!(m_omx_decoder.IsEOS() && latency == 0))
     return false;
