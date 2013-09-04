@@ -54,6 +54,7 @@ public:
   float GetCacheTime();
   float GetCacheTotal();
   unsigned int GetAudioRenderingLatency();
+  float GetMaxLevel(double &pts);
   COMXAudio();
   bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
@@ -105,6 +106,11 @@ private:
   unsigned int  m_OutputChannels;
   unsigned int  m_downmix_channels;
   unsigned int  m_BitsPerSample;
+  float		m_maxLevel;
+  float		m_avgLevel;
+  float         m_amplification;
+  float         m_attenuation;
+  float         m_desired_attenuation;
   COMXCoreComponent *m_omx_clock;
   OMXClock      *m_av_clock;
   bool          m_settings_changed;

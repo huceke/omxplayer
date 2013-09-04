@@ -109,8 +109,10 @@ public:
   unsigned int GetCached() { return m_cached_size; };
   unsigned int GetMaxCached() { return m_max_data_size; };
   unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
-  void SetVolume(float nVolume);
-  float GetVolume();
+  void SetVolume(float fVolume)                          { if(m_decoder) m_decoder->SetVolume(fVolume); }
+  float GetVolume()                                      { return m_decoder ? m_decoder->GetVolume() : 0.0f; }
+  void SetMute(bool bOnOff)                              { if(m_decoder) m_decoder->SetMute(bOnOff); }
+  void SetDynamicRangeCompression(long drc)              { if(m_decoder) m_decoder->SetDynamicRangeCompression(drc); }
   bool Error() { return !m_player_error; };
 };
 #endif

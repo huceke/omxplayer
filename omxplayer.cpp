@@ -79,6 +79,7 @@ enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 bool              m_passthrough         = false;
 long              m_Volume              = 0;
+long              m_Amplification       = 0;
 bool              m_Deinterlace         = false;
 bool              m_NoDeinterlace       = false;
 bool              m_HWDecode            = false;
@@ -164,6 +165,7 @@ void print_usage()
   printf("         -b / --blank                   set background to black\n");
   printf("              --boost-on-downmix        boost volume when downmixing\n");
   printf("              --vol n                   Set initial volume in millibels (default 0)\n");
+  printf("              --amp n                   Set initial amplification in millibels (default 0)\n");
   printf("              --no-osd                  do not display status information on screen\n");
   printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
   printf("              --font path               subtitle font\n");
@@ -559,6 +561,7 @@ int main(int argc, char *argv[])
   const int threshold_opt   = 0x10c;
   const int boost_on_downmix_opt = 0x200;
   const int key_config_opt  = 0x10d;
+  const int amp_opt         = 0x10e;
   const int no_osd_opt = 0x202;
 
   struct option longopts[] = {
@@ -571,6 +574,7 @@ int main(int argc, char *argv[])
     { "stats",        no_argument,        NULL,          's' },
     { "passthrough",  no_argument,        NULL,          'p' },
     { "vol",          required_argument,  NULL,          vol_opt },
+    { "amp",          required_argument,  NULL,          amp_opt },
     { "deinterlace",  no_argument,        NULL,          'd' },
     { "nodeinterlace",no_argument,        NULL,          no_deinterlace_opt },
     { "hw",           no_argument,        NULL,          'w' },
@@ -718,6 +722,9 @@ int main(int argc, char *argv[])
         break;
       case vol_opt:
 	m_Volume = atoi(optarg);
+        break;
+      case amp_opt:
+	m_Amplification = atoi(optarg);
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
@@ -983,7 +990,11 @@ int main(int argc, char *argv[])
     goto do_exit;
 
   if(m_has_audio)
+  {
     m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
+    if (m_Amplification)
+      m_player_audio.SetDynamicRangeCompression(m_Amplification);
+  }
 
   m_av_clock->OMXPause();
   m_av_clock->OMXStateExecute();
@@ -997,7 +1008,7 @@ int main(int argc, char *argv[])
 
     double now = m_av_clock->GetAbsoluteClock();
     bool update = false;
-    if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now)
+    if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) 
       update = true;
 
      if (update) {
@@ -1399,7 +1410,7 @@ int main(int argc, char *argv[])
         video_fifo_low = m_has_video && video_fifo < threshold;
         video_fifo_high = !m_has_video || (video_pts != DVD_NOPTS_VALUE && video_fifo > m_threshold);
       }
-      CLog::Log(LOGDEBUG, "Normal M:%.0f (A:%.0f V:%.0f) P:%d A:%.2f V:%.2f/T:%.2f (%d,%d,%d,%d) A:%d%% V:%d%% (%.2f,%.2f)\n", stamp, audio_pts, video_pts, m_av_clock->OMXIsPaused(),
+      CLog::Log(LOGDEBUG, "Normal M:%.0f (A:%.0f V:%.0f) P:%d A:%.2f V:%.2f/T:%.2f (%d,%d,%d,%d) A:%d%% V:%d%% (%.2f,%.2f)\n", stamp, audio_pts, video_pts, m_av_clock->OMXIsPaused(), 
         audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo, video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo, m_threshold, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high,
         m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
 
