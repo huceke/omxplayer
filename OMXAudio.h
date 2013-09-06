@@ -123,6 +123,7 @@ private:
   std::string   m_deviceuse;
   double        m_last_pts;
   bool          m_submitted_eos;
+  bool          m_failed_eos;
   float         m_fifo_size;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;

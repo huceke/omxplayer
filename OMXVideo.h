@@ -110,6 +110,7 @@ protected:
   CRect             m_src_rect;
   float             m_pixel_aspect;
   bool              m_submitted_eos;
+  bool              m_failed_eos;
   OMX_DISPLAYTRANSFORMTYPE m_transform;
   bool              m_settings_changed;
 };
