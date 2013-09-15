@@ -921,7 +921,7 @@ void COMXVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
   if(!m_is_open)
     return;
 
-  if ( !m_settings_changed || !((DestRect.x2 > DestRect.x1 && DestRect.y2 > DestRect.y1) || m_pixel_aspect != 0.0f) )
+  if ( !((DestRect.x2 > DestRect.x1 && DestRect.y2 > DestRect.y1) || m_pixel_aspect != 0.0f) )
     return;
 
   OMX_ERRORTYPE omx_err;
