@@ -84,6 +84,7 @@ Using OMXPlayer
               --audio_queue n           Size of audio input queue in MB
               --video_queue n           Size of video input queue in MB
               --threshold   n           Amount of buffered data required to come out of buffering in seconds
+              --orientation n           Set orientation of video (0, 90, 180 or 270)
               --key-config <file>       Uses key bindings specified in <file> instead of the default
 
 For example:

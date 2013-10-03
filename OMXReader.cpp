@@ -847,6 +847,9 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->aspect = 0.0f;
     if (m_bAVI && stream->codec->codec_id == CODEC_ID_H264)
       hints->ptsinvalid = true;
+    AVDictionaryEntry *rtag = m_dllAvUtil.av_dict_get(stream->metadata, "rotate", NULL, 0);
+    if (rtag)
+      hints->orientation = atoi(rtag->value);
   }
 
   return true;
