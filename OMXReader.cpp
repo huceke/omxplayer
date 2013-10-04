@@ -817,6 +817,7 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
   hints->width         = stream->codec->width;
   hints->height        = stream->codec->height;
   hints->profile       = stream->codec->profile;
+  hints->orientation   = 0;
 
   if(stream->codec->codec_type == AVMEDIA_TYPE_VIDEO)
   {
