@@ -190,6 +190,8 @@ void print_keybindings()
   printf("        p / space          pause/resume\n");
   printf("        -                  decrease volume\n");
   printf("        + / =              increase volume\n");
+  printf("        A - M              set volume between 0 and 120%% (per 10%% increments)\n");
+  printf("        *                  mute/unmute\n");
   printf("        left arrow         seek -30 seconds\n");
   printf("        right arrow        seek +30 seconds\n");
   printf("        down arrow         seek -600 seconds\n");
@@ -1011,6 +1013,26 @@ int main(int argc, char *argv[])
         break;
       case '+': case '=':
         m_player_audio.SetCurrentVolume(m_player_audio.GetCurrentVolume() + 300);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+        break;
+      case '*':
+        // if volume is muted (i.e. at VOLUME_MINIMUM), we call Mute with false
+        // which unmutes sound, and vice-versa
+        m_player_audio.Mute(m_player_audio.GetCurrentVolume() != VOLUME_MINIMUM);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+        break;
+      case 'A':
+        // 'A' is a special case since it would yield -inf
+        m_player_audio.SetCurrentVolume(VOLUME_MINIMUM);
+        printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
+        break;
+      case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':
+      case 'H': case 'I': case 'J': case 'K': case 'L': case 'M':
+        // We make sound vary from -60dB to 6dB per 6dB increments
+        // We want dB from amplitude (0 - 120%) so we convert the sound as :
+        long mdb_vol;
+        mdb_vol = 2000.0 * log((float)(ch[0]-'A')/10);
+        m_player_audio.SetCurrentVolume(mdb_vol);
         printf("Current Volume: %.2fdB\n", m_player_audio.GetCurrentVolume() / 100.0f);
         break;
       default:
