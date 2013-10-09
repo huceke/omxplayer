@@ -45,6 +45,10 @@
 
 #define VIS_PACKET_SIZE 3840
 
+#ifndef VOLUME_MINIMUM
+#define VOLUME_MINIMUM -6000  // -60dB
+#endif
+
 class COMXAudio : public IAudioRenderer
 {
 public:
@@ -101,6 +105,7 @@ private:
   bool          m_Pause;
   bool          m_CanPause;
   long          m_CurrentVolume;
+  long          m_LastVolume;
   long          m_drc;
   bool          m_Passthrough;
   bool          m_HWDecode;

@@ -39,10 +39,6 @@
 #include "guilib/LocalizeStrings.h"
 #endif
 
-#ifndef VOLUME_MINIMUM
-#define VOLUME_MINIMUM -6000  // -60dB
-#endif
-
 #include <algorithm>
 
 using namespace std;
@@ -118,6 +114,7 @@ COMXAudio::COMXAudio() :
   m_Pause           (false  ),
   m_CanPause        (false  ),
   m_CurrentVolume   (0      ),
+  m_LastVolume      (0      ),
   m_Passthrough     (false  ),
   m_HWDecode        (false  ),
   m_normalize_downmix(true   ),
@@ -222,6 +219,7 @@ bool COMXAudio::Initialize(IAudioCallback* pCallback, const CStdString& device, 
   m_CurrentVolume = g_settings.m_nVolumeLevel; 
 #else
   m_CurrentVolume = initialVolume;
+  m_LastVolume = m_CurrentVolume;
 #endif
 
   m_downmix_channels = downmixChannels;
@@ -731,10 +729,12 @@ void COMXAudio::Mute(bool bMute)
   if(!m_Initialized)
     return;
 
-  if (bMute)
+  if (bMute) {
+    m_LastVolume = m_CurrentVolume;
     SetCurrentVolume(VOLUME_MINIMUM);
+  }
   else
-    SetCurrentVolume(m_CurrentVolume);
+    SetCurrentVolume(m_LastVolume);
 }
 
 //***********************************************************************************************

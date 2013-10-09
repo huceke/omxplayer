@@ -722,6 +722,11 @@ void OMXPlayerAudio::SetCurrentVolume(long nVolume)
   if(m_decoder) m_decoder->SetCurrentVolume(nVolume);
 }
 
+void OMXPlayerAudio::Mute(bool bMute)
+{
+  if(m_decoder) m_decoder->Mute(bMute);
+}
+
 long OMXPlayerAudio::GetCurrentVolume()
 {
   if(m_decoder)
