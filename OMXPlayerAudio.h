@@ -135,6 +135,7 @@ public:
   void  RegisterAudioCallback(IAudioCallback* pCallback);
   void  UnRegisterAudioCallback();
   void  DoAudioWork();
+  void Mute(bool bMute);
   void SetCurrentVolume(long nVolume);
   long GetCurrentVolume();
   void SetSpeed(int iSpeed);
