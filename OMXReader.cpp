@@ -106,7 +106,7 @@ static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
     return pFile->Seek(pos, whence & ~AVSEEK_FORCE);
 }
 
-bool OMXReader::Open(std::string filename, bool dump_format)
+bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load())
     return false;
@@ -218,6 +218,9 @@ bool OMXReader::Open(std::string filename, bool dump_format)
 
   if(/*m_bAVI || */m_bMatroska)
     m_pFormatContext->max_analyze_duration = 0;
+
+  if (live)
+    m_pFormatContext->flags |= AVFMT_FLAG_NOBUFFER;
 
   result = m_dllAvFormat.avformat_find_stream_info(m_pFormatContext, NULL);
   if(result < 0)

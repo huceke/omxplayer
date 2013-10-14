@@ -184,6 +184,7 @@ void print_usage()
   printf("              --video_queue n           Size of video input queue in MB\n");
   printf("              --threshold   n           Amount of buffered data required to come out of buffering in seconds\n");
   printf("              --orientation n           Set orientation of video (0, 90, 180 or 270)\n");
+  printf("              --live                    Set for live tv or vod type stream\n");
   printf("              --key-config <file>       Uses key bindings specified in <file> instead of the default\n");
 }
 
@@ -542,8 +543,9 @@ int main(int argc, char *argv[])
   float video_fifo_size = 0.0;
   float audio_queue_size = 0.0;
   float video_queue_size = 0.0;
-  float m_threshold      = 0.2f; // amount of audio/video required to come out of buffering
+  float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
   int m_orientation      = -1; // unset
+  bool m_live            = false; // set to true for live tv or vod for low buffering
   TV_DISPLAY_STATE_T   tv_state;
 
   const int font_opt        = 0x100;
@@ -566,6 +568,7 @@ int main(int argc, char *argv[])
   const int amp_opt         = 0x10e;
   const int no_osd_opt = 0x202;
   const int orientation_opt = 0x204;
+  const int live_opt = 0x205;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -606,6 +609,7 @@ int main(int argc, char *argv[])
     { "key-config",   required_argument,  NULL,          key_config_opt },
     { "no-osd",       no_argument,        NULL,          no_osd_opt },
     { "orientation",  required_argument,  NULL,          orientation_opt },
+    { "live",         no_argument,        NULL,          live_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -614,6 +618,7 @@ int main(int argc, char *argv[])
   const int playspeed_slow_min = 0, playspeed_slow_max = 7, playspeed_rew_max = 8, playspeed_rew_min = 13, playspeed_normal = 14, playspeed_ff_min = 15, playspeed_ff_max = 19;
   int playspeed_current = playspeed_normal;
   double m_last_check_time = 0.0;
+  float m_audio_fifo = 0.0f;
   int c;
   std::string mode;
 
@@ -751,6 +756,9 @@ int main(int argc, char *argv[])
       case orientation_opt:
         m_orientation = atoi(optarg);
         break;
+      case live_opt:
+        m_live = true;
+        break;
       case 'b':
         m_blank_background = true;
         break;
@@ -864,7 +872,7 @@ int main(int argc, char *argv[])
 
   m_thread_player = true;
 
-  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format))
+  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_live))
     goto do_exit;
 
   if(m_dump_format)
@@ -995,7 +1003,7 @@ int main(int argc, char *argv[])
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
                                          m_passthrough, m_use_hw_audio,
-                                         m_boost_on_downmix, m_thread_player, audio_queue_size, audio_fifo_size))
+                                         m_boost_on_downmix, m_thread_player, m_live, audio_queue_size, audio_fifo_size))
     goto do_exit;
 
   if(m_has_audio)
@@ -1004,6 +1012,9 @@ int main(int argc, char *argv[])
     if (m_Amplification)
       m_player_audio.SetDynamicRangeCompression(m_Amplification);
   }
+
+  if (m_threshold < 0.0f)
+    m_threshold = m_live ? 0.7f : 0.2f;
 
   m_av_clock->OMXPause();
   m_av_clock->OMXStateExecute();
@@ -1423,7 +1434,40 @@ int main(int argc, char *argv[])
         audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo, video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo, m_threshold, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high,
         m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
 
-      if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || TRICKPLAY(m_av_clock->OMXPlaySpeed()) || (audio_fifo_high && video_fifo_high)))
+      // keep latency under control by adjusting clock (and so resampling audio)
+      if (m_live)
+      {
+        if (audio_pts != DVD_NOPTS_VALUE && !m_Pause)
+        {
+          if (m_av_clock->OMXIsPaused())
+          {
+            if (audio_fifo > m_threshold)
+            {
+              CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
+              m_av_clock->OMXResume();
+              m_audio_fifo = m_threshold;
+            }
+          }
+          else
+          {
+            m_audio_fifo = m_audio_fifo*0.99f + audio_fifo*0.01f;
+            float speed = 1.0f;
+            if (m_audio_fifo < 0.5f*m_threshold)
+              speed = 0.990f;
+            else if (m_audio_fifo < 0.9f*m_threshold)
+              speed = 0.999f;
+            else if (m_audio_fifo > 2.0f*m_threshold)
+              speed = 1.010f;
+            else if (m_audio_fifo > 1.1f*m_threshold)
+              speed = 1.001f;
+
+            m_av_clock->OMXSetSpeed(S(speed));
+            m_av_clock->OMXSetSpeed(S(speed), true, true);
+            CLog::Log(LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_audio_fifo, audio_fifo, speed, m_threshold);
+          }
+        }
+      }
+      else if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || TRICKPLAY(m_av_clock->OMXPlaySpeed()) || (audio_fifo_high && video_fifo_high)))
       {
         if (m_av_clock->OMXIsPaused())
         {

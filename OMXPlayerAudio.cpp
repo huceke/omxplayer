@@ -47,6 +47,7 @@ OMXPlayerAudio::OMXPlayerAudio()
   m_player_error  = true;
   m_max_data_size = 3 * 1024 * 1024;
   m_fifo_size     = 2.0f;
+  m_live          = false;
 
   pthread_cond_init(&m_packet_cond, NULL);
   pthread_cond_init(&m_audio_cond, NULL);
@@ -90,7 +91,7 @@ void OMXPlayerAudio::UnLockDecoder()
 
 bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
                           std::string device, bool passthrough, bool hw_decode,
-                          bool boost_on_downmix, bool use_thread, float queue_size, float fifo_size)
+                          bool boost_on_downmix, bool use_thread, bool is_live, float queue_size, float fifo_size)
 {
   if(ThreadHandle())
     Close();
@@ -113,6 +114,7 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   m_bAbort      = false;
   m_use_thread  = use_thread;
   m_flush       = false;
+  m_live        = is_live;
   m_cached_size = 0;
   m_pAudioCodec = NULL;
   m_pChannelMap = NULL;
@@ -432,7 +434,7 @@ bool OMXPlayerAudio::OpenDecoder()
   unsigned int downmix_channels = m_hints.channels;
   bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pChannelMap,
                            m_hints, downmix_channels, m_hints.samplerate, m_pAudioCodec->GetBitsPerSample(), m_boost_on_downmix,
-                           m_av_clock, m_passthrough, m_hw_decode, m_fifo_size);
+                           m_av_clock, m_passthrough, m_hw_decode, m_live, m_fifo_size);
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
   

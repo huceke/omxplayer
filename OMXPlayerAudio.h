@@ -71,6 +71,7 @@ protected:
   bool                      m_bAbort;
   bool                      m_use_thread; 
   bool                      m_flush;
+  bool                      m_live;
   enum PCMChannels          *m_pChannelMap;
   unsigned int              m_cached_size;
   unsigned int              m_max_data_size;
@@ -88,7 +89,7 @@ public:
   ~OMXPlayerAudio();
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
             std::string device, bool passthrough, bool hw_decode,
-            bool boost_on_downmix, bool use_thread, float queue_size, float fifo_size);
+            bool boost_on_downmix, bool use_thread, bool is_live, float queue_size, float fifo_size);
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();

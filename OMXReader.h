@@ -130,7 +130,7 @@ private:
 public:
   OMXReader();
   ~OMXReader();
-  bool Open(std::string filename, bool dump_format);
+  bool Open(std::string filename, bool dump_format, bool live = false);
   void ClearStreams();
   bool Close();
   //void FlushRead();

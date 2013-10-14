@@ -133,7 +133,8 @@ COMXAudio::COMXAudio() :
   m_last_pts        (DVD_NOPTS_VALUE),
   m_submitted_eos   (false  ),
   m_failed_eos      (false  ),
-  m_fifo_size       (0.0    )
+  m_fifo_size       (0.0    ),
+  m_live            (false  )
 {
 }
 
@@ -206,16 +207,13 @@ bool COMXAudio::PortSettingsChanged()
 
   // By default audio_render is the clock master, and if output samples don't fit the timestamps, it will speed up/slow down the clock.
   // This tends to be better for maintaining audio sync and avoiding audio glitches, but can affect video/display sync
-  if(1)
-  {
-    OMX_CONFIG_BOOLEANTYPE configBool;
-    OMX_INIT_STRUCTURE(configBool);
-    configBool.bEnabled = OMX_FALSE;
+  OMX_CONFIG_BOOLEANTYPE configBool;
+  OMX_INIT_STRUCTURE(configBool);
+  configBool.bEnabled = m_live ? OMX_FALSE:OMX_TRUE;
 
-    omx_err = m_omx_render.SetConfig(OMX_IndexConfigBrcmClockReferenceSource, &configBool);
-    if (omx_err != OMX_ErrorNone)
-       return false;
-  }
+  omx_err = m_omx_render.SetConfig(OMX_IndexConfigBrcmClockReferenceSource, &configBool);
+  if (omx_err != OMX_ErrorNone)
+     return false;
 
   OMX_CONFIG_BRCMAUDIODESTINATIONTYPE audioDest;
   OMX_INIT_STRUCTURE(audioDest);
@@ -276,7 +274,7 @@ bool COMXAudio::PortSettingsChanged()
 
 bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSampleRate, unsigned int uiBitsPerSample, bool boostOnDownmix,
-                           OMXClock *clock, bool bUsePassthrough, bool bUseHWDecode, float fifo_size)
+                           OMXClock *clock, bool bUsePassthrough, bool bUseHWDecode, bool is_live, float fifo_size)
 {
   CSingleLock lock (m_critSection);
   OMX_ERRORTYPE omx_err;
@@ -298,6 +296,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_fifo_size = fifo_size;
   m_downmix_channels = downmixChannels;
   m_normalize_downmix = !boostOnDownmix;
+  m_live = is_live;
 
   if(m_InputChannels == 0)
     return false;

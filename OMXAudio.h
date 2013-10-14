@@ -58,7 +58,7 @@ public:
   COMXAudio();
   bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
                            COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
-                           OMXClock *clock, bool bUsePassthrough = false, bool bUseHWDecode = false, float fifo_size = 0);
+                           OMXClock *clock, bool bUsePassthrough = false, bool bUseHWDecode = false, bool is_live = false, float fifo_size = 0);
   ~COMXAudio();
   bool PortSettingsChanged();
 
@@ -125,6 +125,7 @@ private:
   bool          m_submitted_eos;
   bool          m_failed_eos;
   float         m_fifo_size;
+  bool          m_live;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
   OMX_AUDIO_PARAM_DTSTYPE     m_dtsParam;
