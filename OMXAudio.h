@@ -90,6 +90,7 @@ public:
   void PrintDTS(OMX_AUDIO_PARAM_DTSTYPE *dtsparam);
   unsigned int SyncDTS(BYTE* pData, unsigned int iSize);
   unsigned int SyncAC3(BYTE* pData, unsigned int iSize);
+  void UpdateAttenuation();
 
 private:
   bool          m_Initialized;
@@ -107,10 +108,9 @@ private:
   unsigned int  m_downmix_channels;
   unsigned int  m_BitsPerSample;
   float		m_maxLevel;
-  float		m_avgLevel;
   float         m_amplification;
   float         m_attenuation;
-  float         m_desired_attenuation;
+  float         m_submitted;
   COMXCoreComponent *m_omx_clock;
   OMXClock      *m_av_clock;
   bool          m_settings_changed;
@@ -129,6 +129,11 @@ private:
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
   OMX_AUDIO_PARAM_DTSTYPE     m_dtsParam;
   WAVEFORMATEXTENSIBLE        m_wave_header;
+  typedef struct {
+    double pts;
+    float level;
+  } amplitudes_t;
+  std::deque<amplitudes_t> m_ampqueue;
 
 protected:
   COMXCoreComponent m_omx_render;
