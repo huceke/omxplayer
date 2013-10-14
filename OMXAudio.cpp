@@ -700,7 +700,7 @@ bool COMXAudio::ApplyVolume(void)
   const float* coeff = downmixing_coefficients_8;
 
   // alternate coffeciciants that boost centre channel more
-  if(m_boostcentre)
+  if(m_boostcentre && m_InputChannels > 2)
     coeff = downmixing_coefficients_8_boostcentre;
 
   // normally we normalise the levels, can be skipped (boosted) at risk of distortion
