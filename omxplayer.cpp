@@ -99,7 +99,6 @@ unsigned int      m_subtitle_lines      = 3;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = -1;
-int               m_seek_pos            = 0;
 bool              m_thread_player       = false;
 OMXClock          *m_av_clock           = NULL;
 OMXControl        m_omxcontrol;
@@ -691,9 +690,10 @@ int main(int argc, char *argv[])
           m_audio_index_use = 0;
         break;
       case 'l':
-        m_seek_pos = atoi(optarg) ;
-        if (m_seek_pos < 0)
-            m_seek_pos = 0;
+        m_incr = atof(optarg) ;
+        if (m_incr < 0)
+            m_incr = 0;
+        m_seek_flush = true;
         break;
       case no_osd_opt:
         m_osd = false;
@@ -934,12 +934,6 @@ int main(int argc, char *argv[])
   }
   m_display_aspect *= (float)current_tv_state.display.hdmi.height/(float)current_tv_state.display.hdmi.width;
 
-  // seek on start
-  if (m_seek_pos !=0 && m_omx_reader.CanSeek()) {
-        printf("Seeking start of video to %i seconds\n", m_seek_pos);
-        m_omx_reader.SeekTime(m_seek_pos * 1000.0f, false, &startpts);  // from seconds to DVD_TIME_BASE
-  }
-  
   if (m_orientation >= 0)
     m_hints_video.orientation = m_orientation;
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
