@@ -931,7 +931,10 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
 void COMXAudio::UpdateAttenuation()
 {
   if (m_amplification == 1.0)
+  {
+    ApplyVolume();
     return;
+  }
 
   double level_pts = 0.0;
   float level = GetMaxLevel(level_pts);
