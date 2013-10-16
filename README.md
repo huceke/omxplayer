@@ -8,7 +8,7 @@ standalone.
 Downloading OMXPlayer
 ---------------------
 
-    git clone git://github.com/huceke/omxplayer.git
+    git clone https://github.com/popcornmix/omxplayer.git
 
 Compiling OMXPlayer
 -------------------
