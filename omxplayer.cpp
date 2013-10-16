@@ -617,7 +617,7 @@ int main(int argc, char *argv[])
   const int playspeed_slow_min = 0, playspeed_slow_max = 7, playspeed_rew_max = 8, playspeed_rew_min = 13, playspeed_normal = 14, playspeed_ff_min = 15, playspeed_ff_max = 19;
   int playspeed_current = playspeed_normal;
   double m_last_check_time = 0.0;
-  float m_audio_fifo = 0.0f;
+  float m_latency = 0.0f;
   int c;
   std::string mode;
 
@@ -1431,33 +1431,38 @@ int main(int argc, char *argv[])
       // keep latency under control by adjusting clock (and so resampling audio)
       if (m_live)
       {
-        if (audio_pts != DVD_NOPTS_VALUE && !m_Pause)
+        float latency = DVD_NOPTS_VALUE;
+        if (m_has_audio && audio_pts != DVD_NOPTS_VALUE)
+          latency = audio_fifo;
+        else if (!m_has_audio && m_has_video && video_pts != DVD_NOPTS_VALUE)
+          latency = video_fifo;
+        if (!m_Pause && latency != DVD_NOPTS_VALUE)
         {
           if (m_av_clock->OMXIsPaused())
           {
-            if (audio_fifo > m_threshold)
+            if (latency > m_threshold)
             {
               CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
               m_av_clock->OMXResume();
-              m_audio_fifo = m_threshold;
+              m_latency = latency;
             }
           }
           else
           {
-            m_audio_fifo = m_audio_fifo*0.99f + audio_fifo*0.01f;
+            m_latency = m_latency*0.99f + latency*0.01f;
             float speed = 1.0f;
-            if (m_audio_fifo < 0.5f*m_threshold)
+            if (m_latency < 0.5f*m_threshold)
               speed = 0.990f;
-            else if (m_audio_fifo < 0.9f*m_threshold)
+            else if (m_latency < 0.9f*m_threshold)
               speed = 0.999f;
-            else if (m_audio_fifo > 2.0f*m_threshold)
+            else if (m_latency > 2.0f*m_threshold)
               speed = 1.010f;
-            else if (m_audio_fifo > 1.1f*m_threshold)
+            else if (m_latency > 1.1f*m_threshold)
               speed = 1.001f;
 
             m_av_clock->OMXSetSpeed(S(speed));
             m_av_clock->OMXSetSpeed(S(speed), true, true);
-            CLog::Log(LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_audio_fifo, audio_fifo, speed, m_threshold);
+            CLog::Log(LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_latency, latency, speed, m_threshold);
           }
         }
       }
