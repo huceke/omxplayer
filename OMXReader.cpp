@@ -1289,7 +1289,7 @@ bool OMXReader::CanSeek()
   if(m_ioContext)
     return m_ioContext->seekable;
 
-  if(!m_pFormatContext)
+  if(!m_pFormatContext || !m_pFormatContext->pb)
     return false;
 
   if(m_pFormatContext->pb->seekable == AVIO_SEEKABLE_NORMAL)
