@@ -1023,8 +1023,10 @@ int main(int argc, char *argv[])
     double now = m_av_clock->GetAbsoluteClock();
     bool update = false;
     if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) 
+    {
       update = true;
-    m_last_check_time = now;
+      m_last_check_time = now;
+    }
 
      if (update) {
     switch(m_omxcontrol.getEvent())
