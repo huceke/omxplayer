@@ -1024,6 +1024,7 @@ int main(int argc, char *argv[])
     bool update = false;
     if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) 
       update = true;
+    m_last_check_time = now;
 
      if (update) {
     switch(m_omxcontrol.getEvent())
@@ -1556,6 +1557,8 @@ int main(int argc, char *argv[])
         m_omx_reader.FreePacket(m_omx_pkt);
         m_omx_pkt = NULL;
       }
+      else
+        OMXClock::OMXSleep(10);
     }
   }
 
