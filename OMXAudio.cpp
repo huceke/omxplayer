@@ -40,6 +40,8 @@
 using namespace std;
 
 #define OMX_MAX_CHANNELS 10
+// the size of the audio_render output port buffers
+#define AUDIO_DECODE_OUTPUT_BUFFER (32*1024)
 
 static enum PCMChannels OMXChannelMap[OMX_MAX_CHANNELS] =
 {
@@ -394,7 +396,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   // we don't mind less common formats being split (e.g. ape/wma output large frames)
   // the audio_decode output buffer size is 32K, and typically we convert from
   // 6 channel 32bpp float to 8 channel 16bpp in, so a full 48K input buffer will fit the outbut buffer
-  m_ChunkLen      = 48*1024;
+  m_ChunkLen      = AUDIO_DECODE_OUTPUT_BUFFER * 2 * 6 / 8;
 
   m_wave_header.Samples.wSamplesPerBlock    = 0;
   m_wave_header.Format.nChannels            = m_InputChannels;
@@ -826,8 +828,13 @@ unsigned int COMXAudio::AddPackets(const void* data, unsigned int len, double dt
     omx_buffer->nOffset = 0;
     omx_buffer->nFlags  = 0;
 
+    // we want audio_decode output buffer size to be no more than AUDIO_DECODE_OUTPUT_BUFFER.
+    // it will be 16-bit and rounded up to next power of 2 in channels
+    static const char rounded_up_channels_shift[] = {0,0,1,2,2,3,3,3,3};
+    unsigned int max_buffer = AUDIO_DECODE_OUTPUT_BUFFER * (m_InputChannels * m_BitsPerSample) >> (rounded_up_channels_shift[m_InputChannels] + 4);
+
     unsigned int remaining = demuxer_samples-demuxer_samples_sent;
-    unsigned int samples_space = omx_buffer->nAllocLen/pitch;
+    unsigned int samples_space = std::min(max_buffer, omx_buffer->nAllocLen)/pitch;
     unsigned int samples = std::min(remaining, samples_space);
 
     omx_buffer->nFilledLen = samples * pitch;
