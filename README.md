@@ -65,7 +65,7 @@ Using OMXPlayer
          -g / --genlog                  generate log file
          -l / --pos n                   start position (in seconds)
          -b / --blank                   set background to black
-              --boost-on-downmix        boost volume when downmixing
+              --no-boost-on-downmix     don't boost volume when downmixing
               --vol n                   Set initial volume in millibels (default 0)
               --no-osd                  do not display status information on screen
               --subtitles path          external subtitles in UTF-8 srt format

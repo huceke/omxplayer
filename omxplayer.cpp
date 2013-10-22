@@ -119,7 +119,7 @@ bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
-bool              m_boost_on_downmix    = false;
+bool              m_boost_on_downmix    = true;
 bool              m_gen_log             = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
@@ -162,7 +162,7 @@ void print_usage()
   printf("         -g / --genlog                  generate log file\n");
   printf("         -l / --pos n                   start position (in seconds)\n");
   printf("         -b / --blank                   set background to black\n");
-  printf("              --boost-on-downmix        boost volume when downmixing\n");
+  printf("              --no-boost-on-downmix     don't boost volume when downmixing\n");
   printf("              --vol n                   Set initial volume in millibels (default 0)\n");
   printf("              --amp n                   Set initial amplification in millibels (default 0)\n");
   printf("              --no-osd                  do not display status information on screen\n");
@@ -563,6 +563,7 @@ int main(int argc, char *argv[])
   const int no_deinterlace_opt = 0x10b;
   const int threshold_opt   = 0x10c;
   const int boost_on_downmix_opt = 0x200;
+  const int no_boost_on_downmix_opt = 0x207;
   const int key_config_opt  = 0x10d;
   const int amp_opt         = 0x10e;
   const int no_osd_opt = 0x202;
@@ -605,6 +606,7 @@ int main(int argc, char *argv[])
     { "video_queue",  required_argument,  NULL,          video_queue_opt },
     { "threshold",    required_argument,  NULL,          threshold_opt },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
+    { "no-boost-on-downmix", no_argument, NULL,          no_boost_on_downmix_opt },
     { "key-config",   required_argument,  NULL,          key_config_opt },
     { "no-osd",       no_argument,        NULL,          no_osd_opt },
     { "orientation",  required_argument,  NULL,          orientation_opt },
@@ -737,6 +739,9 @@ int main(int argc, char *argv[])
         break;
       case boost_on_downmix_opt:
         m_boost_on_downmix = true;
+        break;
+      case no_boost_on_downmix_opt:
+        m_boost_on_downmix = false;
         break;
       case audio_fifo_opt:
   audio_fifo_size = atof(optarg);
