@@ -112,6 +112,7 @@ protected:
   float              m_sampleRate;
   unsigned int       m_holdCounter;
   bool               m_limiterEnabled;
+  bool               m_dontnormalize;
 
   struct PCMMapInfo* ResolveChannel(enum PCMChannels channel, float level, bool ifExists, std::vector<enum PCMChannels> path, struct PCMMapInfo *tablePtr);
   void               ResolveChannels(); //!< Partial BuildMap(), just enough to see which output channels are active
@@ -133,9 +134,9 @@ public:
   ~CPCMRemap();
 
   void Reset();
-  enum PCMChannels *SetInputFormat (unsigned int channels, enum PCMChannels *channelMap, unsigned int sampleSize, unsigned int sampleRate);
-#if 0
+  enum PCMChannels *SetInputFormat (unsigned int channels, enum PCMChannels *channelMap, unsigned int sampleSize, unsigned int sampleRate, enum PCMLayout channelLayout, bool dontnormalize);
   void SetOutputFormat(unsigned int channels, enum PCMChannels *channelMap, bool ignoreLayout = false);
+#if 0
   void Remap(void *data, void *out, unsigned int samples, long drc);
   void Remap(void *data, void *out, unsigned int samples, float gain = 1.0f);
   bool CanRemap();
@@ -144,6 +145,7 @@ public:
   int  FramesToInBytes (int frames);
 #endif
   float GetCurrentAttenuation() { return m_attenuationMin; }
+  void               GetDownmixMatrix(float *downmix);
 };
 
 #endif

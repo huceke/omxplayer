@@ -362,7 +362,7 @@ void CPCMRemap::BuildMap()
   m_outStride = m_inSampleSize * m_outChannels;
 
   /* see if we need to normalize the levels */
-  bool dontnormalize = 1;
+  bool dontnormalize = m_dontnormalize;
   CLog::Log(LOGDEBUG, "CPCMRemap: Downmix normalization is %s", (dontnormalize ? "disabled" : "enabled"));
 
   ResolveChannels();
@@ -444,7 +444,7 @@ void CPCMRemap::Reset()
 }
 
 /* sets the input format, and returns the requested channel layout */
-enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChannels *channelMap, unsigned int sampleSize, unsigned int sampleRate)
+enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChannels *channelMap, unsigned int sampleSize, unsigned int sampleRate, enum PCMLayout channelLayout, bool dontnormalize)
 {
   m_inChannels   = channels;
   m_inSampleSize = sampleSize;
@@ -454,7 +454,8 @@ enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChann
     memcpy(m_inMap, channelMap, sizeof(enum PCMChannels) * channels);
 
   /* get the audio layout, and count the channels in it */
-  m_channelLayout  = PCM_LAYOUT_2_0;
+  m_channelLayout = channelLayout;
+  m_dontnormalize = dontnormalize;
   if (m_channelLayout >= PCM_MAX_LAYOUT) m_channelLayout = PCM_LAYOUT_2_0;
 
   
@@ -483,7 +484,7 @@ enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChann
 
   return m_layoutMap;
 }
-#if 0
+
 /* sets the output format supported by the audio renderer */
 void CPCMRemap::SetOutputFormat(unsigned int channels, enum PCMChannels *channelMap, bool ignoreLayout/* = false */)
 {
@@ -501,6 +502,7 @@ void CPCMRemap::SetOutputFormat(unsigned int channels, enum PCMChannels *channel
   m_holdCounter = 0;
 }
 
+#if 0
 void CPCMRemap::Remap(void *data, void *out, unsigned int samples, long drc)
 {
   float gain = 1.0f;
@@ -790,3 +792,20 @@ CStdString CPCMRemap::PCMLayoutStr(enum PCMLayout ename)
   return namestr;
 }
 #endif
+
+
+void CPCMRemap::GetDownmixMatrix(float *downmix)
+{
+  for (int i=0; i<8*8; i++)
+    downmix[i] = 0.0f;
+
+  for (unsigned int ch = 0; ch < m_outChannels; ch++)
+  {
+    struct PCMMapInfo *info = m_lookupMap[m_outMap[ch]];
+    if (info->channel == PCM_INVALID)
+      continue;
+
+    for(; info->channel != PCM_INVALID; info++)
+      downmix[8*ch + (info->in_offset>>1)] = info->level;
+  }
+}

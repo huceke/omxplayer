@@ -39,67 +39,13 @@
 
 using namespace std;
 
-#define OMX_MAX_CHANNELS 10
 // the size of the audio_render output port buffers
 #define AUDIO_DECODE_OUTPUT_BUFFER (32*1024)
-
-static enum PCMChannels OMXChannelMap[OMX_MAX_CHANNELS] =
-{
-  PCM_FRONT_LEFT  , PCM_FRONT_RIGHT,
-  PCM_FRONT_CENTER, PCM_LOW_FREQUENCY,
-  PCM_BACK_LEFT   , PCM_BACK_RIGHT,
-  PCM_SIDE_LEFT   , PCM_SIDE_RIGHT,
-  PCM_BACK_CENTER
-};
-
-static enum OMX_AUDIO_CHANNELTYPE OMXChannels[OMX_MAX_CHANNELS] =
-{
-  OMX_AUDIO_ChannelLF, OMX_AUDIO_ChannelRF,
-  OMX_AUDIO_ChannelCF, OMX_AUDIO_ChannelLFE,
-  OMX_AUDIO_ChannelLR, OMX_AUDIO_ChannelRR,
-  OMX_AUDIO_ChannelLS, OMX_AUDIO_ChannelRS,
-  OMX_AUDIO_ChannelCS, OMX_AUDIO_ChannelNone
-};
-
-static unsigned int WAVEChannels[OMX_MAX_CHANNELS] =
-{
-  SPEAKER_FRONT_LEFT,       SPEAKER_FRONT_RIGHT,
-  SPEAKER_TOP_FRONT_CENTER, SPEAKER_LOW_FREQUENCY,
-  SPEAKER_BACK_LEFT,        SPEAKER_BACK_RIGHT,
-  SPEAKER_SIDE_LEFT,        SPEAKER_SIDE_RIGHT,
-  SPEAKER_BACK_CENTER,      0
-};
 
 static const uint16_t AC3Bitrates[] = {32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 576, 640};
 static const uint16_t AC3FSCod   [] = {48000, 44100, 32000, 0};
 
 static const uint16_t DTSFSCod   [] = {0, 8000, 16000, 32000, 0, 0, 11025, 22050, 44100, 0, 0, 12000, 24000, 48000, 0, 0};
-
-// 7.1 downmixing coefficients
-const float downmixing_coefficients_8[OMX_AUDIO_MAXCHANNELS] = {
-  //        L       R
-  /* L */   1,      0,
-  /* R */   0,      1,
-  /* C */   0.7071, 0.7071,
-  /* LFE */ 0.7071, 0.7071,
-  /* Ls */  0.7071, 0,
-  /* Rs */  0,      0.7071,
-  /* Lr */  0.7071, 0,
-  /* Rr */  0,      0.7071
-};
-
-// 7.1 downmixing coefficients with boosted centre channel
-const float downmixing_coefficients_8_boostcentre[OMX_AUDIO_MAXCHANNELS] = {
-  //        L       R
-  /* L */   0.7071, 0,
-  /* R */   0,      0.7071,
-  /* C */   1,      1,
-  /* LFE */ 0.7071, 0.7071,
-  /* Ls */  0.7071, 0,
-  /* Rs */  0,      0.7071,
-  /* Lr */  0.7071, 0,
-  /* Rr */  0,      0.7071
-};
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -117,7 +63,7 @@ COMXAudio::COMXAudio() :
   m_BufferLen       (0      ),
   m_ChunkLen        (0      ),
   m_InputChannels   (0      ),
-  m_downmix_channels(0      ),
+  m_OutputChannels  (0      ),
   m_BitsPerSample   (0      ),
   m_maxLevel        (0.0f   ),
   m_amplification   (1.0f   ),
@@ -182,9 +128,8 @@ bool COMXAudio::PortSettingsChanged()
     m_pcm_output.nPortIndex      = m_omx_mixer.GetOutputPort();
 
     /* mixer output is always stereo */
-    m_pcm_output.eChannelMapping[0] = OMX_AUDIO_ChannelLF;
-    m_pcm_output.eChannelMapping[1] = OMX_AUDIO_ChannelRF;
-    m_pcm_output.nChannels = 2;
+    memcpy(m_pcm_output.eChannelMapping, m_output_channels, sizeof(m_output_channels));
+    m_pcm_output.nChannels = m_OutputChannels;
 
     omx_err = m_omx_mixer.SetParameter(OMX_IndexParamAudioPcm, &m_pcm_output);
     if(omx_err != OMX_ErrorNone)
@@ -274,8 +219,8 @@ bool COMXAudio::PortSettingsChanged()
   return true;
 }
 
-bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSampleRate, unsigned int uiBitsPerSample, bool boostOnDownmix,
+bool COMXAudio::Initialize(const CStdString& device, int iChannels, uint64_t channelMap,
+                           COMXStreamInfo &hints, enum PCMLayout layout, unsigned int uiSampleRate, unsigned int uiBitsPerSample, bool boostOnDownmix,
                            OMXClock *clock, bool bUsePassthrough, bool bUseHWDecode, bool is_live, float fifo_size)
 {
   CSingleLock lock (m_critSection);
@@ -296,7 +241,6 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_Passthrough = bUsePassthrough;
   m_InputChannels = iChannels;
   m_fifo_size = fifo_size;
-  m_downmix_channels = downmixChannels;
   m_normalize_downmix = !boostOnDownmix;
   m_live = is_live;
 
@@ -339,53 +283,28 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_drc         = 0;
 
   memset(m_input_channels, 0x0, sizeof(m_input_channels));
-
+  memset(m_output_channels, 0x0, sizeof(m_output_channels));
   memset(&m_wave_header, 0x0, sizeof(m_wave_header));
-
-  for(int i = 0; i < OMX_AUDIO_MAXCHANNELS; i++)
-  {
-    m_pcm_input.eChannelMapping[i] = OMX_AUDIO_ChannelNone;
-    m_input_channels[i] = OMX_AUDIO_ChannelMax;
-  }
-
-  m_input_channels[0] = OMX_AUDIO_ChannelLF;
-  m_input_channels[1] = OMX_AUDIO_ChannelRF;
-  m_input_channels[2] = OMX_AUDIO_ChannelMax;
 
   m_wave_header.Format.nChannels  = 2;
   m_wave_header.dwChannelMask     = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
 
   // set the input format, and get the channel layout so we know what we need to open
-  enum PCMChannels *outLayout = NULL;
-
-  m_remap.Reset();
   if (!m_Passthrough && channelMap)
-    outLayout = m_remap.SetInputFormat (iChannels, channelMap, uiBitsPerSample / 8, uiSampleRate);;
-
-  if (!m_Passthrough && channelMap && outLayout)
   {
-    /* setup input channel map */
-    int map = 0;
-    int chan = 0;
-
-    for (unsigned int ch = 0; ch < m_InputChannels; ++ch)
-    {
-      for(map = 0; map < OMX_MAX_CHANNELS; ++map)
-      {
-        if (channelMap[ch] == OMXChannelMap[map])
-        {
-          m_input_channels[chan] = OMXChannels[map];
-          m_wave_header.dwChannelMask |= WAVEChannels[map];
-          chan++;
-          break;
-        }
-      }
-    }
+    enum PCMChannels inLayout[OMX_AUDIO_MAXCHANNELS];
+    enum PCMChannels outLayout[OMX_AUDIO_MAXCHANNELS];
+    BuildChannelMap(inLayout, channelMap);
+    m_OutputChannels = BuildChannelMapCEA(outLayout, GetChannelLayout(layout));
+    CPCMRemap m_remap;
+    m_remap.Reset();
+    /*outLayout = */m_remap.SetInputFormat (iChannels, inLayout, uiBitsPerSample / 8, uiSampleRate, layout, boostOnDownmix);
+    m_remap.SetOutputFormat(m_OutputChannels, outLayout);
+    m_remap.GetDownmixMatrix(m_downmix_matrix);
+    m_wave_header.dwChannelMask = channelMap;
+    BuildChannelMapOMX(m_input_channels, channelMap);
+    BuildChannelMapOMX(m_output_channels, GetChannelLayout(layout));
   }
-
-  OMX_INIT_STRUCTURE(m_pcm_input);
-
-  memcpy(m_pcm_input.eChannelMapping, m_input_channels, sizeof(m_input_channels));
 
   m_SampleRate = uiSampleRate;
   m_BitsPerSample = uiBitsPerSample;
@@ -411,6 +330,8 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, enum PCMChan
   m_wave_header.Format.cbSize               = 0;
   m_wave_header.SubFormat                   = KSDATAFORMAT_SUBTYPE_PCM;
 
+  OMX_INIT_STRUCTURE(m_pcm_input);
+  memcpy(m_pcm_input.eChannelMapping, m_input_channels, sizeof(m_input_channels));
   m_pcm_input.eNumData              = OMX_NumericalDataSigned;
   m_pcm_input.eEndian               = OMX_EndianLittle;
   m_pcm_input.bInterleaved          = OMX_TRUE;
@@ -697,7 +618,6 @@ float COMXAudio::GetVolume()
 bool COMXAudio::ApplyVolume(void)
 {
   float m_ac3Gain = 12.0f;
-  bool m_boostcentre = false;
   CSingleLock lock (m_critSection);
 
   if(!m_Initialized || m_Passthrough)
@@ -708,48 +628,22 @@ bool COMXAudio::ApplyVolume(void)
   // the analogue volume is too quiet for some. Allow use of an advancedsetting to boost this (at risk of distortion) (deprecated)
   double gain = pow(10, (m_ac3Gain - 12.0f) / 20.0);
 
-  double r = 1.0;
-  const float* coeff = downmixing_coefficients_8;
+  const float* coeff = m_downmix_matrix;
 
-  // alternate coefficients that boost centre channel more
-  if(m_boostcentre && m_InputChannels > 2)
-    coeff = downmixing_coefficients_8_boostcentre;
-
-  // normally we normalise the levels, can be skipped (boosted) at risk of distortion
-  if(!m_normalize_downmix)
-  {
-    double sum_L = 0;
-    double sum_R = 0;
-
-    for(size_t i = 0; i < OMX_AUDIO_MAXCHANNELS; ++i)
-    {
-      if (m_input_channels[i] == OMX_AUDIO_ChannelMax)
-        break;
-      if(i & 1)
-        sum_R += coeff[i];
-      else
-        sum_L += coeff[i];
-    }
-
-    r /= max(sum_L, sum_R);
-  }
-
-  r *= gain;
-
-  OMX_CONFIG_BRCMAUDIODOWNMIXCOEFFICIENTS mix;
+  OMX_CONFIG_BRCMAUDIODOWNMIXCOEFFICIENTS8x8 mix;
   OMX_INIT_STRUCTURE(mix);
   OMX_ERRORTYPE omx_err;
 
-  assert(sizeof(mix.coeff)/sizeof(mix.coeff[0]) == 16);
+  assert(sizeof(mix.coeff)/sizeof(mix.coeff[0]) == 64);
 
   if (m_amplification != 1.0)
   {
     // reduce scaling so overflow can be seen
-    for(size_t i = 0; i < 16; ++i)
-      mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * r * 0.01f));
+    for(size_t i = 0; i < 8*8; ++i)
+      mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * gain * 0.01f));
 
     mix.nPortIndex = m_omx_decoder.GetInputPort();
-    omx_err = m_omx_decoder.SetConfig(OMX_IndexConfigBrcmAudioDownmixCoefficients, &mix);
+    omx_err = m_omx_decoder.SetConfig(OMX_IndexConfigBrcmAudioDownmixCoefficients8x8, &mix);
     if(omx_err != OMX_ErrorNone)
     {
       CLog::Log(LOGERROR, "%s::%s - error setting decoder OMX_IndexConfigBrcmAudioDownmixCoefficients, error 0x%08x\n",
@@ -757,11 +651,11 @@ bool COMXAudio::ApplyVolume(void)
       return false;
     }
   }
-  for(size_t i = 0; i < 16; ++i)
-    mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * r * fVolume * m_amplification * m_attenuation));
+  for(size_t i = 0; i < 8*8; ++i)
+    mix.coeff[i] = static_cast<unsigned int>(0x10000 * (coeff[i] * gain * fVolume * m_amplification * m_attenuation));
 
   mix.nPortIndex = m_omx_mixer.GetInputPort();
-  omx_err = m_omx_mixer.SetConfig(OMX_IndexConfigBrcmAudioDownmixCoefficients, &mix);
+  omx_err = m_omx_mixer.SetConfig(OMX_IndexConfigBrcmAudioDownmixCoefficients8x8, &mix);
   if(omx_err != OMX_ErrorNone)
   {
     CLog::Log(LOGERROR, "%s::%s - error setting mixer OMX_IndexConfigBrcmAudioDownmixCoefficients, error 0x%08x\n",
@@ -1484,3 +1378,97 @@ unsigned int COMXAudio::SyncAC3(BYTE* pData, unsigned int iSize)
   return iSize;
 }
 
+void COMXAudio::BuildChannelMap(enum PCMChannels *channelMap, uint64_t layout)
+{
+  int index = 0;
+  if (layout & AV_CH_FRONT_LEFT           ) channelMap[index++] = PCM_FRONT_LEFT           ;
+  if (layout & AV_CH_FRONT_RIGHT          ) channelMap[index++] = PCM_FRONT_RIGHT          ;
+  if (layout & AV_CH_FRONT_CENTER         ) channelMap[index++] = PCM_FRONT_CENTER         ;
+  if (layout & AV_CH_LOW_FREQUENCY        ) channelMap[index++] = PCM_LOW_FREQUENCY        ;
+  if (layout & AV_CH_BACK_LEFT            ) channelMap[index++] = PCM_BACK_LEFT            ;
+  if (layout & AV_CH_BACK_RIGHT           ) channelMap[index++] = PCM_BACK_RIGHT           ;
+  if (layout & AV_CH_FRONT_LEFT_OF_CENTER ) channelMap[index++] = PCM_FRONT_LEFT_OF_CENTER ;
+  if (layout & AV_CH_FRONT_RIGHT_OF_CENTER) channelMap[index++] = PCM_FRONT_RIGHT_OF_CENTER;
+  if (layout & AV_CH_BACK_CENTER          ) channelMap[index++] = PCM_BACK_CENTER          ;
+  if (layout & AV_CH_SIDE_LEFT            ) channelMap[index++] = PCM_SIDE_LEFT            ;
+  if (layout & AV_CH_SIDE_RIGHT           ) channelMap[index++] = PCM_SIDE_RIGHT           ;
+  if (layout & AV_CH_TOP_CENTER           ) channelMap[index++] = PCM_TOP_CENTER           ;
+  if (layout & AV_CH_TOP_FRONT_LEFT       ) channelMap[index++] = PCM_TOP_FRONT_LEFT       ;
+  if (layout & AV_CH_TOP_FRONT_CENTER     ) channelMap[index++] = PCM_TOP_FRONT_CENTER     ;
+  if (layout & AV_CH_TOP_FRONT_RIGHT      ) channelMap[index++] = PCM_TOP_FRONT_RIGHT      ;
+  if (layout & AV_CH_TOP_BACK_LEFT        ) channelMap[index++] = PCM_TOP_BACK_LEFT        ;
+  if (layout & AV_CH_TOP_BACK_CENTER      ) channelMap[index++] = PCM_TOP_BACK_CENTER      ;
+  if (layout & AV_CH_TOP_BACK_RIGHT       ) channelMap[index++] = PCM_TOP_BACK_RIGHT       ;
+  while (index<OMX_AUDIO_MAXCHANNELS)
+    channelMap[index++] = PCM_INVALID;
+}
+
+// See CEA spec: Table 20, Audio InfoFrame data byte 4 for the ordering here
+int COMXAudio::BuildChannelMapCEA(enum PCMChannels *channelMap, uint64_t layout)
+{
+  int index = 0;
+  if (layout & AV_CH_FRONT_LEFT           ) channelMap[index++] = PCM_FRONT_LEFT;
+  if (layout & AV_CH_FRONT_RIGHT          ) channelMap[index++] = PCM_FRONT_RIGHT;
+  if (layout & AV_CH_LOW_FREQUENCY        ) channelMap[index++] = PCM_LOW_FREQUENCY;
+  if (layout & AV_CH_FRONT_CENTER         ) channelMap[index++] = PCM_FRONT_CENTER;
+  if (layout & AV_CH_BACK_LEFT            ) channelMap[index++] = PCM_BACK_LEFT;
+  if (layout & AV_CH_BACK_RIGHT           ) channelMap[index++] = PCM_BACK_RIGHT;
+  if (layout & AV_CH_SIDE_LEFT            ) channelMap[index++] = PCM_SIDE_LEFT;
+  if (layout & AV_CH_SIDE_RIGHT           ) channelMap[index++] = PCM_SIDE_RIGHT;
+
+  while (index<OMX_AUDIO_MAXCHANNELS)
+    channelMap[index++] = PCM_INVALID;
+
+  int num_channels = 0;
+  for (index=0; index<OMX_AUDIO_MAXCHANNELS; index++)
+    if (channelMap[index] != PCM_INVALID)
+       num_channels = index+1;
+  // round up to power of 2
+  num_channels = num_channels > 4 ? 8 : num_channels > 2 ? 4 : num_channels;
+  return num_channels;
+}
+
+void COMXAudio::BuildChannelMapOMX(enum OMX_AUDIO_CHANNELTYPE *	channelMap, uint64_t layout)
+{
+  int index = 0;
+
+  if (layout & AV_CH_FRONT_LEFT           ) channelMap[index++] = OMX_AUDIO_ChannelLF;
+  if (layout & AV_CH_FRONT_RIGHT          ) channelMap[index++] = OMX_AUDIO_ChannelRF;
+  if (layout & AV_CH_FRONT_CENTER         ) channelMap[index++] = OMX_AUDIO_ChannelCF;
+  if (layout & AV_CH_LOW_FREQUENCY        ) channelMap[index++] = OMX_AUDIO_ChannelLFE;
+  if (layout & AV_CH_BACK_LEFT            ) channelMap[index++] = OMX_AUDIO_ChannelLR;
+  if (layout & AV_CH_BACK_RIGHT           ) channelMap[index++] = OMX_AUDIO_ChannelRR;
+  if (layout & AV_CH_SIDE_LEFT            ) channelMap[index++] = OMX_AUDIO_ChannelLS;
+  if (layout & AV_CH_SIDE_RIGHT           ) channelMap[index++] = OMX_AUDIO_ChannelRS;
+  if (layout & AV_CH_BACK_CENTER          ) channelMap[index++] = OMX_AUDIO_ChannelCS;
+  // following are not in openmax spec, but gpu does accept them
+  if (layout & AV_CH_FRONT_LEFT_OF_CENTER ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)10;
+  if (layout & AV_CH_FRONT_RIGHT_OF_CENTER) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)11;
+  if (layout & AV_CH_TOP_CENTER           ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)12;
+  if (layout & AV_CH_TOP_FRONT_LEFT       ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)13;
+  if (layout & AV_CH_TOP_FRONT_CENTER     ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)14;
+  if (layout & AV_CH_TOP_FRONT_RIGHT      ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)15;
+  if (layout & AV_CH_TOP_BACK_LEFT        ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)16;
+  if (layout & AV_CH_TOP_BACK_CENTER      ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)17;
+  if (layout & AV_CH_TOP_BACK_RIGHT       ) channelMap[index++] = (enum OMX_AUDIO_CHANNELTYPE)18;
+
+  while (index<OMX_AUDIO_MAXCHANNELS)
+    channelMap[index++] = OMX_AUDIO_ChannelNone;
+}
+
+uint64_t COMXAudio::GetChannelLayout(enum PCMLayout layout)
+{
+  uint64_t layouts[] = {
+    /* 2.0 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT,
+    /* 2.1 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_LOW_FREQUENCY,
+    /* 3.0 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_FRONT_CENTER,
+    /* 3.1 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_FRONT_CENTER | 1<<PCM_LOW_FREQUENCY,
+    /* 4.0 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_BACK_LEFT | 1<<PCM_BACK_RIGHT,
+    /* 4.1 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_BACK_LEFT | 1<<PCM_BACK_RIGHT | 1<<PCM_LOW_FREQUENCY,
+    /* 5.0 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_FRONT_CENTER | 1<<PCM_BACK_LEFT | 1<<PCM_BACK_RIGHT,
+    /* 5.1 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_FRONT_CENTER | 1<<PCM_BACK_LEFT | 1<<PCM_BACK_RIGHT | 1<<PCM_LOW_FREQUENCY,
+    /* 7.0 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_FRONT_CENTER | 1<<PCM_SIDE_LEFT | 1<<PCM_SIDE_RIGHT | 1<<PCM_BACK_LEFT | 1<<PCM_BACK_RIGHT,
+    /* 7.1 */ 1<<PCM_FRONT_LEFT | 1<<PCM_FRONT_RIGHT | 1<<PCM_FRONT_CENTER | 1<<PCM_SIDE_LEFT | 1<<PCM_SIDE_RIGHT | 1<<PCM_BACK_LEFT | 1<<PCM_BACK_RIGHT | 1<<PCM_LOW_FREQUENCY
+  };
+  return (int)layout < 10 ? layouts[(int)layout] : 0;
+}

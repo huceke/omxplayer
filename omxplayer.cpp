@@ -184,6 +184,7 @@ void print_usage()
   printf("              --threshold   n           Amount of buffered data required to come out of buffering in seconds\n");
   printf("              --orientation n           Set orientation of video (0, 90, 180 or 270)\n");
   printf("              --live                    Set for live tv or vod type stream\n");
+  printf("              --layout                  Set output speaker layout (e.g. 5.1)\n");
   printf("              --key-config <file>       Uses key bindings specified in <file> instead of the default\n");
 }
 
@@ -545,6 +546,7 @@ int main(int argc, char *argv[])
   float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
   int m_orientation      = -1; // unset
   bool m_live            = false; // set to true for live tv or vod for low buffering
+  enum PCMLayout m_layout = PCM_LAYOUT_2_0;
   TV_DISPLAY_STATE_T   tv_state;
 
   const int font_opt        = 0x100;
@@ -569,6 +571,7 @@ int main(int argc, char *argv[])
   const int no_osd_opt = 0x202;
   const int orientation_opt = 0x204;
   const int live_opt = 0x205;
+  const int layout_opt = 0x206;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -611,6 +614,7 @@ int main(int argc, char *argv[])
     { "no-osd",       no_argument,        NULL,          no_osd_opt },
     { "orientation",  required_argument,  NULL,          orientation_opt },
     { "live",         no_argument,        NULL,          live_opt },
+    { "layout",       required_argument,  NULL,          layout_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -764,6 +768,23 @@ int main(int argc, char *argv[])
       case live_opt:
         m_live = true;
         break;
+      case layout_opt:
+      {
+        const char *layouts[] = {"2.0", "2.1", "3.0", "3.1", "4.0", "4.1", "5.0", "5.1", "7.0", "7.1"};
+        unsigned i;
+        for (i=0; i<sizeof layouts/sizeof *layouts; i++)
+          if (strcmp(optarg, layouts[i]) == 0)
+          {
+            m_layout = (enum PCMLayout)i;
+            break;
+          }
+        if (i == sizeof layouts/sizeof *layouts)
+        {
+          print_usage();
+          return 0;
+        }
+        break;
+      }
       case 'b':
         m_blank_background = true;
         break;
@@ -1002,7 +1023,7 @@ int main(int argc, char *argv[])
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
                                          m_passthrough, m_use_hw_audio,
-                                         m_boost_on_downmix, m_thread_player, m_live, audio_queue_size, audio_fifo_size))
+                                         m_boost_on_downmix, m_thread_player, m_live, m_layout, audio_queue_size, audio_fifo_size))
     goto do_exit;
 
   if(m_has_audio)

@@ -86,6 +86,7 @@ Using OMXPlayer
               --threshold   n           Amount of buffered data required to come out of buffering in seconds
               --orientation n           Set orientation of video (0, 90, 180 or 270)
               --live                    Set for live tv or vod type stream
+              --layout                  Set output speaker layout (e.g. 5.1)
               --key-config <file>       Uses key bindings specified in <file> instead of the default
 
 For example:

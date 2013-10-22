@@ -56,8 +56,8 @@ public:
   unsigned int GetAudioRenderingLatency();
   float GetMaxLevel(double &pts);
   COMXAudio();
-  bool Initialize(const CStdString& device, int iChannels, enum PCMChannels *channelMap,
-                           COMXStreamInfo &hints, unsigned int downmixChannels, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
+  bool Initialize(const CStdString& device, int iChannels, uint64_t channelMap,
+                           COMXStreamInfo &hints, enum PCMLayout layout, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
                            OMXClock *clock, bool bUsePassthrough = false, bool bUseHWDecode = false, bool is_live = false, float fifo_size = 0);
   ~COMXAudio();
   bool PortSettingsChanged();
@@ -91,6 +91,10 @@ public:
   unsigned int SyncDTS(BYTE* pData, unsigned int iSize);
   unsigned int SyncAC3(BYTE* pData, unsigned int iSize);
   void UpdateAttenuation();
+  void BuildChannelMap(enum PCMChannels *channelMap, uint64_t layout);
+  int BuildChannelMapCEA(enum PCMChannels *channelMap, uint64_t layout);
+  void BuildChannelMapOMX(enum OMX_AUDIO_CHANNELTYPE *channelMap, uint64_t layout);
+  uint64_t GetChannelLayout(enum PCMLayout layout);
 
 private:
   bool          m_Initialized;
@@ -105,7 +109,6 @@ private:
   unsigned int  m_ChunkLen;
   unsigned int  m_InputChannels;
   unsigned int  m_OutputChannels;
-  unsigned int  m_downmix_channels;
   unsigned int  m_BitsPerSample;
   float		m_maxLevel;
   float         m_amplification;
@@ -126,6 +129,9 @@ private:
   bool          m_failed_eos;
   float         m_fifo_size;
   bool          m_live;
+
+  OMX_AUDIO_CHANNELTYPE m_input_channels[OMX_AUDIO_MAXCHANNELS];
+  OMX_AUDIO_CHANNELTYPE m_output_channels[OMX_AUDIO_MAXCHANNELS];
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_output;
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
   OMX_AUDIO_PARAM_DTSTYPE     m_dtsParam;
@@ -135,6 +141,7 @@ private:
     float level;
   } amplitudes_t;
   std::deque<amplitudes_t> m_ampqueue;
+  float m_downmix_matrix[OMX_AUDIO_MAXCHANNELS*OMX_AUDIO_MAXCHANNELS];
 
 protected:
   COMXCoreComponent m_omx_render;
@@ -144,8 +151,6 @@ protected:
   COMXCoreTunel     m_omx_tunnel_mixer;
   COMXCoreTunel     m_omx_tunnel_decoder;
   DllAvUtil         m_dllAvUtil;
-  OMX_AUDIO_CHANNELTYPE m_input_channels[OMX_AUDIO_MAXCHANNELS];
-  CPCMRemap         m_remap;
   CCriticalSection m_critSection;
 };
 #endif

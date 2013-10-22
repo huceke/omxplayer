@@ -41,7 +41,7 @@ public:
   int GetData(BYTE** dst);
   void Reset();
   int GetChannels();
-  enum PCMChannels *GetChannelMap();
+  uint64_t GetChannelMap();
   int GetSampleRate();
   int GetBitsPerSample();
   static const char* GetName() { return "FFmpeg"; }
@@ -52,7 +52,6 @@ protected:
   SwrContext*     m_pConvert;
   enum AVSampleFormat m_iSampleFormat;
   enum AVSampleFormat m_desiredSampleFormat;
-  enum PCMChannels m_channelMap[PCM_MAX_CH + 1];
 
   AVFrame* m_pFrame1;
 
@@ -62,13 +61,10 @@ protected:
   bool m_bOpenedCodec;
 
   int     m_channels;
-  uint64_t m_layout;
 
   bool m_bFirstFrame;
   bool m_bGotFrame;
   DllAvCodec m_dllAvCodec;
   DllAvUtil m_dllAvUtil;
   DllSwResample m_dllSwResample;
-
-  void BuildChannelMap();
 };
