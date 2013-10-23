@@ -77,6 +77,9 @@ protected:
   unsigned int              m_max_data_size;
   float                     m_fifo_size;
   COMXAudioCodecOMX         *m_pAudioCodec;
+  float                     m_CurrentVolume;
+  long                      m_amplification;
+  bool                      m_mute;
   bool   m_player_error;
 
   void Lock();
@@ -110,10 +113,10 @@ public:
   unsigned int GetCached() { return m_cached_size; };
   unsigned int GetMaxCached() { return m_max_data_size; };
   unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
-  void SetVolume(float fVolume)                          { if(m_decoder) m_decoder->SetVolume(fVolume); }
-  float GetVolume()                                      { return m_decoder ? m_decoder->GetVolume() : 0.0f; }
-  void SetMute(bool bOnOff)                              { if(m_decoder) m_decoder->SetMute(bOnOff); }
-  void SetDynamicRangeCompression(long drc)              { if(m_decoder) m_decoder->SetDynamicRangeCompression(drc); }
+  void SetVolume(float fVolume)                          { m_CurrentVolume = fVolume; if(m_decoder) m_decoder->SetVolume(fVolume); }
+  float GetVolume()                                      { return m_CurrentVolume; }
+  void SetMute(bool bOnOff)                              { m_mute = bOnOff; if(m_decoder) m_decoder->SetMute(bOnOff); }
+  void SetDynamicRangeCompression(long drc)              { m_amplification = drc; if(m_decoder) m_decoder->SetDynamicRangeCompression(drc); }
   bool Error() { return !m_player_error; };
 };
 #endif

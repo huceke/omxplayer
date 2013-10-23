@@ -48,6 +48,9 @@ OMXPlayerAudio::OMXPlayerAudio()
   m_fifo_size     = 2.0f;
   m_live          = false;
   m_layout        = PCM_LAYOUT_2_0;
+  m_CurrentVolume = 0.0f;
+  m_amplification = 0;
+  m_mute          = false;
 
   pthread_cond_init(&m_packet_cond, NULL);
   pthread_cond_init(&m_audio_cond, NULL);
@@ -455,6 +458,10 @@ bool OMXPlayerAudio::OpenDecoder()
         m_codec_name.c_str(), m_hints.channels, m_hints.samplerate, m_hints.bitspersample);
     }
   }
+  // setup current volume settings
+  m_decoder->SetVolume(m_CurrentVolume);
+  m_decoder->SetMute(m_mute);
+  m_decoder->SetDynamicRangeCompression(m_amplification);
 
   return true;
 }
