@@ -203,12 +203,14 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
     new_bitrate = old_bitrate = 0;
   }
 
-  /* audio codec changed. reinit device and decoder */
-  if(m_hints.codec         != pkt->hints.codec ||
-     m_hints.channels      != channels ||
-     m_hints.samplerate    != pkt->hints.samplerate ||
-     old_bitrate           != new_bitrate ||
-     m_hints.bitspersample != pkt->hints.bitspersample)
+  // for passthrough we only care about the codec and the samplerate
+  bool minor_change = channels                 != m_hints.channels ||
+                      pkt->hints.bitspersample != m_hints.bitspersample ||
+                      old_bitrate              != new_bitrate;
+
+  if(pkt->hints.codec          != m_hints.codec ||
+     pkt->hints.samplerate     != m_hints.samplerate ||
+     (!m_passthrough && minor_change))
   {
     printf("C : %d %d %d %d %d\n", m_hints.codec, m_hints.channels, m_hints.samplerate, m_hints.bitrate, m_hints.bitspersample);
     printf("N : %d %d %d %d %d\n", pkt->hints.codec, channels, pkt->hints.samplerate, pkt->hints.bitrate, pkt->hints.bitspersample);
