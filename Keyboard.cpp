@@ -47,18 +47,17 @@ Keyboard::Keyboard()
 
 Keyboard::~Keyboard() 
 {
+  Close();
+}
+
+void Keyboard::Close()
+{
   restore_term();
   dbus_disconnect();
   if (ThreadHandle()) 
   {
     StopThread();
   }
-}
-
-void Keyboard::Close() 
-{
-  if (ThreadHandle())
-    StopThread();
 }
 
 void Keyboard::restore_term() 
