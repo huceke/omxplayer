@@ -935,6 +935,10 @@ int main(int argc, char *argv[])
   if(m_hdmi_clock_sync && !m_av_clock->HDMIClockSync())
     goto do_exit;
 
+  m_av_clock->OMXStateIdle();
+  m_av_clock->OMXStop();
+  m_av_clock->OMXPause();
+
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
   m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_hints_video);
 
@@ -1036,9 +1040,6 @@ int main(int argc, char *argv[])
 
   if (m_threshold < 0.0f)
     m_threshold = m_live ? 0.7f : 0.2f;
-
-  m_av_clock->OMXPause();
-  m_av_clock->OMXStateExecute();
 
   PrintSubtitleInfo();
 
@@ -1350,7 +1351,6 @@ int main(int argc, char *argv[])
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
       m_av_clock->OMXPause();
-      m_av_clock->OMXStateExecute();
 
       if(m_has_subtitle)
         m_player_subtitles.Resume();
@@ -1473,6 +1473,7 @@ int main(int argc, char *argv[])
             if (latency > m_threshold)
             {
               CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
+              m_av_clock->OMXStateExecute();
               m_av_clock->OMXResume();
               m_latency = latency;
             }
@@ -1501,6 +1502,7 @@ int main(int argc, char *argv[])
         if (m_av_clock->OMXIsPaused())
         {
           CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
+          m_av_clock->OMXStateExecute();
           m_av_clock->OMXResume();
         }
       }
