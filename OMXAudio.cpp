@@ -456,6 +456,9 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, uint64_t cha
   {
     enum PCMChannels inLayout[OMX_AUDIO_MAXCHANNELS];
     enum PCMChannels outLayout[OMX_AUDIO_MAXCHANNELS];
+    // force out layout to stereo if input is not multichannel - it gives the receiver a chance to upmix
+    if (channelMap == (AV_CH_FRONT_LEFT | AV_CH_FRONT_RIGHT) || channelMap == AV_CH_FRONT_CENTER)
+      layout = PCM_LAYOUT_2_0;
     BuildChannelMap(inLayout, channelMap);
     m_OutputChannels = BuildChannelMapCEA(outLayout, GetChannelLayout(layout));
     CPCMRemap m_remap;
