@@ -760,13 +760,6 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
 
 void COMXVideo::Close()
 {
-  m_omx_tunnel_decoder.Flush();
-  if(m_deinterlace)
-    m_omx_tunnel_image_fx.Flush();
-  m_omx_tunnel_clock.Flush();
-  m_omx_tunnel_sched.Flush();
-  m_omx_tunnel_text.Flush();
-
   m_omx_tunnel_clock.Deestablish();
   m_omx_tunnel_decoder.Deestablish();
   if(m_deinterlace)
@@ -781,7 +774,7 @@ void COMXVideo::Close()
   if(m_deinterlace)
     m_omx_image_fx.Deinitialize(true);
   m_omx_render.Deinitialize(true);
-  m_omx_text.Deinitialize();
+  m_omx_tunnel_text.Deestablish(true);
 
   m_is_open       = false;
 
@@ -906,13 +899,12 @@ void COMXVideo::Reset(void)
   if(!m_is_open)
     return;
 
-  //m_setStartTime      = true;
-  //m_setStartTimeText  = true;
-
+  m_setStartTime      = true;
+  m_setStartTimeText  = true;
   m_omx_text.FlushAll();
-  m_omx_tunnel_text.Flush();
   m_omx_decoder.FlushInput();
-  m_omx_tunnel_decoder.Flush();
+  if(m_deinterlace)
+    m_omx_image_fx.FlushInput();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1018,7 +1010,7 @@ bool COMXVideo::IsEOS()
 
 OMXPacket *COMXVideo::GetText()
 {
-  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer();
+  OMX_BUFFERHEADERTYPE *omx_buffer = m_omx_text.GetOutputBuffer(0);
   OMXPacket *pkt = NULL;
 
   if(omx_buffer)

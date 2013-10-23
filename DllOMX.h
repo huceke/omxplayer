@@ -86,6 +86,7 @@ public:
     return true;
   }
   virtual void Unload() {}
+  static DllOMX *GetDllOMX() { static DllOMX static_dll_omx; return &static_dll_omx; }
 };
 #else
 class DllOMX : public DllDynamic, DllOMXInterface
