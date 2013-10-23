@@ -430,7 +430,7 @@ bool OMXPlayerAudio::OpenDecoder()
   if(m_passthrough)
     m_hw_decode = false;
 
-  bAudioRenderOpen = m_decoder->Initialize(m_device.substr(4), m_hints.channels, m_pAudioCodec->GetChannelMap(),
+  bAudioRenderOpen = m_decoder->Initialize(m_device, m_hints.channels, m_pAudioCodec->GetChannelMap(),
                            m_hints, m_layout, m_hints.samplerate, m_pAudioCodec->GetBitsPerSample(), m_boost_on_downmix,
                            m_av_clock, m_passthrough, m_hw_decode, m_live, m_fifo_size);
 

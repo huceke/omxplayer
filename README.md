@@ -50,7 +50,7 @@ Using OMXPlayer
          -v / --version                 print version info
          -k / --keys                    print key bindings
          -n / --aidx  index             audio stream index    : e.g. 1
-         -o / --adev  device            audio out device      : e.g. hdmi/local
+         -o / --adev  device            audio out device      : e.g. hdmi/local/both
          -i / --info                    dump stream format and exit
          -s / --stats                   pts and buffer stats
          -p / --passthrough             audio passthrough

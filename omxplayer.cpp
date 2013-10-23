@@ -148,7 +148,7 @@ void print_usage()
   printf("         -k / --keys                    print key bindings\n");
 //  printf("         -a / --alang language          audio language        : e.g. ger\n");
   printf("         -n / --aidx  index             audio stream index    : e.g. 1\n");
-  printf("         -o / --adev  device            audio out device      : e.g. hdmi/local\n");
+  printf("         -o / --adev  device            audio out device      : e.g. hdmi/local/both\n");
   printf("         -i / --info                    dump stream format and exit\n");
   printf("         -s / --stats                   pts and buffer stats\n");
   printf("         -p / --passthrough             audio passthrough\n");
@@ -676,7 +676,7 @@ int main(int argc, char *argv[])
         break;
       case 'o':
         deviceString = optarg;
-        if(deviceString != "local" && deviceString != "hdmi")
+        if(deviceString != "local" && deviceString != "hdmi" && deviceString != "both")
         {
           print_usage();
           return 0;

@@ -225,8 +225,8 @@ OMX_ERRORTYPE COMXCoreTunel::Establish(bool portSettingsChanged, bool enable_por
     UnLock();
     return OMX_ErrorUndefined;
   }
-
-  if(m_src_component->GetState() == OMX_StateLoaded)
+#if 1
+  if(m_src_component->GetState() == OMX_StateLoaded && m_src_component->GetName() != "OMX.broadcom.clock")
   {
     omx_err = m_src_component->SetStateForComponent(OMX_StateIdle);
     if(omx_err != OMX_ErrorNone)
@@ -237,7 +237,7 @@ OMX_ERRORTYPE COMXCoreTunel::Establish(bool portSettingsChanged, bool enable_por
       return omx_err;
     }
   }
-
+#endif
   if(portSettingsChanged)
   {
     omx_err = m_src_component->WaitForEvent(OMX_EventPortSettingsChanged);

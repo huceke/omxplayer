@@ -634,7 +634,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
   if(!m_omx_text.Initialize("OMX.broadcom.text_scheduler", OMX_IndexParamOtherInit))
     return false;
 
-  m_omx_tunnel_text.Initialize(m_omx_clock, m_omx_clock->GetInputPort() + 2, &m_omx_text, m_omx_text.GetInputPort() + 2);
+  m_omx_tunnel_text.Initialize(m_omx_clock, m_omx_clock->GetInputPort() + 3, &m_omx_text, m_omx_text.GetInputPort() + 2);
 
   OMX_INIT_STRUCTURE(portParam);
   portParam.nPortIndex = m_omx_text.GetInputPort();
