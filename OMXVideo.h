@@ -31,6 +31,7 @@
 #include "OMXReader.h"
 
 #include "guilib/Geometry.h"
+#include "utils/SingleLock.h"
 
 #define VIDEO_BUFFERS 60
 
@@ -113,6 +114,7 @@ protected:
   bool              m_failed_eos;
   OMX_DISPLAYTRANSFORMTYPE m_transform;
   bool              m_settings_changed;
+  CCriticalSection  m_critSection;
 };
 
 #endif
