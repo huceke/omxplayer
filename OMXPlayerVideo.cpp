@@ -274,7 +274,7 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
       // if a stream has had more than 4 valid pts values in the last 16, the use UNKNOWN, otherwise use dts
       m_history_valid_pts = (m_history_valid_pts << 1) | (pkt->pts != DVD_NOPTS_VALUE);
       double pts = pkt->pts;
-      if(pkt->pts == DVD_NOPTS_VALUE && count_bits(m_history_valid_pts & 0xffff) < 4)
+      if(pkt->pts == DVD_NOPTS_VALUE && (m_iCurrentPts == DVD_NOPTS_VALUE || count_bits(m_history_valid_pts & 0xffff) < 4))
         pts = pkt->dts;
 
       if (pts != DVD_NOPTS_VALUE)
