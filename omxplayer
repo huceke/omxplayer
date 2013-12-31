@@ -2,9 +2,9 @@
 
 #mount -t nfs -o rsize=32768,wsize=32768,intr 192.168.10.1:/data/video /media
 
-OMXPLAYER="./omxplayer.bin"
 FBSET="/usr/sbin/fbset"
 FONT="fonts/FreeSans.ttf"
+BASE=`dirname $0`
 
 if [ -e /usr/share/fonts/truetype/freefont/FreeSans.ttf ]; then
   FONT="/usr/share/fonts/truetype/freefont/FreeSans.ttf"
@@ -18,16 +18,12 @@ else
   ITALIC_FONT="fonts/FreeSansOblique.ttf"
 fi
 
-if [ -e /usr/bin/omxplayer.bin ]; then
-  OMXPLAYER="/usr/bin/omxplayer.bin"
-else
-  OMXPLAYER="./omxplayer.bin"
-fi
+OMXPLAYER=$BASE"/omxplayer.bin"
 
-if [ -e /usr/lib/omxplayer ]; then
-  export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-else
+if [ -e $BASE"/ffmpeg_compiled" ]; then
   export LD_LIBRARY_PATH=$PWD/ffmpeg_compiled/usr/local/lib:/opt/vc/lib:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+else
+  export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 fi
 
 XRES=1920
