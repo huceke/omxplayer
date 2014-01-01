@@ -69,6 +69,7 @@ COMXVideo::COMXVideo() : m_video_codec_name("")
   m_drop_state        = false;
   m_decoded_width     = 0;
   m_decoded_height    = 0;
+  m_display_pixel_aspect = 0.0f;
   m_omx_clock         = NULL;
   m_av_clock          = NULL;
   m_submitted_eos     = false;
@@ -168,7 +169,10 @@ bool COMXVideo::PortSettingsChanged()
   }
 
   if (pixel_aspect.nX && pixel_aspect.nY)
-    m_pixel_aspect = (float)pixel_aspect.nX / (float)pixel_aspect.nY;
+  {
+    float fAspect = (float)pixel_aspect.nX / (float)pixel_aspect.nY;
+    m_pixel_aspect = fAspect / m_display_pixel_aspect;
+  }
 
   if (m_settings_changed)
   {
@@ -351,6 +355,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
 
   m_decoded_width  = hints.width;
   m_decoded_height = hints.height;
+  m_display_pixel_aspect = display_aspect;
 
   m_hdmi_clock_sync = hdmi_clock_sync;
   m_submitted_eos = false;
@@ -755,8 +760,8 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
 
   m_first_text    = true;
 
-  float fAspect = (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height;
-  m_pixel_aspect = hints.aspect ? fAspect/display_aspect : 0.0f;
+  float fAspect = hints.aspect ? (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height : (float)m_decoded_width / (float)m_decoded_height;
+  m_pixel_aspect = fAspect / m_display_pixel_aspect;
 
   return true;
 }

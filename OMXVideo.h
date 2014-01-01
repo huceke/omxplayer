@@ -77,6 +77,7 @@ protected:
   bool              m_drop_state;
   unsigned int      m_decoded_width;
   unsigned int      m_decoded_height;
+  float             m_display_pixel_aspect;
 
   OMX_VIDEO_CODINGTYPE m_codingType;
 
