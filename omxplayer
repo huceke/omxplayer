@@ -1,44 +1,50 @@
-#!/bin/sh
+#!/bin/bash
+#
+# OMXPlayer launcher script.
+#
 
-#mount -t nfs -o rsize=32768,wsize=32768,intr 192.168.10.1:/data/video /media
+OMXPLAYER_DIR=`dirname $0`
+OMXPLAYER_BIN="$OMXPLAYER_DIR/omxplayer.bin"
+OMXPLAYER_LIBS="/opt/vc/lib"
 
-FBSET="/usr/sbin/fbset"
-FONT="fonts/FreeSans.ttf"
-BASE=`dirname $0`
-
-if [ -e /usr/share/fonts/truetype/freefont/FreeSans.ttf ]; then
-  FONT="/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+if [ -e "$OMXPLAYER_DIR/ffmpeg_compiled" ]; then
+    OMXPLAYER_LIBS="$OMXPLAYER_LIBS:$OMXPLAYER_DIR/ffmpeg_compiled"
 else
-  FONT="fonts/FreeSans.ttf"
+    OMXPLAYER_LIBS="$OMXPLAYER_LIBS:/usr/lib/omxplayer"
 fi
 
-if [ -e /usr/share/fonts/truetype/freefont/FreeSansOblique.ttf ]; then
-  ITALIC_FONT="/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf"
-else
-  ITALIC_FONT="fonts/FreeSansOblique.ttf"
+refresh_regex='(|.* )(-r|--refresh)( .*|$)'
+audio_regex='.*\.(mp3|wav|wma|cda|ogg|ogm|aac|ac3|flac)( .*|$)'
+
+fbset_bin=`which fbset`
+xset_bin=`which xset`
+xrefresh_bin=`which xrefresh`
+
+if [ -z $NOREFRESH ] || [ "$NOREFRESH" == "0" ]; then
+    if [[ $@ =~ $refresh_regex ]] && [[ ! $@ =~ $audio_regex ]]; then
+        check_failed=0
+
+        if [ -z $fbset_bin ]; then
+            echo "WARNING: You are going to run omxplayer with -r/--refresh and you don't have fbset installed, this can cause black screen when it finishes playing."
+            check_failed=1
+        fi
+
+        if [ ! -z $DISPLAY ]; then
+            if [ -z $xset_bin ] || [ -z $xrefresh_bin ]; then
+                echo "WARNING: You are going to run omxplayer with -r/--refresh and you don't have xset and xrefresh installed (x11-xserver-utils package on Debian/Raspbian), this can cause black screen when it finishes playing."
+                check_failed=1
+            fi
+        fi
+
+        if [ "$check_failed" == "1" ]; then
+            read -sn 1 -p "Press any key to continue or Ctrl-C to quit."
+            echo
+        fi
+    fi
 fi
 
-OMXPLAYER=$BASE"/omxplayer.bin"
-
-if [ -e $BASE"/ffmpeg_compiled" ]; then
-  export LD_LIBRARY_PATH=$PWD/ffmpeg_compiled/usr/local/lib:/opt/vc/lib:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-else
-  export LD_LIBRARY_PATH=/opt/vc/lib:/usr/lib/omxplayer:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-fi
-
-XRES=1920
-YRES=1080
-
-XRES=1600
-YRES=900
-
-if [ -e $FBSET ]; then
-  echo 0 > /sys/class/vtconsole/vtcon1/bind
-  fbset -xres 1 -yres 1
-fi
-
-OMXPLAYER_DBUS_ADDR="/tmp/omxplayer_dbus_addr"
-OMXPLAYER_DBUS_PID="/tmp/omxplayer_dbus_pid"
+OMXPLAYER_DBUS_ADDR=`mktemp -t omxplayer-XXXXX`
+OMXPLAYER_DBUS_PID=`mktemp -t omxplayer-XXXXX`
 
 exec 5> $OMXPLAYER_DBUS_ADDR
 exec 6> $OMXPLAYER_DBUS_PID
@@ -51,7 +57,7 @@ DBUS_SESSION_BUS_PID=`cat $OMXPLAYER_DBUS_PID`
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
-$OMXPLAYER --font $FONT --italic-font $ITALIC_FONT "$@"; true
+LD_LIBRARY_PATH="$OMXPLAYER_LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" $OMXPLAYER_BIN "$@"; true
 
 if [ -n "$DBUS_SESSION_BUS_PID" ]; then
     kill -2 "$DBUS_SESSION_BUS_PID"
@@ -60,7 +66,39 @@ fi
 rm -f $OMXPLAYER_DBUS_ADDR
 rm -f $OMXPLAYER_DBUS_PID
 
-if [ -e $FBSET ]; then
-  fbset -xres ${XRES} -yres ${YRES}
-  echo 1 > /sys/class/vtconsole/vtcon1/bind
+if [ ! -z $NOREFRESH ] && [ "$NOREFRESH" == "1" ]; then
+    exit 0
+fi
+
+if [[ $@ =~ $audio_regex ]]; then
+    exit 0
+fi
+
+if [[ $@ =~ $refresh_regex ]]; then
+    if [ ! -z $fbset_bin ]; then
+        DEPTH2=`$fbset_bin | head -3 | tail -1 | cut -d " " -f 10`
+
+        if [ "$DEPTH2" == "8" ]; then
+            DEPTH1=16
+        elif [ "$DEPTH2" == "16" ] || [ "$DEPTH2" == "32" ]; then
+            DEPTH1=8
+        else
+            DEPTH1=8
+            DEPTH2=16
+        fi
+
+        $fbset_bin -depth $DEPTH1 > /dev/null 2>&1
+        $fbset_bin -depth $DEPTH2 > /dev/null 2>&1
+    fi
+
+    if [ ! -z $xset_bin ] && [ ! -z $xrefresh_bin ]; then
+        if [ -z $DISPLAY ]; then
+            DISPLAY=":0"
+        fi
+
+        $xset_bin -display $DISPLAY -q > /dev/null 2>&1
+        if [ "$?" == "0" ]; then
+            $xrefresh_bin -display $DISPLAY > /dev/null 2>&1
+        fi
+    fi
 fi
