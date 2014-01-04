@@ -67,7 +67,7 @@ bool OMXPlayerSubtitles::Open(size_t stream_count,
   assert(!m_open);
 
   m_subtitle_buffers.resize(stream_count, circular_buffer<Subtitle>(32));
-  m_external_subtitles = move(external_subtitles);
+  m_external_subtitles = std::move(external_subtitles);
   
   m_visible = true;
   m_use_external_subtitles = true;
@@ -240,11 +240,11 @@ RenderLoop(const string& font_path,
     m_mailbox.receive_wait(chrono::milliseconds(timeout),
       [&](Message::Push&& args)
       {
-        subtitles.push_back(move(args.subtitle));
+        subtitles.push_back(std::move(args.subtitle));
       },
       [&](Message::Flush&& args)
       {
-        subtitles = move(args.subtitles);
+        subtitles = std::move(args.subtitles);
         prev_now = INT_MAX;
       },
       [&](Message::Touch&&)
@@ -329,7 +329,7 @@ void OMXPlayerSubtitles::FlushRenderer()
     assert(!m_subtitle_buffers.empty());
     for(auto& s : m_subtitle_buffers[m_active_index])
       flush.subtitles.push_back(s);
-    SendToRenderer(move(flush));
+    SendToRenderer(std::move(flush));
   }
 }
 
@@ -474,7 +474,7 @@ bool OMXPlayerSubtitles::AddPacket(OMXPacket *pkt, size_t stream_index) BOOST_NO
      GetVisible() &&
      stream_index == GetActiveStream())
   {
-    SendToRenderer(Message::Push{{start, stop, move(text_lines)}});
+    SendToRenderer(Message::Push{{start, stop, std::move(text_lines)}});
   }
 
   return true;
@@ -486,5 +486,5 @@ void OMXPlayerSubtitles::DisplayText(const std::string& text, int duration) BOOS
 
   vector<string> text_lines;
   split(text_lines, text, is_any_of("\n"));
-  SendToRenderer(Message::DisplayText{move(text_lines), duration});
+  SendToRenderer(Message::DisplayText{std::move(text_lines), duration});
 }
