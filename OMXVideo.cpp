@@ -176,6 +176,14 @@ bool COMXVideo::PortSettingsChanged()
 
   if (m_settings_changed)
   {
+    CLog::Log(LOGDEBUG, "%s::%s - %dx%d@%.2f interlace:%d deinterlace:%d par:%.2f", CLASSNAME, __func__,
+        port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
+        port_image.format.video.xFramerate / (float)(1<<16), 0, m_deinterlace, m_pixel_aspect);
+
+    printf("V:PortSettingsChanged: %dx%d@%.2f interlace:%d deinterlace:%d par:%.2f\n",
+        port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
+        port_image.format.video.xFramerate / (float)(1<<16), 0, m_deinterlace, m_pixel_aspect);
+
     SetVideoRect(m_src_rect, m_dst_rect);
     m_omx_decoder.EnablePort(m_omx_decoder.GetOutputPort(), true);
     return true;
@@ -198,13 +206,13 @@ bool COMXVideo::PortSettingsChanged()
 
   m_omx_render.ResetEos();
 
-  CLog::Log(LOGDEBUG, "%s::%s - %dx%d@%.2f interlace:%d deinterlace:%d", CLASSNAME, __func__,
+  CLog::Log(LOGDEBUG, "%s::%s - %dx%d@%.2f interlace:%d deinterlace:%d par:%.2f", CLASSNAME, __func__,
       port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
-      port_image.format.video.xFramerate / (float)(1<<16), interlace.eMode, m_deinterlace);
+      port_image.format.video.xFramerate / (float)(1<<16), interlace.eMode, m_deinterlace, m_pixel_aspect);
 
-  printf("V:PortSettingsChanged: %dx%d@%.2f interlace:%d deinterlace:%d\n",
+  printf("V:PortSettingsChanged: %dx%d@%.2f interlace:%d deinterlace:%d par:%.2f\n",
       port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
-      port_image.format.video.xFramerate / (float)(1<<16), interlace.eMode, m_deinterlace);
+      port_image.format.video.xFramerate / (float)(1<<16), interlace.eMode, m_deinterlace, m_pixel_aspect);
 
   if(!m_omx_sched.Initialize("OMX.broadcom.video_scheduler", OMX_IndexParamVideoInit))
     return false;
@@ -760,7 +768,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
 
   m_first_text    = true;
 
-  float fAspect = hints.aspect ? (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height : (float)m_decoded_width / (float)m_decoded_height;
+  float fAspect = hints.aspect ? (float)hints.aspect / (float)m_decoded_width * (float)m_decoded_height : 1.0f;
   m_pixel_aspect = fAspect / m_display_pixel_aspect;
 
   return true;
@@ -964,10 +972,6 @@ void COMXVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
   {
     CLog::Log(LOGERROR, "COMXVideo::Open error OMX_IndexConfigDisplayRegion omx_err(0x%08x)\n", omx_err);
   }
-
-  printf("dest_rect.x_offset %d dest_rect.y_offset %d dest_rect.width %d dest_rect.height %d, pixel_aspect %.2f\n",
-      configDisplay.dest_rect.x_offset, configDisplay.dest_rect.y_offset, 
-      configDisplay.dest_rect.width, configDisplay.dest_rect.height, m_pixel_aspect);
 }
 
 int COMXVideo::GetInputBufferSize()
