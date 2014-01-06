@@ -549,6 +549,7 @@ int main(int argc, char *argv[])
   bool m_live            = false; // set to true for live tv or vod for low buffering
   enum PCMLayout m_layout = PCM_LAYOUT_2_0;
   TV_DISPLAY_STATE_T   tv_state;
+  double last_seek_pos = 0;
 
   const int font_opt        = 0x100;
   const int italic_font_opt = 0x201;
@@ -1322,7 +1323,8 @@ int main(int argc, char *argv[])
 
       pts = m_av_clock->OMXMediaTime();
 
-      seek_pos = (pts / DVD_TIME_BASE) + m_incr;
+      seek_pos = (pts ? pts / DVD_TIME_BASE : last_seek_pos) + m_incr;
+      last_seek_pos = seek_pos;
 
       seek_pos *= 1000.0;
 
