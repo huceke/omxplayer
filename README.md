@@ -63,7 +63,7 @@ Using OMXPlayer
          -t / --sid index               show subtitle with index
          -r / --refresh                 adjust framerate/resolution to video
          -g / --genlog                  generate log file
-         -l / --pos n                   start position (in seconds)
+         -l / --pos n                   start position (hh:mm:ss)
          -b / --blank                   set background to black
               --no-boost-on-downmix     don't boost volume when downmixing
               --vol n                   Set initial volume in millibels (default 0)
