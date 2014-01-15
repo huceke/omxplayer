@@ -315,6 +315,27 @@ static void FlushStreams(double pts)
   }
 }
 
+static void CallbackTvServiceCallback(void *userdata, uint32_t reason, uint32_t param1, uint32_t param2)
+{
+  sem_t *tv_synced = (sem_t *)userdata;
+  switch(reason)
+  {
+  case VC_HDMI_UNPLUGGED:
+    break;
+  case VC_HDMI_STANDBY:
+    break;
+  case VC_SDTV_NTSC:
+  case VC_SDTV_PAL:
+  case VC_HDMI_HDMI:
+  case VC_HDMI_DVI:
+    // Signal we are ready now
+    sem_post(tv_synced);
+    break;
+  default:
+     break;
+  }
+}
+
 void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T is3d)
 {
   int32_t num_modes = 0;
@@ -434,7 +455,14 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
     }
 
     printf("ntsc_freq:%d %s%s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS":"", property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB":"");
-    m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
+    sem_t tv_synced;
+    sem_init(&tv_synced, 0, 0);
+    m_BcmHost.vc_tv_register_callback(CallbackTvServiceCallback, &tv_synced);
+    int success = m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
+    if (success == 0)
+      sem_wait(&tv_synced);
+    m_BcmHost.vc_tv_unregister_callback(CallbackTvServiceCallback);
+    sem_destroy(&tv_synced);
   }
   if (supported_modes)
     delete[] supported_modes;
