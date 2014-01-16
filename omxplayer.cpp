@@ -161,7 +161,7 @@ void print_usage()
   printf("         -t / --sid index               show subtitle with index\n");
   printf("         -r / --refresh                 adjust framerate/resolution to video\n");
   printf("         -g / --genlog                  generate log file\n");
-  printf("         -l / --pos n                   start position (in seconds)\n");
+  printf("         -l / --pos n                   start position (hh:mm:ss)\n");
   printf("         -b / --blank                   set background to black\n");
   printf("              --no-boost-on-downmix     don't boost volume when downmixing\n");
   printf("              --vol n                   Set initial volume in millibels (default 0)\n");
@@ -726,10 +726,18 @@ int main(int argc, char *argv[])
           m_audio_index_use = 0;
         break;
       case 'l':
-        m_incr = atof(optarg) ;
-        if (m_incr < 0)
-            m_incr = 0;
-        m_seek_flush = true;
+        {
+          if(strchr(optarg, ':'))
+          {
+            unsigned int h, m, s;
+            if(sscanf(optarg, "%u:%u:%u", &h, &m, &s) == 3)
+              m_incr = h*3600 + m*60 + s;
+          }
+          else
+          {
+            m_incr = atof(optarg);
+          }
+        }
         break;
       case no_osd_opt:
         m_osd = false;
