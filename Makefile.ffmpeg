@@ -75,8 +75,8 @@ configure:
 			--disable-decoder=h263 \
 			--disable-decoder=rv10 \
 			--disable-decoder=rv20 \
-			--disable-decoder=mjpeg \
-			--disable-decoder=mjpegb \
+			--enable-decoder=mjpeg \
+			--enable-decoder=mjpegb \
 			--disable-decoder=sp5x \
 			--disable-decoder=jpegls \
 			--enable-decoder=mpeg4 \
