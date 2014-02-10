@@ -648,9 +648,10 @@ void OMXReader::AddStream(int id)
     return;
 
   AVStream *pStream = m_pFormatContext->streams[id];
-  // discard PNG stream as we don't support it, and it stops mp3 files playing with album art
-  if (pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO && 
-    (pStream->codec->codec_id == CODEC_ID_PNG))
+
+  // discard if it's a picture attachment (e.g. album art embedded in MP3 or AAC)
+  if(pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO &&
+    (pStream->disposition & AV_DISPOSITION_ATTACHED_PIC))
     return;
 
   switch (pStream->codec->codec_type)
