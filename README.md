@@ -85,6 +85,7 @@ Using OMXPlayer
               --video_queue n           Size of video input queue in MB
               --threshold   n           Amount of buffered data required to come out of buffering in seconds
               --orientation n           Set orientation of video (0, 90, 180 or 270)
+              --fps n                   Set fps of video where timestamps are not present
               --live                    Set for live tv or vod type stream
               --layout                  Set output speaker layout (e.g. 5.1)
               --key-config <file>       Uses key bindings specified in <file> instead of the default

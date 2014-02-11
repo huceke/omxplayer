@@ -184,6 +184,7 @@ void print_usage()
   printf("              --video_queue n           Size of video input queue in MB\n");
   printf("              --threshold   n           Amount of buffered data required to come out of buffering in seconds\n");
   printf("              --orientation n           Set orientation of video (0, 90, 180 or 270)\n");
+  printf("              --fps n                   Set fps of video where timestamps are not present\n");
   printf("              --live                    Set for live tv or vod type stream\n");
   printf("              --layout                  Set output speaker layout (e.g. 5.1)\n");
   printf("              --key-config <file>       Uses key bindings specified in <file> instead of the default\n");
@@ -574,6 +575,7 @@ int main(int argc, char *argv[])
   float video_queue_size = 0.0;
   float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
   int m_orientation      = -1; // unset
+  float m_fps            = 0.0f; // unset
   bool m_live            = false; // set to true for live tv or vod for low buffering
   enum PCMLayout m_layout = PCM_LAYOUT_2_0;
   TV_DISPLAY_STATE_T   tv_state;
@@ -600,6 +602,7 @@ int main(int argc, char *argv[])
   const int amp_opt         = 0x10e;
   const int no_osd_opt = 0x202;
   const int orientation_opt = 0x204;
+  const int fps_opt = 0x208;
   const int live_opt = 0x205;
   const int layout_opt = 0x206;
 
@@ -643,6 +646,7 @@ int main(int argc, char *argv[])
     { "key-config",   required_argument,  NULL,          key_config_opt },
     { "no-osd",       no_argument,        NULL,          no_osd_opt },
     { "orientation",  required_argument,  NULL,          orientation_opt },
+    { "fps",          required_argument,  NULL,          fps_opt },
     { "live",         no_argument,        NULL,          live_opt },
     { "layout",       required_argument,  NULL,          layout_opt },
     { 0, 0, 0, 0 }
@@ -802,6 +806,9 @@ int main(int argc, char *argv[])
         break;
       case orientation_opt:
         m_orientation = atoi(optarg);
+        break;
+      case fps_opt:
+        m_fps = atof(optarg);
         break;
       case live_opt:
         m_live = true;
@@ -978,6 +985,9 @@ int main(int argc, char *argv[])
 
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
   m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_hints_video);
+
+  if (m_fps > 0.0f)
+    m_hints_video.fpsrate = m_fps * DVD_TIME_BASE, m_hints_video.fpsscale = DVD_TIME_BASE;
 
   if(m_audio_index_use != -1)
     m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
