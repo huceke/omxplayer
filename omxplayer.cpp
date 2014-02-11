@@ -1080,6 +1080,10 @@ int main(int argc, char *argv[])
 
   PrintSubtitleInfo();
 
+  m_av_clock->OMXReset(m_has_video, m_has_audio);
+  m_av_clock->OMXStateExecute();
+  sentStarted = true;
+
   while(!m_stop)
   {
     if(g_abort)
@@ -1511,7 +1515,6 @@ int main(int argc, char *argv[])
             if (latency > m_threshold)
             {
               CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
-              m_av_clock->OMXStateExecute();
               m_av_clock->OMXResume();
               m_latency = latency;
             }
@@ -1540,7 +1543,6 @@ int main(int argc, char *argv[])
         if (m_av_clock->OMXIsPaused())
         {
           CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
-          m_av_clock->OMXStateExecute();
           m_av_clock->OMXResume();
         }
       }
