@@ -3,7 +3,7 @@
 echo "Patching makefiles..."
 echo "FLOAT=hard
 
-CFLAGS +=  -mfloat-abi=hard -mcpu=arm1176jzf-s -fomit-frame-pointer -mabi=aapcs-linux -mtune=arm1176jzf-s -mfpu=vfp -Wno-psabi -mno-apcs-stack-check -O3 -mstructure-size-boundary=32 -mno-sched-prolog -march=armv6zk
+CFLAGS +=  -mfloat-abi=hard -mcpu=arm1176jzf-s -fomit-frame-pointer -mabi=aapcs-linux -mtune=arm1176jzf-s -mfpu=vfp -Wno-psabi -mno-apcs-stack-check -O3 -mstructure-size-boundary=32 -mno-sched-prolog -march=armv6zk `pkg-config dbus-1 --cflags`
 
 BUILDROOT	:=/usr/local/src/omxplayer
 TOOLCHAIN	:=/usr/
@@ -38,7 +38,7 @@ install: dist
 
 echo "Installing packages..."
 sudo apt-get update
-sudo apt-get -y install ca-certificates git-core subversion binutils libva1 libpcre3-dev libidn11-dev libboost1.50-dev libfreetype6-dev libusb-1.0-0-dev
+sudo apt-get -y install ca-certificates git-core subversion binutils libva1 libpcre3-dev libidn11-dev libboost1.50-dev libfreetype6-dev libusb-1.0-0-dev libdbus-1-dev
 sudo apt-get -y install gcc-4.7 g++-4.7
 
 
