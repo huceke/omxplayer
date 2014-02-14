@@ -11,8 +11,7 @@ copy:
 	$(HOST)-strip *.so*
 
 compile: 
-	cd ffmpeg; \
-	make -j9
+	+$(MAKE) -C ffmpeg
 
 configure: 
 	cd ffmpeg; \
