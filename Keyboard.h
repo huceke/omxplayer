@@ -1,4 +1,3 @@
-#define OMXPLAYER_DBUS_NAME "org.mpris.MediaPlayer2.omxplayer"
 #define OMXPLAYER_DBUS_PATH_SERVER "/org/mpris/MediaPlayer2"  
 #define OMXPLAYER_DBUS_INTERFACE_ROOT "org.mpris.MediaPlayer2"
 #define OMXPLAYER_DBUS_INTERFACE_PLAYER "org.mpris.MediaPlayer2.Player"
@@ -13,12 +12,14 @@
   int orig_fl;
   DBusConnection *conn;
   std::map<int,int> m_keymap;
+  std::string m_dbus_name;
  public:
   Keyboard();
   ~Keyboard();
   void Close();
   void Process();
   void setKeymap(std::map<int,int> keymap);
+  void setDbusName(std::string dbus_name);
   void Sleep(unsigned int dwMilliSeconds);
  private:
   void restore_term();
