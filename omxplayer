@@ -43,13 +43,20 @@ if [ -z $NOREFRESH ] || [ "$NOREFRESH" == "0" ]; then
     fi
 fi
 
-OMXPLAYER_DBUS_ADDR=`mktemp -t omxplayer-XXXXX`
-OMXPLAYER_DBUS_PID=`mktemp -t omxplayer-XXXXX`
+DBUS_CMD="dbus-daemon --fork --print-address 5 --print-pid 6 --session"
+OMXPLAYER_DBUS_ADDR="/tmp/omxplayerdbus"
+OMXPLAYER_DBUS_PID="/tmp/omxplayerdbus.pid"
 
-exec 5> $OMXPLAYER_DBUS_ADDR
-exec 6> $OMXPLAYER_DBUS_PID
-
-dbus-daemon --fork --print-address 5 --print-pid 6 --session
+if [ ! -s "$OMXPLAYER_DBUS_PID" ] || ! pgrep -f "$DBUS_CMD" -F "$OMXPLAYER_DBUS_PID" >/dev/null; then
+	#echo "starting dbus for the first time" >&2
+	exec 5> "$OMXPLAYER_DBUS_ADDR"
+	exec 6> "$OMXPLAYER_DBUS_PID"
+	$DBUS_CMD
+	until [ -s "$OMXPLAYER_DBUS_ADDR" ]; do
+		echo "waiting for dbus address to appear" >&2
+		sleep .2
+	done
+fi
 
 DBUS_SESSION_BUS_ADDRESS=`cat $OMXPLAYER_DBUS_ADDR`
 DBUS_SESSION_BUS_PID=`cat $OMXPLAYER_DBUS_PID`
@@ -58,13 +65,6 @@ export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
 LD_LIBRARY_PATH="$OMXPLAYER_LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" $OMXPLAYER_BIN "$@"; true
-
-if [ -n "$DBUS_SESSION_BUS_PID" ]; then
-    kill -2 "$DBUS_SESSION_BUS_PID"
-fi
-
-rm -f $OMXPLAYER_DBUS_ADDR
-rm -f $OMXPLAYER_DBUS_PID
 
 if [ ! -z $NOREFRESH ] && [ "$NOREFRESH" == "1" ]; then
     exit 0

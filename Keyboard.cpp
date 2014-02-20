@@ -106,7 +106,7 @@ void Keyboard::send_action(int action)
 
   dbus_error_init(&error);
 
-  if (!(message = dbus_message_new_method_call(OMXPLAYER_DBUS_NAME, 
+  if (!(message = dbus_message_new_method_call(m_dbus_name.c_str(),
                                               OMXPLAYER_DBUS_PATH_SERVER, 
                                               OMXPLAYER_DBUS_INTERFACE_PLAYER,
                                               "Action"))) 
@@ -144,6 +144,11 @@ fail:
 void Keyboard::setKeymap(std::map<int,int> keymap) 
 {
   m_keymap = keymap;
+}
+
+void Keyboard::setDbusName(std::string dbus_name)
+{
+  m_dbus_name = dbus_name;
 }
 
 int Keyboard::dbus_connect() 

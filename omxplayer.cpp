@@ -90,6 +90,7 @@ std::string       m_external_subtitles_path;
 bool              m_has_external_subtitles = false;
 std::string       m_font_path           = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 std::string       m_italic_font_path    = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
+std::string       m_dbus_name           = "org.mpris.MediaPlayer2.omxplayer";
 bool              m_asked_for_font      = false;
 bool              m_asked_for_italic_font = false;
 float             m_font_size           = 0.055f;
@@ -187,6 +188,8 @@ void print_usage()
   printf("              --fps n                   Set fps of video where timestamps are not present\n");
   printf("              --live                    Set for live tv or vod type stream\n");
   printf("              --layout                  Set output speaker layout (e.g. 5.1)\n");
+  printf("              --dbus_name name          Set D-Bus bus name\n");
+  printf("                                        (default: org.mpris.MediaPlayer2.omxplayer)\n");
   printf("              --key-config <file>       Uses key bindings specified in <file> instead of the default\n");
 }
 
@@ -605,6 +608,7 @@ int main(int argc, char *argv[])
   const int fps_opt = 0x208;
   const int live_opt = 0x205;
   const int layout_opt = 0x206;
+  const int dbus_name_opt = 0x209;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -649,6 +653,7 @@ int main(int argc, char *argv[])
     { "fps",          required_argument,  NULL,          fps_opt },
     { "live",         no_argument,        NULL,          live_opt },
     { "layout",       required_argument,  NULL,          layout_opt },
+    { "dbus_name",    required_argument,  NULL,          dbus_name_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -830,6 +835,9 @@ int main(int argc, char *argv[])
         }
         break;
       }
+      case dbus_name_opt:
+        m_dbus_name = optarg;
+        break;
       case 'b':
         m_blank_background = true;
         break;
@@ -938,8 +946,9 @@ int main(int argc, char *argv[])
     printf("Only %dM of gpu_mem is configured. Try running \"sudo raspi-config\" and ensure that \"memory_split\" has a value of %d or greater\n", gpu_mem, min_gpu_mem);
 
   m_av_clock = new OMXClock();
-  m_omxcontrol.init(m_av_clock, &m_player_audio);
+  m_omxcontrol.init(m_av_clock, &m_player_audio, &m_omx_reader, m_dbus_name);
   m_keyboard.setKeymap(keymap);
+  m_keyboard.setDbusName(m_dbus_name);
 
   m_thread_player = true;
 
@@ -1108,7 +1117,10 @@ int main(int argc, char *argv[])
     }
 
      if (update) {
-    switch(m_omxcontrol.getEvent())
+       OMXControlResult result = m_omxcontrol.getEvent();
+       double oldPos, newPos;
+
+    switch(result.getKey())
     {
       case KeyConfig::ACTION_SHOW_INFO:
         m_tv_show_info = !m_tv_show_info;
@@ -1314,6 +1326,14 @@ int main(int argc, char *argv[])
       case KeyConfig::ACTION_SEEK_BACK_LARGE:
         if(m_omx_reader.CanSeek()) m_incr = -600.0;
         break;
+      case KeyConfig::ACTION_SEEK_RELATIVE:
+          m_incr = result.getArg() * 1e-6;
+          break;
+      case KeyConfig::ACTION_SEEK_ABSOLUTE:
+          newPos = result.getArg() * 1e-6;
+          oldPos = m_av_clock->OMXMediaTime()*1e-6;
+          m_incr = newPos - oldPos;
+          break;
       case KeyConfig::ACTION_PAUSE:
         m_Pause = !m_Pause;
         if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE)

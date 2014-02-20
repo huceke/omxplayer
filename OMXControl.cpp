@@ -7,6 +7,7 @@
 #include <dbus/dbus.h>
 
 #include <string>
+#include <sstream>
 #include <utility>
 
 #include "utils/log.h"
@@ -15,18 +16,26 @@
 
 #define CLASSNAME "OMXControl"
 
+OMXControlResult::OMXControlResult( int newKey ) {
+  key = newKey;
+}
+
+OMXControlResult::OMXControlResult( int newKey, int64_t newArg ) {
+  key = newKey;
+  arg = newArg;
+}
+
+int OMXControlResult::getKey() {
+  return key;
+}
+
+int64_t OMXControlResult::getArg() {
+  return arg;
+}
+
 OMXControl::OMXControl() 
 {
-  if (dbus_connect() < 0) 
-  {
-    CLog::Log(LOGWARNING, "DBus connection failed");
-  } 
-  else 
-  {
-    CLog::Log(LOGDEBUG, "DBus connection succeeded");
-  }
 
-  dbus_threads_init_default();
 }
 
 OMXControl::~OMXControl() 
@@ -34,18 +43,43 @@ OMXControl::~OMXControl()
     dbus_disconnect();
 }
 
-void OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio) 
+void OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXReader *m_omx_reader, std::string& dbus_name)
 {
   clock = m_av_clock;
   audio = m_player_audio;
+  reader = m_omx_reader;
+
+  if (dbus_connect(dbus_name) < 0)
+  {
+    CLog::Log(LOGWARNING, "DBus connection failed, trying alternate");
+    dbus_disconnect();
+    std::stringstream ss;
+    ss << getpid();
+    dbus_name += ".instance";
+    dbus_name += ss.str();
+    if (dbus_connect(dbus_name) < 0)
+    {
+      CLog::Log(LOGWARNING, "DBus connection failed, alternate failed, will continue without DBus");
+      dbus_disconnect();
+    } else {
+      CLog::Log(LOGDEBUG, "DBus connection succeeded");
+      dbus_threads_init_default();
+    }
+  }
+  else
+  {
+    CLog::Log(LOGDEBUG, "DBus connection succeeded");
+    dbus_threads_init_default();
+  }
 }
+
 void OMXControl::dispatch() 
 {
   if (bus)
     dbus_connection_read_write_dispatch(bus, 0);
 }
 
-int OMXControl::dbus_connect() 
+int OMXControl::dbus_connect(std::string& dbus_name)
 {
   DBusError error;
 
@@ -60,7 +94,7 @@ int OMXControl::dbus_connect()
 
   if (dbus_bus_request_name(
         bus,
-        OMXPLAYER_DBUS_NAME,
+        dbus_name.c_str(),
         DBUS_NAME_FLAG_DO_NOT_QUEUE,
         &error) != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) 
   {
@@ -70,7 +104,7 @@ int OMXControl::dbus_connect()
             goto fail;
         }
 
-        CLog::Log(LOGWARNING, "Failed to acquire D-Bus name '%s'", OMXPLAYER_DBUS_NAME);
+        CLog::Log(LOGWARNING, "Failed to acquire D-Bus name '%s'", dbus_name.c_str());
         goto fail;
     }
 
@@ -100,7 +134,7 @@ void OMXControl::dbus_disconnect()
     }
 }
 
-int OMXControl::getEvent() 
+OMXControlResult OMXControl::getEvent()
 {
   if (!bus)
     return KeyConfig::ACTION_BLANK;
@@ -110,6 +144,9 @@ int OMXControl::getEvent()
 
   if (m == NULL) 
     return KeyConfig::ACTION_BLANK;
+
+  CLog::Log(LOGDEBUG, "Popped message member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
+
   if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_ROOT, "Quit")) 
   {
     dbus_respond_ok(m);
@@ -188,30 +225,46 @@ int OMXControl::getEvent()
     DBusError error;
     dbus_error_init(&error);
 
-    long offset;
+    int64_t offset;
     dbus_message_get_args(m, &error, DBUS_TYPE_INT64, &offset, DBUS_TYPE_INVALID);
 
     // Make sure a value is sent for seeking
     if (dbus_error_is_set(&error)) 
     {
+          CLog::Log(LOGWARNING, "Seek D-Bus Error: %s", error.message );
           dbus_error_free(&error);
           dbus_respond_ok(m);
           return KeyConfig::ACTION_BLANK;
     } 
     else 
     {
-      dbus_respond_int64(m, offset);
-      if (offset < 0) 
+          dbus_respond_int64(m, offset);
+          return OMXControlResult(KeyConfig::ACTION_SEEK_RELATIVE, offset);
+    }
+  }
+  else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "SetPosition"))
+    {
+      DBusError error;
+      dbus_error_init(&error);
+
+      int64_t position;
+      const char *oPath; // ignoring path right now because we don't have a playlist
+      dbus_message_get_args(m, &error, DBUS_TYPE_OBJECT_PATH, &oPath, DBUS_TYPE_INT64, &position, DBUS_TYPE_INVALID);
+
+      // Make sure a value is sent for setting position
+      if (dbus_error_is_set(&error))
       {
-        return KeyConfig::ACTION_SEEK_BACK_SMALL;
-      } 
-      else if (offset > 0) 
+            CLog::Log(LOGWARNING, "SetPosition D-Bus Error: %s", error.message );
+            dbus_error_free(&error);
+            dbus_respond_ok(m);
+            return KeyConfig::ACTION_BLANK;
+      }
+      else
       {
-        return KeyConfig::ACTION_SEEK_FORWARD_SMALL;
+            dbus_respond_int64(m, position);
+            return OMXControlResult(KeyConfig::ACTION_SEEK_ABSOLUTE, position);
       }
     }
-    return KeyConfig::ACTION_BLANK;
-  } 
   else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "PlaybackStatus")) 
   {
     const char *status;
@@ -251,9 +304,22 @@ int OMXControl::getEvent()
       return KeyConfig::ACTION_BLANK;
     }
   } 
+  else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "Position"))
+  {
+    int64_t pos = clock->OMXMediaTime();
+    dbus_respond_int64(m, pos);
+    return KeyConfig::ACTION_BLANK;
+  }
+  else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "Duration"))
+  {
+    int64_t dur = reader->GetStreamLength();
+    dur *= 1000; // ms -> us
+    dbus_respond_int64(m, dur);
+    return KeyConfig::ACTION_BLANK;
+  }
   else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "Time_In_Us")) 
   {
-    long pos = clock->OMXMediaTime();
+    int64_t pos = clock->OMXMediaTime();
     dbus_respond_int64(m, pos);
     return KeyConfig::ACTION_BLANK;
   } 
@@ -288,6 +354,9 @@ int OMXControl::getEvent()
       dbus_respond_ok(m);
       return action; // Directly return enum
     }
+  }
+  else {
+    CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
   }
 
   return KeyConfig::ACTION_BLANK;
