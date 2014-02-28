@@ -946,7 +946,7 @@ int main(int argc, char *argv[])
     printf("Only %dM of gpu_mem is configured. Try running \"sudo raspi-config\" and ensure that \"memory_split\" has a value of %d or greater\n", gpu_mem, min_gpu_mem);
 
   m_av_clock = new OMXClock();
-  m_omxcontrol.init(m_av_clock, &m_player_audio, &m_omx_reader, m_dbus_name);
+  m_omxcontrol.init(m_av_clock, &m_player_audio, &m_player_subtitles, &m_omx_reader, m_dbus_name);
   m_keyboard.setKeymap(keymap);
   m_keyboard.setDbusName(m_dbus_name);
 

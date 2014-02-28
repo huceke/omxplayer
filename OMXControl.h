@@ -5,6 +5,7 @@
 #include <dbus/dbus.h>
 #include "OMXClock.h"
 #include "OMXPlayerAudio.h"
+#include "OMXPlayerSubtitles.h"
 
 class OMXControlResult {
   int key;
@@ -20,14 +21,15 @@ public:
 class OMXControl
 {
 protected:
-  DBusConnection *bus;
-  OMXClock       *clock;
-  OMXPlayerAudio *audio;
-  OMXReader      *reader;
+  DBusConnection     *bus;
+  OMXClock           *clock;
+  OMXPlayerAudio     *audio;
+  OMXReader          *reader;
+  OMXPlayerSubtitles *subtitles;
 public:
   OMXControl();
   ~OMXControl();
-  void init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXReader *m_omx_reader, std::string& dbus_name);
+  void init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXPlayerSubtitles *m_player_subtitles, OMXReader *m_omx_reader, std::string& dbus_name);
   OMXControlResult getEvent();
   void dispatch();
 private:
