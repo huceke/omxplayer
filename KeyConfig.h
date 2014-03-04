@@ -32,7 +32,10 @@ class KeyConfig
         ACTION_SEEK_RELATIVE = 25,
         ACTION_SEEK_ABSOLUTE = 26,
         ACTION_STEP = 23,
-        ACTION_BLANK = 24
+        ACTION_BLANK = 24,
+        ACTION_MOVE_VIDEO = 27,
+        ACTION_HIDE_VIDEO = 28,
+        ACTION_UNHIDE_VIDEO = 29
     };
 
     #define KEY_LEFT 0x5b44

@@ -10,12 +10,15 @@
 class OMXControlResult {
   int key;
   int64_t arg;
+  const char *winarg;
 
 public:
    OMXControlResult(int);
    OMXControlResult(int, int64_t);
+   OMXControlResult(int, const char *);
    int getKey();
    int64_t getArg();
+   const char *getWinArg();
 };
 
 class OMXControl
@@ -42,4 +45,3 @@ private:
   DBusHandlerResult dbus_respond_string(DBusMessage *m, const char *text);
   DBusHandlerResult dbus_respond_array(DBusMessage *m, const char *array[], int size);
 };
-

@@ -560,6 +560,7 @@ int main(int argc, char *argv[])
   bool                  m_send_eos            = false;
   bool                  m_packet_after_seek   = false;
   bool                  m_seek_flush          = false;
+  bool                  m_new_win_pos         = false;
   std::string           m_filename;
   double                m_incr                = 0;
   CRBP                  g_RBP;
@@ -1364,6 +1365,18 @@ int main(int argc, char *argv[])
             (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
         }
         break;
+      case KeyConfig::ACTION_MOVE_VIDEO:
+        sscanf(result.getWinArg(), "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
+        m_new_win_pos = true;
+        m_seek_flush = true;
+        break;
+      case KeyConfig::ACTION_HIDE_VIDEO:
+        m_player_video.Close();
+        break;
+      case KeyConfig::ACTION_UNHIDE_VIDEO:
+        m_new_win_pos = true;
+        m_seek_flush = true;
+        break;
       case KeyConfig::ACTION_DECREASE_VOLUME:
         m_Volume -= 300;
         m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
@@ -1405,9 +1418,16 @@ int main(int argc, char *argv[])
         unsigned t = (unsigned)(startpts*1e-6);
         auto dur = m_omx_reader.GetStreamLength() / 1000;
 
-        DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
-            (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-        printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+        if (!m_new_win_pos)
+        {
+          DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
+              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+          printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+        }
+        else
+        {
+          m_new_win_pos = false;
+        }
 
         FlushStreams(startpts);
       }

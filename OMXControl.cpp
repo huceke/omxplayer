@@ -25,12 +25,21 @@ OMXControlResult::OMXControlResult( int newKey, int64_t newArg ) {
   arg = newArg;
 }
 
+OMXControlResult::OMXControlResult( int newKey, const char *newArg ) {
+  key = newKey;
+  winarg = newArg;
+}
+
 int OMXControlResult::getKey() {
   return key;
 }
 
 int64_t OMXControlResult::getArg() {
   return arg;
+}
+
+const char *OMXControlResult::getWinArg() {
+  return winarg;
 }
 
 OMXControl::OMXControl() 
@@ -364,6 +373,39 @@ OMXControlResult OMXControl::getEvent()
     }
 
     return KeyConfig::ACTION_BLANK;
+  }
+  else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "VideoPos"))
+  {
+    DBusError error;
+    dbus_error_init(&error);
+
+    const char *win;
+    const char *oPath; // ignoring path right now because we don't have a playlist
+    dbus_message_get_args(m, &error, DBUS_TYPE_OBJECT_PATH, &oPath, DBUS_TYPE_STRING, &win, DBUS_TYPE_INVALID);
+
+    // Make sure a value is sent for setting VideoPos
+    if (dbus_error_is_set(&error))
+    {
+      CLog::Log(LOGWARNING, "VideoPos D-Bus Error: %s", error.message );
+      dbus_error_free(&error);
+      dbus_respond_ok(m);
+      return KeyConfig::ACTION_BLANK;
+    }
+    else
+    {
+      dbus_respond_string(m, win);
+      return OMXControlResult(KeyConfig::ACTION_MOVE_VIDEO, win);
+    }
+  }
+  else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "HideVideo"))
+  {
+    dbus_respond_ok(m);
+    return KeyConfig::ACTION_HIDE_VIDEO;
+  }
+  else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "UnHideVideo"))
+  {
+    dbus_respond_ok(m);
+    return KeyConfig::ACTION_UNHIDE_VIDEO;
   }
   else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "ListAudio"))
   {
