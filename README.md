@@ -65,6 +65,7 @@ Using OMXPlayer
          -g / --genlog                  generate log file
          -l / --pos n                   start position (hh:mm:ss)
          -b / --blank                   set background to black
+              --loop                    loop file. Ignored if file is not seekable, start position applied if given
               --no-boost-on-downmix     don't boost volume when downmixing
               --vol n                   Set initial volume in millibels (default 0)
               --no-osd                  do not display status information on screen
