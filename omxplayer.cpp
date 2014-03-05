@@ -122,6 +122,7 @@ bool              m_has_subtitle        = false;
 float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = true;
 bool              m_gen_log             = false;
+bool              m_loop                = false;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -164,6 +165,7 @@ void print_usage()
   printf("         -g / --genlog                  generate log file\n");
   printf("         -l / --pos n                   start position (hh:mm:ss)\n");
   printf("         -b / --blank                   set background to black\n");
+  printf("              --loop                    loop file. Ignored if file is not seekable, start position applied if given\n");
   printf("              --no-boost-on-downmix     don't boost volume when downmixing\n");
   printf("              --vol n                   Set initial volume in millibels (default 0)\n");
   printf("              --amp n                   Set initial amplification in millibels (default 0)\n");
@@ -563,6 +565,7 @@ int main(int argc, char *argv[])
   bool                  m_new_win_pos         = false;
   std::string           m_filename;
   double                m_incr                = 0;
+  double                m_loop_from           = 0;
   CRBP                  g_RBP;
   COMXCore              g_OMX;
   bool                  m_stats               = false;
@@ -610,6 +613,7 @@ int main(int argc, char *argv[])
   const int live_opt = 0x205;
   const int layout_opt = 0x206;
   const int dbus_name_opt = 0x209;
+  const int loop_opt = 0x20a;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -655,6 +659,7 @@ int main(int argc, char *argv[])
     { "live",         no_argument,        NULL,          live_opt },
     { "layout",       required_argument,  NULL,          layout_opt },
     { "dbus_name",    required_argument,  NULL,          dbus_name_opt },
+    { "loop",         no_argument,        NULL,          loop_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -747,6 +752,8 @@ int main(int argc, char *argv[])
           {
             m_incr = atof(optarg);
           }
+          if(m_loop)
+            m_loop_from = m_incr;
         }
         break;
       case no_osd_opt:
@@ -838,6 +845,11 @@ int main(int argc, char *argv[])
       }
       case dbus_name_opt:
         m_dbus_name = optarg;
+        break;
+      case loop_opt:
+        if(m_incr != 0)
+            m_loop_from = m_incr;
+        m_loop = true;
         break;
       case 'b':
         m_blank_background = true;
@@ -963,6 +975,7 @@ int main(int argc, char *argv[])
   m_has_audio     = m_omx_reader.AudioStreamCount();
   m_has_subtitle  = m_has_external_subtitles ||
                     m_omx_reader.SubtitleStreamCount();
+  m_loop          = m_loop && m_omx_reader.CanSeek();
 
   if (m_audio_extension)
   {
@@ -1627,6 +1640,11 @@ int main(int argc, char *argv[])
            (m_has_audio && m_player_audio.GetCached()) )
       {
         OMXClock::OMXSleep(10);
+        continue;
+      }
+      if (m_loop)
+      {
+        m_incr = m_loop_from - (m_av_clock->OMXMediaTime() ? m_av_clock->OMXMediaTime() / DVD_TIME_BASE : last_seek_pos);
         continue;
       }
       if (!m_send_eos && m_has_video)
