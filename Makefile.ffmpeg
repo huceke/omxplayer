@@ -39,7 +39,9 @@ configure:
 			--disable-doc \
 			--disable-postproc \
 			--enable-gpl \
-			--enable-protocol=http \
+			--enable-protocols \
+			--enable-nonfree \
+			--enable-openssl \
 			--enable-pthreads \
 			--enable-pic \
 			--disable-armv5te \
@@ -244,7 +246,7 @@ clean:
 
 checkout: 
 	git clone git://source.ffmpeg.org/ffmpeg ffmpeg; \
-	cd ffmpeg; git checkout n2.1
+	cd ffmpeg; git checkout n2.1.4
 
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
