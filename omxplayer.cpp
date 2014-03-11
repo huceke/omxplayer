@@ -1385,8 +1385,15 @@ int main(int argc, char *argv[])
         break;
       case KeyConfig::ACTION_HIDE_VIDEO:
         m_player_video.Close();
+        if (m_live)
+          m_omx_reader.Close();
         break;
       case KeyConfig::ACTION_UNHIDE_VIDEO:
+        if (m_live)
+        {
+          if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, true))
+            goto do_exit;
+        }
         m_new_win_pos = true;
         m_seek_flush = true;
         break;
