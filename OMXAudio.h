@@ -30,12 +30,15 @@
 #include "linux/PlatformDefs.h"
 #include "DllAvCodec.h"
 #include "DllAvUtil.h"
+#include "utils/PCMRemap.h"
 #include "OMXCore.h"
 #include "OMXClock.h"
 #include "OMXStreamInfo.h"
 #include "BitstreamConverter.h"
 #include "utils/PCMRemap.h"
 #include "utils/SingleLock.h"
+
+#define AUDIO_BUFFER_SECONDS 3
 
 class COMXAudio
 {
@@ -63,7 +66,7 @@ public:
   bool PortSettingsChanged();
 
   unsigned int AddPackets(const void* data, unsigned int len);
-  unsigned int AddPackets(const void* data, unsigned int len, double dts, double pts);
+  unsigned int AddPackets(const void* data, unsigned int len, double dts, double pts, unsigned int frame_size);
   unsigned int GetSpace();
   bool Deinitialize();
 
@@ -105,6 +108,7 @@ private:
   bool          m_HWDecode;
   bool          m_normalize_downmix;
   unsigned int  m_BytesPerSec;
+  unsigned int  m_InputBytesPerSec;
   unsigned int  m_BufferLen;
   unsigned int  m_ChunkLen;
   unsigned int  m_InputChannels;

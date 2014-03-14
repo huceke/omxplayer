@@ -243,9 +243,10 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
 
   if(!m_passthrough && !m_hw_decode)
   {
+    double dts = pkt->dts, pts=pkt->pts;
     while(data_len > 0)
     {
-      int len = m_pAudioCodec->Decode((BYTE *)data_dec, data_len);
+      int len = m_pAudioCodec->Decode((BYTE *)data_dec, data_len, dts, pts);
       if( (len < 0) || (len >  data_len) )
       {
         m_pAudioCodec->Reset();
@@ -256,7 +257,7 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
       data_len -= len;
 
       uint8_t *decoded;
-      int decoded_size = m_pAudioCodec->GetData(&decoded);
+      int decoded_size = m_pAudioCodec->GetData(&decoded, dts, pts);
 
       if(decoded_size <=0)
         continue;
@@ -269,7 +270,7 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
 
       int ret = 0;
 
-      ret = m_decoder->AddPackets(decoded, decoded_size, pkt->dts, pkt->pts);
+      ret = m_decoder->AddPackets(decoded, decoded_size, dts, pts, m_pAudioCodec->GetFrameSize());
       if(ret != decoded_size)
       {
         printf("error ret %d decoded_size %d\n", ret, decoded_size);
@@ -284,7 +285,7 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
       if(m_flush_requested) return true;
     }
 
-    m_decoder->AddPackets(pkt->data, pkt->size, pkt->dts, pkt->pts);
+    m_decoder->AddPackets(pkt->data, pkt->size, pkt->dts, pkt->pts, 0);
   }
 
   return true;
