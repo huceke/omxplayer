@@ -128,6 +128,14 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
   unsigned char *buffer   = NULL;
   unsigned int  flags     = READ_TRUNCATED | READ_BITRATE | READ_CHUNKED;
 
+  m_pFormatContext     = m_dllAvFormat.avformat_alloc_context();
+
+  // set the interrupt callback, appeared in libavformat 53.15.0
+  m_pFormatContext->interrupt_callback = int_cb;
+
+  // if format can be nonblocking, let's use that
+  m_pFormatContext->flags |= AVFMT_FLAG_NONBLOCK;
+
   if(m_filename.substr(0, 8) == "shout://" )
     m_filename.replace(0, 8, "http://");
 
@@ -193,7 +201,6 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
       return false;
     }
 
-    m_pFormatContext     = m_dllAvFormat.avformat_alloc_context();
     m_pFormatContext->pb = m_ioContext;
     result = m_dllAvFormat.avformat_open_input(&m_pFormatContext, m_filename.c_str(), iformat, NULL);
     if(result < 0)
@@ -203,14 +210,8 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
     }
   }
 
-  // set the interrupt callback, appeared in libavformat 53.15.0
-  m_pFormatContext->interrupt_callback = int_cb;
-
   m_bMatroska = strncmp(m_pFormatContext->iformat->name, "matroska", 8) == 0; // for "matroska.webm"
   m_bAVI = strcmp(m_pFormatContext->iformat->name, "avi") == 0;
-
-  // if format can be nonblocking, let's use that
-  m_pFormatContext->flags |= AVFMT_FLAG_NONBLOCK;
 
   // analyse very short to speed up mjpeg playback start
   if (iformat && (strcmp(iformat->name, "mjpeg") == 0) && m_ioContext->seekable == 0)
