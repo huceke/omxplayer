@@ -47,6 +47,7 @@ public:
             bool centered,
             bool ghost_box,
             unsigned int lines,
+            int layer,
             OMXClock* clock) BOOST_NOEXCEPT;
   void Close() BOOST_NOEXCEPT;
   void Flush() BOOST_NOEXCEPT;
@@ -161,6 +162,7 @@ private:
   bool                                          m_ghost_box;
   unsigned int                                  m_lines;
   OMXClock*                                     m_av_clock;
+  int                                           m_layer;
 
 #ifndef NDEBUG
   bool m_open;
