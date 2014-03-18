@@ -590,6 +590,7 @@ int main(int argc, char *argv[])
   enum PCMLayout m_layout = PCM_LAYOUT_2_0;
   TV_DISPLAY_STATE_T   tv_state;
   double last_seek_pos = 0;
+  bool idle = false;
 
   const int font_opt        = 0x100;
   const int italic_font_opt = 0x201;
@@ -1395,11 +1396,15 @@ int main(int argc, char *argv[])
       case KeyConfig::ACTION_HIDE_VIDEO:
         m_player_video.Close();
         if (m_live)
+        {
           m_omx_reader.Close();
+          idle = true;
+        }
         break;
       case KeyConfig::ACTION_UNHIDE_VIDEO:
         if (m_live)
         {
+          idle = false;
           if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, true))
             goto do_exit;
         }
@@ -1423,6 +1428,12 @@ int main(int argc, char *argv[])
       default:
         break;
     }
+    }
+
+    if (idle)
+    {
+      usleep(10000);
+      continue;
     }
 
     if(m_seek_flush || m_incr != 0)
