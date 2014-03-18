@@ -55,7 +55,7 @@ public:
   // Required overrides
   bool SendDecoderConfig();
   bool NaluFormatStartCodes(enum AVCodecID codec, uint8_t *in_extradata, int in_extrasize);
-  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, EDEINTERLACEMODE deinterlace = VS_DEINTERLACEMODE_OFF, bool hdmi_clock_sync = false, float fifo_size = 0.0f);
+  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, EDEINTERLACEMODE deinterlace = VS_DEINTERLACEMODE_OFF, bool hdmi_clock_sync = false, int layer = 0, float fifo_size = 0.0f);
   bool PortSettingsChanged();
   void Close(void);
   unsigned int GetFreeSpace();
@@ -116,6 +116,7 @@ protected:
   OMX_DISPLAYTRANSFORMTYPE m_transform;
   bool              m_settings_changed;
   CCriticalSection  m_critSection;
+  int               m_layer;
 };
 
 #endif

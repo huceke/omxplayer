@@ -123,6 +123,7 @@ float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = true;
 bool              m_gen_log             = false;
 bool              m_loop                = false;
+int               m_layer               = 0;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -193,6 +194,7 @@ void print_usage()
   printf("              --dbus_name name          Set D-Bus bus name\n");
   printf("                                        (default: org.mpris.MediaPlayer2.omxplayer)\n");
   printf("              --key-config <file>       Uses key bindings specified in <file> instead of the default\n");
+  printf("              --layer n                 Set the video render layer number (higher numbers are on top)\n");
 }
 
 void print_keybindings()
@@ -524,6 +526,7 @@ static void blank_background(bool enable)
   uint32_t vc_image_ptr;
   VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
   uint16_t image = 0x0000; // black
+  int             layer = m_layer - 1;
 
   VC_RECT_T dst_rect, src_rect;
 
@@ -544,7 +547,7 @@ static void blank_background(bool enable)
   update = vc_dispmanx_update_start(0);
   assert(update);
 
-  element = vc_dispmanx_element_add(update, display, -1 /*layer*/, &dst_rect, resource, &src_rect,
+  element = vc_dispmanx_element_add(update, display, layer, &dst_rect, resource, &src_rect,
                                     DISPMANX_PROTECTION_NONE, NULL, NULL, (DISPMANX_TRANSFORM_T)0 );
   assert(element);
 
@@ -614,6 +617,7 @@ int main(int argc, char *argv[])
   const int layout_opt = 0x206;
   const int dbus_name_opt = 0x209;
   const int loop_opt = 0x20a;
+  const int layer_opt = 0x20b;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -660,6 +664,7 @@ int main(int argc, char *argv[])
     { "layout",       required_argument,  NULL,          layout_opt },
     { "dbus_name",    required_argument,  NULL,          dbus_name_opt },
     { "loop",         no_argument,        NULL,          loop_opt },
+    { "layer",        required_argument,  NULL,          layer_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -857,6 +862,9 @@ int main(int argc, char *argv[])
       case key_config_opt:
         keymap = KeyConfig::parseConfigFile(optarg);
         break;
+      case layer_opt:
+        m_layer = atoi(optarg);
+        break;
       case 0:
         break;
       case 'h':
@@ -1038,7 +1046,7 @@ int main(int argc, char *argv[])
   if (m_orientation >= 0)
     m_hints_video.orientation = m_orientation;
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
     goto do_exit;
 
   if(m_has_subtitle || m_osd)
@@ -1059,6 +1067,7 @@ int main(int argc, char *argv[])
                                 m_centered,
                                 m_ghost_box,
                                 m_subtitle_lines,
+                                m_layer + 1,
                                 m_av_clock))
       goto do_exit;
   }
@@ -1457,7 +1466,7 @@ int main(int argc, char *argv[])
       sentStarted = false;
 
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, video_queue_size, video_fifo_size))
+                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
         goto do_exit;
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
