@@ -39,6 +39,22 @@
 
 static bool g_abort = false;
 
+static int64_t timeout_start;
+static int64_t timeout_duration = 10 * 1000000000LL;
+
+static int64_t CurrentHostCounter(void)
+{
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return( ((int64_t)now.tv_sec * 1000000000LL) + now.tv_nsec );
+}
+
+#define RESET_TIMEOUT(x) do { \
+  timeout_start = CurrentHostCounter(); \
+  timeout_duration = (x) * 1000000000LL; \
+} while (0)
+
+
 OMXReader::OMXReader()
 {
   m_open        = false;
@@ -82,11 +98,12 @@ static int interrupt_cb(void *unused)
 {
   if(g_abort)
     return 1;
-  return 0;
+  return CurrentHostCounter() - timeout_start > timeout_duration;
 }
 
 static int dvd_file_read(void *h, uint8_t* buf, int size)
 {
+  RESET_TIMEOUT(10);
   if(interrupt_cb(NULL))
     return -1;
 
@@ -96,6 +113,7 @@ static int dvd_file_read(void *h, uint8_t* buf, int size)
 
 static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
 {
+  RESET_TIMEOUT(10);
   if(interrupt_cb(NULL))
     return -1;
 
@@ -116,6 +134,7 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_program     = UINT_MAX;
   const AVIOInterruptCB int_cb = { interrupt_cb, NULL };
+  RESET_TIMEOUT(30);
 
   ClearStreams();
 
@@ -380,7 +399,7 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
   if (m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
     seek_pts += m_pFormatContext->start_time;
 
-
+  RESET_TIMEOUT(10);
   int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, -1, seek_pts, backwords ? AVSEEK_FLAG_BACKWARD : 0);
 
   if(ret >= 0)
@@ -419,7 +438,7 @@ OMXPacket *OMXReader::Read()
   OMXPacket *m_omx_pkt = NULL;
   int       result = -1;
 
-  if(!m_pFormatContext)
+  if(!m_pFormatContext || m_eof)
     return NULL;
 
   Lock();
@@ -433,6 +452,7 @@ OMXPacket *OMXReader::Read()
   pkt.data = NULL;
   pkt.stream_index = MAX_OMX_STREAMS;
 
+  RESET_TIMEOUT(10);
   result = m_dllAvFormat.av_read_frame(m_pFormatContext, &pkt);
   if (result < 0)
   {
@@ -442,7 +462,8 @@ OMXPacket *OMXReader::Read()
     UnLock();
     return NULL;
   }
-  else if (pkt.size < 0 || pkt.stream_index >= MAX_OMX_STREAMS)
+
+  if (pkt.size < 0 || pkt.stream_index >= MAX_OMX_STREAMS || interrupt_cb(NULL))
   {
     // XXX, in some cases ffmpeg returns a negative packet size
     if(m_pFormatContext->pb && !m_pFormatContext->pb->eof_reached)
