@@ -790,12 +790,12 @@ void COMXVideo::Close()
 
   m_omx_decoder.FlushInput();
 
-  m_omx_sched.Deinitialize(true);
-  m_omx_decoder.Deinitialize(true);
+  m_omx_sched.Deinitialize();
+  m_omx_decoder.Deinitialize();
   if(m_deinterlace)
-    m_omx_image_fx.Deinitialize(true);
-  m_omx_render.Deinitialize(true);
-  m_omx_tunnel_text.Deestablish(true);
+    m_omx_image_fx.Deinitialize();
+  m_omx_render.Deinitialize();
+  m_omx_tunnel_text.Deestablish();
 
   m_is_open       = false;
 

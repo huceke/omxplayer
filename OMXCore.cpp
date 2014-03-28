@@ -350,7 +350,7 @@ COMXCoreComponent::COMXCoreComponent()
 
 COMXCoreComponent::~COMXCoreComponent()
 {
-  Deinitialize(true);
+  Deinitialize();
 
   pthread_mutex_destroy(&m_omx_input_mutex);
   pthread_mutex_destroy(&m_omx_output_mutex);
@@ -1378,7 +1378,7 @@ bool COMXCoreComponent::Initialize( const std::string &component_name, OMX_INDEX
     {
       CLog::Log(LOGERROR, "COMXCoreComponent::Initialize - could not get component handle for %s omx_err(0x%08x)\n",
           component_name.c_str(), (int)omx_err);
-      Deinitialize(true);
+      Deinitialize();
       return false;
     }
   }
@@ -1437,7 +1437,7 @@ void COMXCoreComponent::ResetEos()
   pthread_mutex_unlock(&m_omx_eos_mutex);
 }
 
-bool COMXCoreComponent::Deinitialize(bool free_component /* = false */)
+bool COMXCoreComponent::Deinitialize()
 {
   OMX_ERRORTYPE omx_err;
 
@@ -1455,23 +1455,20 @@ bool COMXCoreComponent::Deinitialize(bool free_component /* = false */)
 
     TransitionToStateLoaded();
 
-    if(free_component)
+    CLog::Log(LOGDEBUG, "COMXCoreComponent::Deinitialize : %s handle %p\n",
+        m_componentName.c_str(), m_handle);
+    omx_err = m_DllOMX->OMX_FreeHandle(m_handle);
+    if (omx_err != OMX_ErrorNone)
     {
-      CLog::Log(LOGDEBUG, "COMXCoreComponent::Deinitialize : %s handle %p\n",
-          m_componentName.c_str(), m_handle);
-      omx_err = m_DllOMX->OMX_FreeHandle(m_handle);
-      if (omx_err != OMX_ErrorNone)
-      {
-        CLog::Log(LOGERROR, "COMXCoreComponent::Deinitialize - failed to free handle for component %s omx_err(0x%08x)",
-            m_componentName.c_str(), omx_err);
-      }  
-      m_handle = NULL;
-
-      m_input_port      = 0;
-      m_output_port     = 0;
-      m_componentName   = "";
-      m_resource_error  = false;
+      CLog::Log(LOGERROR, "COMXCoreComponent::Deinitialize - failed to free handle for component %s omx_err(0x%08x)",
+          m_componentName.c_str(), omx_err);
     }
+    m_handle = NULL;
+
+    m_input_port      = 0;
+    m_output_port     = 0;
+    m_componentName   = "";
+    m_resource_error  = false;
   }
 
   return true;
