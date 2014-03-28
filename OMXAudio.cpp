@@ -1114,17 +1114,29 @@ unsigned int COMXAudio::GetSpace()
 
 float COMXAudio::GetDelay()
 {
-  unsigned int free = m_omx_decoder.GetInputBufferSize() - m_omx_decoder.GetInputBufferSpace();
-  return m_BytesPerSec ? (float)free / (float)m_BytesPerSec : 0.0f;
+  CSingleLock lock (m_critSection);
+  double stamp = DVD_NOPTS_VALUE;
+  double ret = 0.0;
+  if (m_last_pts != DVD_NOPTS_VALUE && m_av_clock)
+    stamp = m_av_clock->OMXMediaTime();
+  // if possible the delay is current media time - time of last submitted packet
+  if (stamp != DVD_NOPTS_VALUE)
+  {
+    ret = (m_last_pts - stamp) * (1.0 / DVD_TIME_BASE);
+    //CLog::Log(LOGINFO, "%s::%s - %.2f %.0f %.0f", CLASSNAME, __func__, ret, stamp, m_last_pts);
+  }
+  else // just measure the input fifo
+  {
+    unsigned int used = m_omx_decoder.GetInputBufferSize() - m_omx_decoder.GetInputBufferSpace();
+    float ret = m_InputBytesPerSec ? (float)used / (float)m_InputBytesPerSec : 0.0f;
+    //CLog::Log(LOGINFO, "%s::%s - %.2f %d, %d, %d", CLASSNAME, __func__, ret, used, m_omx_decoder.GetInputBufferSize(), m_omx_decoder.GetInputBufferSpace());
+  }
+  return ret;
 }
 
 float COMXAudio::GetCacheTime()
 {
-  float fBufferLenFull = (float)m_BufferLen - (float)GetSpace();
-  if(fBufferLenFull < 0)
-    fBufferLenFull = 0;
-  float ret = m_BytesPerSec ? fBufferLenFull / (float)m_BytesPerSec : 0.0f;
-  return ret;
+  return GetDelay();
 }
 
 float COMXAudio::GetCacheTotal()

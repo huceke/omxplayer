@@ -66,7 +66,10 @@ protected:
   OMX_TIME_REFCLOCKTYPE m_eClock;
 private:
   COMXCoreComponent m_omx_clock;
+  double            m_last_media_time;
+  double            m_last_media_time_read;
   DllAvFormat       m_dllAvFormat;
+
 public:
   OMXClock();
   ~OMXClock();
