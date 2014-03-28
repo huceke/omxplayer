@@ -96,9 +96,18 @@ void OMXReader::UnLock()
 
 static int interrupt_cb(void *unused)
 {
-  if(g_abort)
-    return 1;
-  return CurrentHostCounter() - timeout_start > timeout_duration;
+  int ret = 0;
+  if (g_abort)
+  {
+    CLog::Log(LOGERROR, "COMXPlayer::interrupt_cb - Told to abort");
+    ret = 1;
+  }
+  else if (CurrentHostCounter() - timeout_start > timeout_duration)
+  {
+    CLog::Log(LOGERROR, "COMXPlayer::interrupt_cb - Timed out");
+    ret = 1;
+  }
+  return ret;
 }
 
 static int dvd_file_read(void *h, uint8_t* buf, int size)
