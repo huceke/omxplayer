@@ -187,6 +187,7 @@ void print_usage()
   printf("              --audio_queue n           Size of audio input queue in MB\n");
   printf("              --video_queue n           Size of video input queue in MB\n");
   printf("              --threshold   n           Amount of buffered data required to come out of buffering in seconds\n");
+  printf("              --timeout     n           Amount of time a file/network operation can stall for before timing out (default 10s)\n");
   printf("              --orientation n           Set orientation of video (0, 90, 180 or 270)\n");
   printf("              --fps n                   Set fps of video where timestamps are not present\n");
   printf("              --live                    Set for live tv or vod type stream\n");
@@ -584,6 +585,7 @@ int main(int argc, char *argv[])
   float audio_queue_size = 0.0;
   float video_queue_size = 0.0;
   float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
+  float m_timeout        = 10.0f; // amount of time file/network operation can stall for before timing out
   int m_orientation      = -1; // unset
   float m_fps            = 0.0f; // unset
   bool m_live            = false; // set to true for live tv or vod for low buffering
@@ -607,6 +609,7 @@ int main(int argc, char *argv[])
   const int video_queue_opt = 0x10a;
   const int no_deinterlace_opt = 0x10b;
   const int threshold_opt   = 0x10c;
+  const int timeout_opt     = 0x10f;
   const int boost_on_downmix_opt = 0x200;
   const int no_boost_on_downmix_opt = 0x207;
   const int key_config_opt  = 0x10d;
@@ -655,6 +658,7 @@ int main(int argc, char *argv[])
     { "audio_queue",  required_argument,  NULL,          audio_queue_opt },
     { "video_queue",  required_argument,  NULL,          video_queue_opt },
     { "threshold",    required_argument,  NULL,          threshold_opt },
+    { "timeout",      required_argument,  NULL,          timeout_opt },
     { "boost-on-downmix", no_argument,    NULL,          boost_on_downmix_opt },
     { "no-boost-on-downmix", no_argument, NULL,          no_boost_on_downmix_opt },
     { "key-config",   required_argument,  NULL,          key_config_opt },
@@ -823,6 +827,9 @@ int main(int argc, char *argv[])
       case threshold_opt:
   m_threshold = atof(optarg);
         break;
+      case timeout_opt:
+        m_timeout = atof(optarg);
+        break;
       case orientation_opt:
         m_orientation = atoi(optarg);
         break;
@@ -974,7 +981,7 @@ int main(int argc, char *argv[])
 
   m_thread_player = true;
 
-  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_live))
+  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_live, m_timeout))
     goto do_exit;
 
   if(m_dump_format)

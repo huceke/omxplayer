@@ -40,7 +40,8 @@
 static bool g_abort = false;
 
 static int64_t timeout_start;
-static int64_t timeout_duration = 10 * 1000000000LL;
+static int64_t timeout_default_duration;
+static int64_t timeout_duration;
 
 static int64_t CurrentHostCounter(void)
 {
@@ -51,7 +52,7 @@ static int64_t CurrentHostCounter(void)
 
 #define RESET_TIMEOUT(x) do { \
   timeout_start = CurrentHostCounter(); \
-  timeout_duration = (x) * 1000000000LL; \
+  timeout_duration = (x) * timeout_default_duration; \
 } while (0)
 
 
@@ -102,7 +103,7 @@ static int interrupt_cb(void *unused)
     CLog::Log(LOGERROR, "COMXPlayer::interrupt_cb - Told to abort");
     ret = 1;
   }
-  else if (CurrentHostCounter() - timeout_start > timeout_duration)
+  else if (timeout_duration && CurrentHostCounter() - timeout_start > timeout_duration)
   {
     CLog::Log(LOGERROR, "COMXPlayer::interrupt_cb - Timed out");
     ret = 1;
@@ -112,7 +113,7 @@ static int interrupt_cb(void *unused)
 
 static int dvd_file_read(void *h, uint8_t* buf, int size)
 {
-  RESET_TIMEOUT(10);
+  RESET_TIMEOUT(1);
   if(interrupt_cb(NULL))
     return -1;
 
@@ -122,7 +123,7 @@ static int dvd_file_read(void *h, uint8_t* buf, int size)
 
 static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
 {
-  RESET_TIMEOUT(10);
+  RESET_TIMEOUT(1);
   if(interrupt_cb(NULL))
     return -1;
 
@@ -133,17 +134,18 @@ static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
     return pFile->Seek(pos, whence & ~AVSEEK_FORCE);
 }
 
-bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */)
+bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */, float timeout /* = 0.0f */)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load())
     return false;
-  
+
+  timeout_default_duration = (int64_t) (timeout * 1e9);
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_filename    = filename; 
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_program     = UINT_MAX;
   const AVIOInterruptCB int_cb = { interrupt_cb, NULL };
-  RESET_TIMEOUT(30);
+  RESET_TIMEOUT(3);
 
   ClearStreams();
 
@@ -408,7 +410,7 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
   if (m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
     seek_pts += m_pFormatContext->start_time;
 
-  RESET_TIMEOUT(10);
+  RESET_TIMEOUT(1);
   int ret = m_dllAvFormat.av_seek_frame(m_pFormatContext, -1, seek_pts, backwords ? AVSEEK_FLAG_BACKWARD : 0);
 
   if(ret >= 0)
@@ -461,7 +463,7 @@ OMXPacket *OMXReader::Read()
   pkt.data = NULL;
   pkt.stream_index = MAX_OMX_STREAMS;
 
-  RESET_TIMEOUT(10);
+  RESET_TIMEOUT(1);
   result = m_dllAvFormat.av_read_frame(m_pFormatContext, &pkt);
   if (result < 0)
   {

@@ -85,6 +85,7 @@ Using OMXPlayer
               --audio_queue n           Size of audio input queue in MB
               --video_queue n           Size of video input queue in MB
               --threshold   n           Amount of buffered data required to come out of buffering in seconds
+              --timeout     n           Amount of time a file/network operation can stall for before timing out (default 10s)
               --orientation n           Set orientation of video (0, 90, 180 or 270)
               --fps n                   Set fps of video where timestamps are not present
               --live                    Set for live tv or vod type stream
