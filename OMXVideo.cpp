@@ -291,14 +291,14 @@ bool COMXVideo::PortSettingsChanged()
   m_omx_tunnel_sched.Initialize(&m_omx_sched, m_omx_sched.GetOutputPort(), &m_omx_render, m_omx_render.GetInputPort());
   m_omx_tunnel_clock.Initialize(m_omx_clock, m_omx_clock->GetInputPort() + 1, &m_omx_sched, m_omx_sched.GetOutputPort() + 1);
 
-  omx_err = m_omx_tunnel_clock.Establish(false);
+  omx_err = m_omx_tunnel_clock.Establish();
   if(omx_err != OMX_ErrorNone)
   {
     CLog::Log(LOGERROR, "%s::%s - m_omx_tunnel_clock.Establish omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
     return false;
   }
 
-  omx_err = m_omx_tunnel_decoder.Establish(false);
+  omx_err = m_omx_tunnel_decoder.Establish();
   if (omx_err != OMX_ErrorNone)
   {
     CLog::Log(LOGERROR, "%s::%s - m_omx_tunnel_decoder.Establish omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
@@ -307,7 +307,7 @@ bool COMXVideo::PortSettingsChanged()
 
   if(m_deinterlace)
   {
-    omx_err = m_omx_tunnel_image_fx.Establish(false);
+    omx_err = m_omx_tunnel_image_fx.Establish();
     if(omx_err != OMX_ErrorNone)
     {
       CLog::Log(LOGERROR, "%s::%s - m_omx_tunnel_image_fx.Establish omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
@@ -322,7 +322,7 @@ bool COMXVideo::PortSettingsChanged()
     }
   }
 
-  omx_err = m_omx_tunnel_sched.Establish(false);
+  omx_err = m_omx_tunnel_sched.Establish();
   if(omx_err != OMX_ErrorNone)
   {
     CLog::Log(LOGERROR, "%s::%s - m_omx_tunnel_sched.Establish omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
@@ -720,7 +720,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
     return false;
   }
 
-  omx_err = m_omx_tunnel_text.Establish(false);
+  omx_err = m_omx_tunnel_text.Establish();
   if(omx_err != OMX_ErrorNone)
   {
     CLog::Log(LOGERROR, "COMXVideo::Open m_omx_tunnel_text.Establish\n");

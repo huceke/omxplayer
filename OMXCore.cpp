@@ -62,7 +62,6 @@ COMXCoreTunel::COMXCoreTunel()
   m_dst_component       = NULL;
   m_src_port            = 0;
   m_dst_port            = 0;
-  m_portSettingsChanged = false;
   m_tunnel_set          = false;
   m_DllOMX              = DllOMX::GetDllOMX();
 }
@@ -90,9 +89,6 @@ OMX_ERRORTYPE COMXCoreTunel::Deestablish(bool noWait)
     return OMX_ErrorUndefined;
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
-
-  if(m_src_component->GetComponent() && m_portSettingsChanged && !noWait)
-    omx_err = m_src_component->WaitForEvent(OMX_EventPortSettingsChanged);
 
   if(m_src_component->GetComponent())
   {
@@ -161,7 +157,7 @@ OMX_ERRORTYPE COMXCoreTunel::Deestablish(bool noWait)
   return OMX_ErrorNone;
 }
 
-OMX_ERRORTYPE COMXCoreTunel::Establish(bool portSettingsChanged, bool enable_ports /* = true */, bool disable_ports /* = false */)
+OMX_ERRORTYPE COMXCoreTunel::Establish(bool enable_ports /* = true */, bool disable_ports /* = false */)
 {
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
   OMX_PARAM_U32TYPE param;
@@ -183,14 +179,6 @@ OMX_ERRORTYPE COMXCoreTunel::Establish(bool portSettingsChanged, bool enable_por
     }
   }
 #endif
-  if(portSettingsChanged)
-  {
-    omx_err = m_src_component->WaitForEvent(OMX_EventPortSettingsChanged);
-    if(omx_err != OMX_ErrorNone)
-    {
-      return omx_err;
-    }
-  }
 
   if(m_src_component->GetComponent() && disable_ports)
   {
@@ -302,8 +290,6 @@ OMX_ERRORTYPE COMXCoreTunel::Establish(bool portSettingsChanged, bool enable_por
       return omx_err;
     }
   }
-
-  m_portSettingsChanged = portSettingsChanged;
 
   return OMX_ErrorNone;
 }
