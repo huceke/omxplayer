@@ -109,7 +109,7 @@ public:
   OMX_ERRORTYPE DisablePort(unsigned int port, bool wait = true);
   OMX_ERRORTYPE UseEGLImage(OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, void* eglImage);
 
-  bool          Initialize( const std::string &component_name, OMX_INDEXTYPE index);
+  bool          Initialize( const std::string &component_name, OMX_INDEXTYPE index, OMX_CALLBACKTYPE *callbacks = NULL);
   bool          IsInitialized();
   bool          Deinitialize();
 
