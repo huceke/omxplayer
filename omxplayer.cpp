@@ -86,6 +86,7 @@ bool              m_HWDecode            = false;
 std::string       deviceString          = "";
 int               m_use_hw_audio        = false;
 bool              m_osd                 = true;
+bool              m_no_keys             = false;
 std::string       m_external_subtitles_path;
 bool              m_has_external_subtitles = false;
 std::string       m_font_path           = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
@@ -103,7 +104,7 @@ int               m_audio_index_use     = -1;
 bool              m_thread_player       = false;
 OMXClock          *m_av_clock           = NULL;
 OMXControl        m_omxcontrol;
-Keyboard          m_keyboard;
+Keyboard          *m_keyboard           = NULL;
 COMXStreamInfo    m_hints_audio;
 COMXStreamInfo    m_hints_video;
 OMXPacket         *m_omx_pkt            = NULL;
@@ -138,7 +139,10 @@ void sig_handler(int s)
   signal(SIGABRT, SIG_DFL);
   signal(SIGSEGV, SIG_DFL);
   signal(SIGFPE, SIG_DFL);
-  m_keyboard.Close();
+  if (NULL != m_keyboard)
+  {
+     m_keyboard->Close();
+  }
   abort();
 }
 
@@ -171,6 +175,7 @@ void print_usage()
   printf("              --vol n                   Set initial volume in millibels (default 0)\n");
   printf("              --amp n                   Set initial amplification in millibels (default 0)\n");
   printf("              --no-osd                  do not display status information on screen\n");
+  printf("              --no-keys                 disable keyboard input (useful to prevent hangs for certain TTYs)\n");
   printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
   printf("              --font path               subtitle font\n");
   printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
@@ -614,14 +619,15 @@ int main(int argc, char *argv[])
   const int no_boost_on_downmix_opt = 0x207;
   const int key_config_opt  = 0x10d;
   const int amp_opt         = 0x10e;
-  const int no_osd_opt = 0x202;
+  const int no_osd_opt      = 0x202;
   const int orientation_opt = 0x204;
-  const int fps_opt = 0x208;
-  const int live_opt = 0x205;
-  const int layout_opt = 0x206;
-  const int dbus_name_opt = 0x209;
-  const int loop_opt = 0x20a;
-  const int layer_opt = 0x20b;
+  const int fps_opt         = 0x208;
+  const int live_opt        = 0x205;
+  const int layout_opt      = 0x206;
+  const int dbus_name_opt   = 0x209;
+  const int loop_opt        = 0x20a;
+  const int layer_opt       = 0x20b;
+  const int no_keys_opt     = 0x20c;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -663,6 +669,7 @@ int main(int argc, char *argv[])
     { "no-boost-on-downmix", no_argument, NULL,          no_boost_on_downmix_opt },
     { "key-config",   required_argument,  NULL,          key_config_opt },
     { "no-osd",       no_argument,        NULL,          no_osd_opt },
+    { "no-keys",      no_argument,        NULL,          no_keys_opt },
     { "orientation",  required_argument,  NULL,          orientation_opt },
     { "fps",          required_argument,  NULL,          fps_opt },
     { "live",         no_argument,        NULL,          live_opt },
@@ -768,6 +775,9 @@ int main(int argc, char *argv[])
         break;
       case no_osd_opt:
         m_osd = false;
+        break;
+      case no_keys_opt:
+        m_no_keys = true;
         break;
       case font_opt:
         m_font_path = optarg;
@@ -903,6 +913,11 @@ int main(int argc, char *argv[])
 
   m_filename = argv[optind];
 
+  if (false == m_no_keys)
+  {
+      m_keyboard = new Keyboard();
+  }
+
   auto PrintFileNotFound = [](const std::string& path)
   {
     printf("File \"%s\" not found.\n", path.c_str());
@@ -976,8 +991,11 @@ int main(int argc, char *argv[])
 
   m_av_clock = new OMXClock();
   m_omxcontrol.init(m_av_clock, &m_player_audio, &m_player_subtitles, &m_omx_reader, m_dbus_name);
-  m_keyboard.setKeymap(keymap);
-  m_keyboard.setDbusName(m_dbus_name);
+  if (NULL != m_keyboard)
+  {
+    m_keyboard->setKeymap(keymap);
+    m_keyboard->setDbusName(m_dbus_name);
+  }
 
   m_thread_player = true;
 
@@ -1756,7 +1774,10 @@ do_exit:
   m_player_subtitles.Close();
   m_player_video.Close();
   m_player_audio.Close();
-  m_keyboard.Close();
+  if (NULL != m_keyboard)
+  {
+    m_keyboard->Close();
+  }
 
   if(m_omx_pkt)
   {
