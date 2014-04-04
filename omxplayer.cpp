@@ -1415,10 +1415,12 @@ int main(int argc, char *argv[])
         break;
       case KeyConfig::ACTION_MOVE_VIDEO:
         sscanf(result.getWinArg(), "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
+        m_has_video = true;
         m_new_win_pos = true;
         m_seek_flush = true;
         break;
       case KeyConfig::ACTION_HIDE_VIDEO:
+        m_has_video = false;
         m_player_video.Close();
         if (m_live)
         {
@@ -1427,6 +1429,7 @@ int main(int argc, char *argv[])
         }
         break;
       case KeyConfig::ACTION_UNHIDE_VIDEO:
+        m_has_video = true;
         if (m_live)
         {
           idle = false;
