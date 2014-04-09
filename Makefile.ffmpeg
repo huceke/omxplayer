@@ -244,9 +244,8 @@ configure:
 clean:
 	@rm -rf ffmpeg
 
-checkout: 
-	git clone git://source.ffmpeg.org/ffmpeg ffmpeg; \
-	cd ffmpeg; git checkout n2.2
+checkout:
+	git clone git://source.ffmpeg.org/ffmpeg ffmpeg -b n2.2 --depth=1
 
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
