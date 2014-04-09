@@ -20,6 +20,8 @@ LDFLAGS		+= -L/opt/vc/lib -L/lib -L/usr/lib -lfreetype
 INCLUDES	+= -I/opt/vc/include/interface/vcos/pthreads \
 			-I/opt/vc/include \
 			-I/opt/vc/include/interface/vmcs_host \
+			-I/opt/vc/include/interface/vmcs_host/linux \
+			-I/usr/lib/arm-linux-gnueabihf/dbus-1.0/include \
 			-I/usr/include \
 			-I/usr/include/freetype2" > Makefile.include
 
