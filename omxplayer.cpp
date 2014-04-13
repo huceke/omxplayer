@@ -913,11 +913,6 @@ int main(int argc, char *argv[])
 
   m_filename = argv[optind];
 
-  if (false == m_no_keys)
-  {
-      m_keyboard = new Keyboard();
-  }
-
   auto PrintFileNotFound = [](const std::string& path)
   {
     printf("File \"%s\" not found.\n", path.c_str());
@@ -991,6 +986,10 @@ int main(int argc, char *argv[])
 
   m_av_clock = new OMXClock();
   m_omxcontrol.init(m_av_clock, &m_player_audio, &m_player_subtitles, &m_omx_reader, m_dbus_name);
+  if (false == m_no_keys)
+  {
+    m_keyboard = new Keyboard();
+  }
   if (NULL != m_keyboard)
   {
     m_keyboard->setKeymap(keymap);
