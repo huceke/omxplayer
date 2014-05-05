@@ -183,7 +183,7 @@ For example:
 
 `omxplayer` can be controlled via DBUS.  There are three interfaces, all of
 which present a different set of commands.  For examples on working with DBUS
-take a look at the supplied [dbuscontrol.sh](blob/master/dbuscontrol.sh) file.
+take a look at the supplied [dbuscontrol.sh](dbuscontrol.sh) file.
 
 ### Root Interface
 
