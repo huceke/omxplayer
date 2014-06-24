@@ -36,10 +36,6 @@
 #include <deque>
 #include <sys/types.h>
 
-#include "OMXOverlayCodec.h"
-#include "OMXOverlayText.h"
-#include "OMXOverlayCodecText.h"
-
 #include <string>
 #include <atomic>
 
@@ -50,9 +46,7 @@ class OMXPlayerVideo : public OMXThread
 protected:
   AVStream                  *m_pStream;
   int                       m_stream_id;
-  std::deque<OMXPacket *>   m_subtitle_packets;
   std::deque<OMXPacket *>   m_packets;
-  std::deque<COMXOverlay *> m_overlays;
   DllAvUtil                 m_dllAvUtil;
   DllAvCodec                m_dllAvCodec;
   DllAvFormat               m_dllAvFormat;
@@ -62,9 +56,7 @@ protected:
   pthread_cond_t            m_packet_cond;
   pthread_cond_t            m_picture_cond;
   pthread_mutex_t           m_lock;
-  pthread_mutex_t           m_subtitle;
   pthread_mutex_t           m_lock_decoder;
-  pthread_mutex_t           m_lock_subtitle;
   OMXClock                  *m_av_clock;
   COMXVideo                 *m_decoder;
   float                     m_fps;
@@ -81,8 +73,6 @@ protected:
   float                     m_fifo_size;
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
-  double                    m_iSubtitleDelay;
-  COMXOverlayCodec          *m_pSubtitleCodec;
   uint32_t                  m_history_valid_pts;
   int                       m_layer;
 
@@ -90,8 +80,6 @@ protected:
   void UnLock();
   void LockDecoder();
   void UnLockDecoder();
-  void LockSubtitles();
-  void UnLockSubtitles();
 private:
 public:
   OMXPlayerVideo();
@@ -101,7 +89,6 @@ public:
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();
-  void FlushSubtitles();
   void Flush();
   bool AddPacket(OMXPacket *pkt);
   bool OpenDecoder();
@@ -117,8 +104,5 @@ public:
   bool IsEOS();
   void SetDelay(double delay) { m_iVideoDelay = delay; }
   double GetDelay() { return m_iVideoDelay; }
-  double GetSubtitleDelay()                                { return m_iSubtitleDelay; }
-  void SetSubtitleDelay(double delay)                      { m_iSubtitleDelay = delay; }
-  std::string GetText();
 };
 #endif
