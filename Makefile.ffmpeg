@@ -4,15 +4,19 @@ CFLAGS=-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DTARGET_POSIX -DTARGET_LI
 
 WORK=$(PWD)
 
+.PHONY : all
 all: checkout configure compile
 
+.PHONY : copy
 copy:
 	find ffmpeg -name '*.so*' -exec cp {} . \;
 	$(HOST)-strip *.so*
 
+.PHONY : compile
 compile: 
 	+$(MAKE) -C ffmpeg
 
+.PHONY : configure
 configure: 
 	cd ffmpeg; \
 	CFLAGS="$(CFLAGS) ${INCLUDES}" \
@@ -241,12 +245,15 @@ configure:
 			--disable-decoder=idf \
 			--cross-prefix=$(HOST)-
 
+.PHONY : clean
 clean:
 	@rm -rf ffmpeg
 
+.PHONY : checkout
 checkout:
 	git clone git://source.ffmpeg.org/ffmpeg ffmpeg -b n2.2 --depth=1
 
+.PHONY : install
 install:
 	cd ffmpeg; make -j9 DESTDIR="$(WORK)/ffmpeg_compiled" install
 	$(HOST)-strip ffmpeg_compiled/usr/local/lib/*.so
