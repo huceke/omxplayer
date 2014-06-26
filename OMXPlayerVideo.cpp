@@ -92,7 +92,7 @@ void OMXPlayerVideo::UnLockDecoder()
     pthread_mutex_unlock(&m_lock_decoder);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, bool hdmi_clock_sync, bool use_thread,
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, bool use_thread,
                              float display_aspect, int layer, float queue_size, float fifo_size)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
@@ -108,6 +108,7 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   m_fps         = 25.0f;
   m_frametime   = 0;
   m_Deinterlace = deinterlace;
+  m_anaglyph    = anaglyph;
   m_display_aspect = display_aspect;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
@@ -312,7 +313,7 @@ bool OMXPlayerVideo::OpenDecoder()
   m_frametime = (double)DVD_TIME_BASE / m_fps;
 
   m_decoder = new COMXVideo();
-  if(!m_decoder->Open(m_hints, m_av_clock, m_DestRect, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync, m_layer, m_fifo_size))
+  if(!m_decoder->Open(m_hints, m_av_clock, m_DestRect, m_display_aspect, m_Deinterlace, m_anaglyph, m_hdmi_clock_sync, m_layer, m_fifo_size))
   {
     CloseDecoder();
     return false;

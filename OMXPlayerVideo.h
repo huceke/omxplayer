@@ -62,6 +62,7 @@ protected:
   float                     m_fps;
   double                    m_frametime;
   EDEINTERLACEMODE          m_Deinterlace;
+  OMX_IMAGEFILTERANAGLYPHTYPE m_anaglyph;
   float                     m_display_aspect;
   CRect                     m_DestRect;
   bool                      m_bAbort;
@@ -84,7 +85,7 @@ private:
 public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, bool hdmi_clock_sync, bool use_thread,
+  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, bool use_thread,
                    float display_aspect, int layer, float queue_size, float fifo_size);
   bool Close();
   bool Decode(OMXPacket *pkt);

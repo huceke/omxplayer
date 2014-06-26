@@ -82,6 +82,7 @@ long              m_Volume              = 0;
 long              m_Amplification       = 0;
 bool              m_Deinterlace         = false;
 bool              m_NoDeinterlace       = false;
+OMX_IMAGEFILTERANAGLYPHTYPE m_anaglyph  = OMX_ImageFilterAnaglyphNone;
 bool              m_HWDecode            = false;
 std::string       deviceString          = "";
 int               m_use_hw_audio        = false;
@@ -161,6 +162,7 @@ void print_usage()
   printf("         -p / --passthrough             audio passthrough\n");
   printf("         -d / --deinterlace             force deinterlacing\n");
   printf("              --nodeinterlace           force no deinterlacing\n");
+  printf("              --anaglyph type           Convert 3d to anaglyph\n");
   printf("         -w / --hw                      hw audio decoding\n");
   printf("         -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)\n");
   printf("         -y / --hdmiclocksync           adjust display refresh rate to match video (default)\n");
@@ -628,6 +630,7 @@ int main(int argc, char *argv[])
   const int loop_opt        = 0x20a;
   const int layer_opt       = 0x20b;
   const int no_keys_opt     = 0x20c;
+  const int anaglyph_opt    = 0x20d;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -642,6 +645,7 @@ int main(int argc, char *argv[])
     { "amp",          required_argument,  NULL,          amp_opt },
     { "deinterlace",  no_argument,        NULL,          'd' },
     { "nodeinterlace",no_argument,        NULL,          no_deinterlace_opt },
+    { "anaglyph",     required_argument,  NULL,          anaglyph_opt },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
     { "hdmiclocksync", no_argument,       NULL,          'y' },
@@ -725,6 +729,9 @@ int main(int argc, char *argv[])
         break;
       case no_deinterlace_opt:
         m_NoDeinterlace = true;
+        break;
+      case anaglyph_opt:
+        m_anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
         break;
       case 'w':
         m_use_hw_audio = true;
@@ -1071,7 +1078,7 @@ int main(int argc, char *argv[])
   if (m_orientation >= 0)
     m_hints_video.orientation = m_orientation;
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
+                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
     goto do_exit;
 
   if(m_has_subtitle || m_osd)
@@ -1504,7 +1511,7 @@ int main(int argc, char *argv[])
       sentStarted = false;
 
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
+                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
         goto do_exit;
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
