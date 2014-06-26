@@ -64,6 +64,7 @@ Using OMXPlayer
          -p / --passthrough             audio passthrough
          -d / --deinterlace             force deinterlacing
               --nodeinterlace           force no deinterlacing
+              --nativedeinterlace       Let display handle interlace
               --anaglyph type           Convert 3d to anaglyph
          -w / --hw                      hw audio decoding
          -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)

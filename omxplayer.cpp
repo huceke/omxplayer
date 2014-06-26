@@ -82,6 +82,7 @@ long              m_Volume              = 0;
 long              m_Amplification       = 0;
 bool              m_Deinterlace         = false;
 bool              m_NoDeinterlace       = false;
+bool              m_NativeDeinterlace   = false;
 OMX_IMAGEFILTERANAGLYPHTYPE m_anaglyph  = OMX_ImageFilterAnaglyphNone;
 bool              m_HWDecode            = false;
 std::string       deviceString          = "";
@@ -162,6 +163,7 @@ void print_usage()
   printf("         -p / --passthrough             audio passthrough\n");
   printf("         -d / --deinterlace             force deinterlacing\n");
   printf("              --nodeinterlace           force no deinterlacing\n");
+  printf("              --nativedeinterlace       Let display handle interlace\n");
   printf("              --anaglyph type           Convert 3d to anaglyph\n");
   printf("         -w / --hw                      hw audio decoding\n");
   printf("         -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)\n");
@@ -388,7 +390,7 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
   if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID)
   {
     uint32_t best_score = 1<<30;
-    uint32_t scan_mode = 0;
+    uint32_t scan_mode = m_NativeDeinterlace;
 
     for (i=0; i<num_modes; i++)
     {
@@ -404,7 +406,7 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
       else if(fabs(r - 2.0f*fps) / fps < 0.002f)
   score += 1<<8;
       else 
-  score += (1<<28)/r; // bad - but prefer higher framerate
+  score += (1<<16) + (1<<20)/r; // bad - but prefer higher framerate
 
       /* Check size too, only choose, bigger resolutions */
       if(width && height) 
@@ -448,12 +450,15 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
 
   if(tv_found)
   {
+    char response[80];
     printf("Output mode %d: %dx%d@%d %s%s:%x\n", tv_found->code, tv_found->width, tv_found->height, 
            tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
+    if (m_NativeDeinterlace && tv_found->scan_mode)
+      vc_gencmd(response, sizeof response, "hvs_update_fields %d", 1);
+
     // if we are closer to ntsc version of framerate, let gpu know
     int ifps = (int)(fps+0.5f);
     bool ntsc_freq = fabs(fps*1001.0f/1000.0f - ifps) < fabs(fps-ifps);
-    char response[80];
     vc_gencmd(response, sizeof response, "hdmi_ntsc_freqs %d", ntsc_freq);
 
     /* inform TV of any 3D settings. Note this property just applies to next hdmi mode change, so no need to call for 2D modes */
@@ -631,6 +636,7 @@ int main(int argc, char *argv[])
   const int layer_opt       = 0x20b;
   const int no_keys_opt     = 0x20c;
   const int anaglyph_opt    = 0x20d;
+  const int native_deinterlace_opt = 0x20e;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -645,6 +651,7 @@ int main(int argc, char *argv[])
     { "amp",          required_argument,  NULL,          amp_opt },
     { "deinterlace",  no_argument,        NULL,          'd' },
     { "nodeinterlace",no_argument,        NULL,          no_deinterlace_opt },
+    { "nativedeinterlace",no_argument,    NULL,          native_deinterlace_opt },
     { "anaglyph",     required_argument,  NULL,          anaglyph_opt },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
@@ -729,6 +736,10 @@ int main(int argc, char *argv[])
         break;
       case no_deinterlace_opt:
         m_NoDeinterlace = true;
+        break;
+      case native_deinterlace_opt:
+        m_NoDeinterlace = true;
+        m_NativeDeinterlace = true;
         break;
       case anaglyph_opt:
         m_anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
@@ -1029,11 +1040,11 @@ int main(int argc, char *argv[])
     m_3d = CONF_FLAGS_FORMAT_TB;
 
   // 3d modes don't work without switch hdmi mode
-  if (m_3d != CONF_FLAGS_FORMAT_NONE)
+  if (m_3d != CONF_FLAGS_FORMAT_NONE || m_NativeDeinterlace)
     m_refresh = true;
 
   // you really don't want want to match refresh rate without hdmi clock sync
-  if (m_refresh && !m_no_hdmi_clock_sync)
+  if ((m_refresh || m_NativeDeinterlace) && !m_no_hdmi_clock_sync)
     m_hdmi_clock_sync = true;
 
   if(!m_av_clock->OMXInitialize())
@@ -1772,6 +1783,11 @@ do_exit:
     printf("Stopped at: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
   }
 
+  if (m_NativeDeinterlace)
+  {
+    char response[80];
+    vc_gencmd(response, sizeof response, "hvs_update_fields %d", 0);
+  }
   if(m_has_video && m_refresh && tv_state.display.hdmi.group && tv_state.display.hdmi.mode)
   {
     m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)tv_state.display.hdmi.group, tv_state.display.hdmi.mode);
