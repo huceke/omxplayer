@@ -422,7 +422,7 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
 
   // demuxer will return failure, if you seek to eof
   m_eof = false;
-  if (m_pFile && m_pFile->IsEOF() && ret <= 0)
+  if (ret < 0)
   {
     m_eof = true;
     ret = 0;
