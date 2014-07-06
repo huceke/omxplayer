@@ -102,7 +102,7 @@ bool              m_ghost_box           = true;
 unsigned int      m_subtitle_lines      = 3;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
-int               m_audio_index_use     = -1;
+int               m_audio_index_use     = 0;
 bool              m_thread_player       = false;
 OMXClock          *m_av_clock           = NULL;
 OMXControl        m_omxcontrol;
@@ -771,9 +771,7 @@ int main(int argc, char *argv[])
           m_subtitle_index = 0;
         break;
       case 'n':
-        m_audio_index_use = atoi(optarg) - 1;
-        if(m_audio_index_use < 0)
-          m_audio_index_use = 0;
+        m_audio_index_use = atoi(optarg);
         break;
       case 'l':
         {
@@ -1023,7 +1021,7 @@ int main(int argc, char *argv[])
     goto do_exit;
 
   m_has_video     = m_omx_reader.VideoStreamCount();
-  m_has_audio     = m_omx_reader.AudioStreamCount();
+  m_has_audio     = m_audio_index_use < 0 ? false : m_omx_reader.AudioStreamCount();
   m_has_subtitle  = m_has_external_subtitles ||
                     m_omx_reader.SubtitleStreamCount();
   m_loop          = m_loop && m_omx_reader.CanSeek();
@@ -1063,8 +1061,8 @@ int main(int argc, char *argv[])
   if (m_fps > 0.0f)
     m_hints_video.fpsrate = m_fps * DVD_TIME_BASE, m_hints_video.fpsscale = DVD_TIME_BASE;
 
-  if(m_audio_index_use != -1)
-    m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use);
+  if(m_audio_index_use > 0)
+    m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use-1);
           
   if(m_has_video && m_refresh)
   {
