@@ -274,7 +274,10 @@ bool COMXVideo::PortSettingsChanged()
     {
       image_filter.nNumParams = 1;
       image_filter.nParams[0] = 3;
-      image_filter.eImageFilter = OMX_ImageFilterDeInterlaceAdvanced;
+      if (port_image.format.video.nFrameWidth * port_image.format.video.nFrameHeight > 576 * 720)
+        image_filter.eImageFilter = OMX_ImageFilterDeInterlaceFast;
+      else
+        image_filter.eImageFilter = OMX_ImageFilterDeInterlaceAdvanced;
     }
     omx_err = m_omx_image_fx.SetConfig(OMX_IndexConfigCommonImageFilterParameters, &image_filter);
     if(omx_err != OMX_ErrorNone)
