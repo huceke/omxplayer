@@ -260,6 +260,23 @@ bool COMXVideo::PortSettingsChanged()
 
   if(m_deinterlace || m_anaglyph)
   {
+    bool advanced_deinterlace = port_image.format.video.nFrameWidth * port_image.format.video.nFrameHeight <= 576 * 720;
+
+    if (m_anaglyph != OMX_ImageFilterAnaglyphNone || !advanced_deinterlace)
+    {
+      // Image_fx assumed 3 frames of context. anaglyph and simple deinterlace don't require this
+      OMX_PARAM_U32TYPE extra_buffers;
+      OMX_INIT_STRUCTURE(extra_buffers);
+      extra_buffers.nU32 = -2;
+
+      omx_err = m_omx_image_fx.SetParameter(OMX_IndexParamBrcmExtraBuffers, &extra_buffers);
+      if(omx_err != OMX_ErrorNone)
+      {
+        CLog::Log(LOGERROR, "%s::%s error OMX_IndexParamBrcmExtraBuffers omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
+        return false;
+      }
+    }
+
     OMX_CONFIG_IMAGEFILTERPARAMSTYPE image_filter;
     OMX_INIT_STRUCTURE(image_filter);
 
@@ -274,7 +291,7 @@ bool COMXVideo::PortSettingsChanged()
     {
       image_filter.nNumParams = 1;
       image_filter.nParams[0] = 3;
-      if (port_image.format.video.nFrameWidth * port_image.format.video.nFrameHeight > 576 * 720)
+      if (!advanced_deinterlace)
         image_filter.eImageFilter = OMX_ImageFilterDeInterlaceFast;
       else
         image_filter.eImageFilter = OMX_ImageFilterDeInterlaceAdvanced;
