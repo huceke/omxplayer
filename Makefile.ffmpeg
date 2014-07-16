@@ -251,7 +251,7 @@ clean:
 
 .PHONY : checkout
 checkout:
-	git clone git://source.ffmpeg.org/ffmpeg ffmpeg -b n2.2.4 --depth=1
+	git clone git://source.ffmpeg.org/ffmpeg ffmpeg -b n2.3 --depth=1
 
 .PHONY : install
 install:
