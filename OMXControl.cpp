@@ -52,8 +52,9 @@ OMXControl::~OMXControl()
     dbus_disconnect();
 }
 
-void OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXPlayerSubtitles *m_player_subtitles, OMXReader *m_omx_reader, std::string& dbus_name)
+int OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXPlayerSubtitles *m_player_subtitles, OMXReader *m_omx_reader, std::string& dbus_name)
 {
+  int ret = 0;
   clock     = m_av_clock;
   audio     = m_player_audio;
   subtitles = m_player_subtitles;
@@ -71,6 +72,7 @@ void OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXP
     {
       CLog::Log(LOGWARNING, "DBus connection failed, alternate failed, will continue without DBus");
       dbus_disconnect();
+      ret = -1;
     } else {
       CLog::Log(LOGDEBUG, "DBus connection succeeded");
       dbus_threads_init_default();
@@ -81,6 +83,7 @@ void OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXP
     CLog::Log(LOGDEBUG, "DBus connection succeeded");
     dbus_threads_init_default();
   }
+  return ret;
 }
 
 void OMXControl::dispatch()

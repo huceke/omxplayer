@@ -10,6 +10,7 @@
  protected:
   struct termios orig_termios;
   int orig_fl;
+  int m_action;
   DBusConnection *conn;
   std::map<int,int> m_keymap;
   std::string m_dbus_name;
@@ -21,6 +22,7 @@
   void setKeymap(std::map<int,int> keymap);
   void setDbusName(std::string dbus_name);
   void Sleep(unsigned int dwMilliSeconds);
+  int getEvent();
  private:
   void restore_term();
   void send_action(int action);
