@@ -159,6 +159,7 @@ void print_usage()
   printf("         -n / --aidx  index             audio stream index    : e.g. 1\n");
   printf("         -o / --adev  device            audio out device      : e.g. hdmi/local/both\n");
   printf("         -i / --info                    dump stream format and exit\n");
+  printf("         -I / --with-info               dump stream format before playback\n");
   printf("         -s / --stats                   pts and buffer stats\n");
   printf("         -p / --passthrough             audio passthrough\n");
   printf("         -d / --deinterlace             force deinterlacing\n");
@@ -586,6 +587,7 @@ int main(int argc, char *argv[])
   COMXCore              g_OMX;
   bool                  m_stats               = false;
   bool                  m_dump_format         = false;
+  bool                  m_dump_format_exit    = false;
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
@@ -640,6 +642,7 @@ int main(int argc, char *argv[])
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
+    { "with-info",    no_argument,        NULL,          'I' },
     { "help",         no_argument,        NULL,          'h' },
     { "version",      no_argument,        NULL,          'v' },
     { "keys",         no_argument,        NULL,          'k' },
@@ -703,7 +706,7 @@ int main(int argc, char *argv[])
   //Build default keymap just in case the --key-config option isn't used
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
 
-  while ((c = getopt_long(argc, argv, "wihvkn:l:o:cslbpd3:yzt:rg", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslbpd3:yzt:rg", longopts, NULL)) != -1)
   {
     switch (c) 
     {
@@ -763,6 +766,10 @@ int main(int argc, char *argv[])
         deviceString = "omx:" + deviceString;
         break;
       case 'i':
+        m_dump_format      = true;
+        m_dump_format_exit = true;
+        break;
+      case 'I':
         m_dump_format = true;
         break;
       case 't':
@@ -1023,7 +1030,7 @@ int main(int argc, char *argv[])
   if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_live, m_timeout))
     goto do_exit;
 
-  if(m_dump_format)
+  if (m_dump_format_exit)
     goto do_exit;
 
   m_has_video     = m_omx_reader.VideoStreamCount();

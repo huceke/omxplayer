@@ -60,6 +60,7 @@ Using OMXPlayer
          -n / --aidx  index             audio stream index    : e.g. 1
          -o / --adev  device            audio out device      : e.g. hdmi/local/both
          -i / --info                    dump stream format and exit
+         -I / --with-info               dump stream format before playback
          -s / --stats                   pts and buffer stats
          -p / --passthrough             audio passthrough
          -d / --deinterlace             force deinterlacing
