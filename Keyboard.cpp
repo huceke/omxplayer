@@ -35,15 +35,16 @@ Keyboard::Keyboard()
 
   if (dbus_connect() < 0)
   {
-    CLog::Log(LOGWARNING, "DBus connection failed");
+    CLog::Log(LOGWARNING, "Keyboard: DBus connection failed");
   } 
   else 
   {
-    CLog::Log(LOGDEBUG, "DBus connection succeeded");
+    CLog::Log(LOGDEBUG, "Keyboard: DBus connection succeeded");
   }
 
   dbus_threads_init_default();
   Create();
+  m_action = -1;
 }
 
 Keyboard::~Keyboard() 
@@ -84,14 +85,20 @@ void Keyboard::Sleep(unsigned int dwMilliSeconds)
 
 void Keyboard::Process() 
 {
-  while(!m_bStop && conn && dbus_connection_read_write_dispatch(conn, 0)) 
+  while(!m_bStop)
   {
+    CLog::Log(LOGDEBUG, "Keyboard: Process() m_bStop %d", m_bStop);
+    if (conn)
+      dbus_connection_read_write_dispatch(conn, 0);
     int ch[8];
     int chnum = 0;
 
     while ((ch[chnum] = getchar()) != EOF) chnum++;
 
     if (chnum > 1) ch[0] = ch[chnum - 1] | (ch[chnum - 2] << 8);
+
+    if (chnum > 0)
+      CLog::Log(LOGDEBUG, "Keyboard: character %c", ch[0]);
 
     if (m_keymap[ch[0]] != 0)
           send_action(m_keymap[ch[0]]);
@@ -100,10 +107,20 @@ void Keyboard::Process()
   }
 }
 
+int Keyboard::getEvent()
+{
+  int ret = m_action;
+  m_action = -1;
+  return ret;
+}
+
 void Keyboard::send_action(int action) 
 {
   DBusMessage *message = NULL, *reply = NULL;
   DBusError error;
+  m_action = action;
+  if (!conn)
+    return;
 
   dbus_error_init(&error);
 

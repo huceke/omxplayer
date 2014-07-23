@@ -1001,7 +1001,13 @@ int main(int argc, char *argv[])
     printf("Only %dM of gpu_mem is configured. Try running \"sudo raspi-config\" and ensure that \"memory_split\" has a value of %d or greater\n", gpu_mem, min_gpu_mem);
 
   m_av_clock = new OMXClock();
-  m_omxcontrol.init(m_av_clock, &m_player_audio, &m_player_subtitles, &m_omx_reader, m_dbus_name);
+  int control_err = m_omxcontrol.init(
+    m_av_clock,
+    &m_player_audio,
+    &m_player_subtitles,
+    &m_omx_reader,
+    m_dbus_name
+  );
   if (false == m_no_keys)
   {
     m_keyboard = new Keyboard();
@@ -1181,7 +1187,9 @@ int main(int argc, char *argv[])
     }
 
      if (update) {
-       OMXControlResult result = m_omxcontrol.getEvent();
+       OMXControlResult result = control_err
+                               ? (OMXControlResult)m_keyboard->getEvent()
+                               : m_omxcontrol.getEvent();
        double oldPos, newPos;
 
     switch(result.getKey())
