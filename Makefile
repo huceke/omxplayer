@@ -45,12 +45,23 @@ all: omxplayer.bin
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -c $< -o $@ -Wno-deprecated-declarations
 
+omxplayer.o: help.h keys.h
+
 version:
 	bash gen_version.sh > version.h 
 
 omxplayer.bin: version $(OBJS)
 	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS) -lvchiq_arm -lvcos -ldbus-1 -lrt -lpthread -lavutil -lavcodec -lavformat -lswscale -lswresample -lpcre
 	$(STRIP) omxplayer.bin
+
+help.h: README.md Makefile
+	awk '/^Using /{p=1;print;next} p&&/^Key Bindings/{p=0};p' $< \
+	| sed -e '1,3 d' -e 's/^/"/' -e 's/$$/\\n"/' \
+	> $@
+keys.h: README.md Makefile
+	awk '/^Key Bindings/{p=1;print;next} p&&/^Key Config/{p=0};p' $< \
+	| sed -e '1,3 d' -e 's/^/"/' -e 's/$$/\\n"/' \
+	> $@
 
 clean:
 	for i in $(OBJS); do (if test -e "$$i"; then ( rm $$i ); fi ); done

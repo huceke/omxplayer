@@ -52,56 +52,57 @@ Install with
 Using OMXPlayer
 ---------------
 
-    Usage: omxplayer [OPTIONS] [FILE]
-    Options :
-         -h / --help                    print this help
-         -v / --version                 print version info
-         -k / --keys                    print key bindings
-         -n / --aidx  index             audio stream index    : e.g. 1
-         -o / --adev  device            audio out device      : e.g. hdmi/local/both
-         -i / --info                    dump stream format and exit
-         -I / --with-info               dump stream format before playback
-         -s / --stats                   pts and buffer stats
-         -p / --passthrough             audio passthrough
-         -d / --deinterlace             force deinterlacing
-              --nodeinterlace           force no deinterlacing
-              --nativedeinterlace       Let display handle interlace
-              --anaglyph type           Convert 3d to anaglyph
-         -w / --hw                      hw audio decoding
-         -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)
-         -y / --hdmiclocksync           adjust display refresh rate to match video (default)
-         -z / --nohdmiclocksync         do not adjust display refresh rate to match video
-         -t / --sid index               show subtitle with index
-         -r / --refresh                 adjust framerate/resolution to video
-         -g / --genlog                  generate log file
-         -l / --pos n                   start position (hh:mm:ss)
-         -b / --blank                   set background to black
-              --loop                    loop file. Ignored if file is not seekable, start position applied if given
-              --no-boost-on-downmix     don't boost volume when downmixing
-              --vol n                   Set initial volume in millibels (default 0)
-              --no-osd                  do not display status information on screen
-              --subtitles path          external subtitles in UTF-8 srt format
-              --font path               subtitle font
-                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
-              --italic-font path        (default: /usr/share/fonts/truetype/freefont/FreeSansOblique.ttf)
-              --font-size size          font size as thousandths of screen height
-                                        (default: 55)
-              --align left/center       subtitle alignment (default: left)
-              --no-ghost-box            no semitransparent boxes behind subtitles
-              --lines n                 number of lines to accommodate in the subtitle buffer
-                                        (default: 3)
-              --win "x1 y1 x2 y2"       Set position of video window
-              --audio_fifo  n           Size of audio output fifo in seconds
-              --video_fifo  n           Size of video output fifo in MB
-              --audio_queue n           Size of audio input queue in MB
-              --video_queue n           Size of video input queue in MB
-              --threshold   n           Amount of buffered data required to come out of buffering in seconds
-              --timeout     n           Amount of time a file/network operation can stall for before timing out (default 10s)
-              --orientation n           Set orientation of video (0, 90, 180 or 270)
-              --fps n                   Set fps of video where timestamps are not present
-              --live                    Set for live tv or vod type stream
-              --layout                  Set output speaker layout (e.g. 5.1)
-              --key-config <file>       Uses key bindings specified in <file> instead of the default
+Usage: omxplayer [OPTIONS] [FILE]
+
+    -h  --help                  Print this help
+    -v  --version               Print version info
+    -k  --keys                  Print key bindings
+    -n  --aidx  index           Audio stream index    : e.g. 1
+    -o  --adev  device          Audio out device      : e.g. hdmi/local/both
+    -i  --info                  Dump stream format and exit
+    -I  --with-info             dump stream format before playback
+    -s  --stats                 Pts and buffer stats
+    -p  --passthrough           Audio passthrough
+    -d  --deinterlace           Force deinterlacing
+        --nodeinterlace         Force no deinterlacing
+        --nativedeinterlace     let display handle interlace
+        --anaglyph type         convert 3d to anaglyph
+    -w  --hw                    Hw audio decoding
+    -3  --3d mode               Switch tv into 3d mode (e.g. SBS/TB)
+    -y  --hdmiclocksync         Display refresh rate to match video (default)
+    -z  --nohdmiclocksync       Do not adjust display refresh rate to match video
+    -t  --sid index             Show subtitle with index
+    -r  --refresh               Adjust framerate/resolution to video
+    -g  --genlog                Generate log file
+    -l  --pos n                 Start position (hh:mm:ss)
+    -b  --blank                 Set background to black
+        --loop                  Loop file. Ignored if file not seekable
+        --no-boost-on-downmix   Don't boost volume when downmixing
+        --vol n                 set initial volume in millibels (default 0)
+        --amp n                 set initial amplification in millibels (default 0)
+        --no-osd                Do not display status information on screen
+        --no-keys               Disable keyboard input (prevents hangs for certain TTYs)
+        --subtitles path        External subtitles in UTF-8 srt format
+        --font path             Default: /usr/share/fonts/truetype/freefont/FreeSans.ttf
+        --italic-font path      Default: /usr/share/fonts/truetype/freefont/FreeSansOblique.ttf
+        --font-size size        Font size in 1/1000 screen height (default: 55)
+        --align left/center     Subtitle alignment (default: left)
+        --no-ghost-box          No semitransparent boxes behind subtitles
+        --lines n               Number of lines in the subtitle buffer (default: 3)
+        --win 'x1 y1 x2 y2'     Set position of video window
+        --audio_fifo  n         Size of audio output fifo in seconds
+        --video_fifo  n         Size of video output fifo in MB
+        --audio_queue n         Size of audio input queue in MB
+        --video_queue n         Size of video input queue in MB
+        --threshold   n         Amount of buffered data required to finish buffering [s]
+        --timeout     n         Timeout for stalled file/network operations (default 10s)
+        --orientation n         Set orientation of video (0, 90, 180 or 270)
+        --fps n                 Set fps of video where timestamps are not present
+        --live                  Set for live tv or vod type stream
+        --layout                Set output speaker layout (e.g. 5.1)
+        --dbus_name name        default: org.mpris.MediaPlayer2.omxplayer
+        --key-config <file>     Uses key bindings in <file> instead of the default
+        --layer n               Set video render layer number (higher numbers are on top)
 
 For example:
 
@@ -110,28 +111,30 @@ For example:
 Key Bindings
 ------------
 
-While playing you can use the following keys to control omxplayer:
+Key bindings to control omxplayer while playing:
 
-    z			Show Info
-    1			Decrease Speed
-    2			Increase Speed
-    j			Previous Audio stream
-    k			Next Audio stream
-    i			Previous Chapter
-    o			Next Chapter
-    n			Previous Subtitle stream
-    m			Next Subtitle stream
-    s			Toggle subtitles
-    d			Subtitle delay -250 ms
-    f			Subtitle delay +250 ms
-    q			Exit OMXPlayer
-    Space or p	Pause/Resume
-    -			Decrease Volume
-    +			Increase Volume
-    Left Arrow	Seek -30 s
-    Right Arrow	Seek +30 s
-    Down Arrow	Seek -600 s
-    Up Arrow	Seek +600 s
+    1           decrease speed
+    2           increase speed
+    <           rewind
+    >           fast forward
+    z           show info
+    j           previous audio stream
+    k           next audio stream
+    i           previous chapter
+    o           next chapter
+    n           previous subtitle stream
+    m           next subtitle stream
+    s           toggle subtitles
+    d           decrease subtitle delay (- 250 ms)
+    f           increase subtitle delay (+ 250 ms)
+    q           exit omxplayer
+    p / space   pause/resume
+    -           decrease volume
+    + / =       increase volume
+    left arrow  seek -30 seconds
+    right arrow seek +30 seconds
+    down arrow  seek -600 seconds
+    up arrow    seek +600 seconds
 
 Key Config Syntax
 -----------------
@@ -165,6 +168,7 @@ The list of valid [action]s roughly corresponds to the list of default key bindi
     STEP
 
 Valid [key]s include all alpha-numeric characters and most symbols, as well as:
+
     left
     right
     up
