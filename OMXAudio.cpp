@@ -1128,7 +1128,7 @@ float COMXAudio::GetDelay()
   else // just measure the input fifo
   {
     unsigned int used = m_omx_decoder.GetInputBufferSize() - m_omx_decoder.GetInputBufferSpace();
-    float ret = m_InputBytesPerSec ? (float)used / (float)m_InputBytesPerSec : 0.0f;
+    ret = m_InputBytesPerSec ? (float)used / (float)m_InputBytesPerSec : 0.0f;
     //CLog::Log(LOGINFO, "%s::%s - %.2f %d, %d, %d", CLASSNAME, __func__, ret, used, m_omx_decoder.GetInputBufferSize(), m_omx_decoder.GetInputBufferSpace());
   }
   return ret;

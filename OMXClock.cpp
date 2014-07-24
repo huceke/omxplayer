@@ -568,11 +568,6 @@ static int64_t CurrentHostCounter(void)
   return( ((int64_t)now.tv_sec * 1000000000L) + now.tv_nsec );
 }
 
-static int64_t CurrentHostFrequency(void)
-{
-  return( (int64_t)1000000000L );
-}
-
 int64_t OMXClock::GetAbsoluteClock()
 {
   return CurrentHostCounter()/1000;
