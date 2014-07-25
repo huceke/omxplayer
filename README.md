@@ -9,6 +9,12 @@ standalone.
 
     git clone https://github.com/popcornmix/omxplayer.git
 
+## HELP AND DOCS
+
+omxplayer's built-in help and the man page are all generated from this
+README.md file during make. You may need to change the Makefile
+if you modify the structure of README.md!
+
 ## COMPILING
 
 Run this script which will install build dependency packages,
