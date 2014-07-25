@@ -39,7 +39,7 @@ SRC=linux/XMemUtils.cpp \
 
 OBJS+=$(filter %.o,$(SRC:.cpp=.o))
 
-all: omxplayer.bin
+all: dist
 
 %.o: %.cpp
 	@rm -f $@ 
