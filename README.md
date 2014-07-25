@@ -1,21 +1,31 @@
-OMXPlayer
-=========
+omxplayer(1) -- Raspberry Pi command line OMX player
+====================================================
 
 OMXPlayer is a commandline OMX player for the Raspberry Pi. It was developed as
 a testbed for the XBMC Raspberry PI implementation and is quite handy to use
 standalone. 
 
-Downloading OMXPlayer
----------------------
+## DOWNLOADING
 
     git clone https://github.com/popcornmix/omxplayer.git
 
-Compiling OMXPlayer
--------------------
+## COMPILING
 
-GCC version 4.7 is required.
+Run this script which will install build dependency packages,
+including g++ 4.7, and update firmware
 
-### Cross Compiling
+    ./prepare-native-raspbian.sh
+
+Build with
+
+    make ffmpeg
+    make
+
+Install with
+    
+    sudo make install
+
+## CROSS COMPILING
 
 You need the content of your sdcard somewhere mounted or copied. There might be
 development headers to install on the running Pi system for the crosscompiling.
@@ -27,30 +37,11 @@ Edit Makefile.include and change the settings according your locations.
     make dist
 
 Installing OMXPlayer
---------------------
 
-Copy over `omxplayer-dist/*` to the Pi `/`. You may want to specify a valid font
-path inside the `omxplayer` shell script.
+You may want to specify a valid font path inside the `omxplayer` shell script.
+Copy over `omxplayer-dist/*` to the Pi `/`.
 
-### Compiling on the Pi
-
-You can also compile it on the PI the native way ;)
-Run this script (which will install packages and update firmware)
-
-    ./prepare-native-raspbian.sh
-
-and build with
-
-    make ffmpeg
-    make
-
-Install with
-    
-    sudo make install
-    
-
-Using OMXPlayer
----------------
+## SYNOPSIS
 
 Usage: omxplayer [OPTIONS] [FILE]
 
@@ -108,8 +99,7 @@ For example:
 
     ./omxplayer -p -o hdmi test.mkv
 
-Key Bindings
-------------
+## KEY BINDINGS
 
 Key bindings to control omxplayer while playing:
 
@@ -136,8 +126,7 @@ Key bindings to control omxplayer while playing:
     down arrow  seek -600 seconds
     up arrow    seek +600 seconds
 
-Key Config Syntax
------------------
+## KEY CONFIG SYNTAX
 
 A key config file is a series of rules of the form [action]:[key]. Multiple keys can be bound
 to the same action, and comments are supported by adding a # in front of the line.
@@ -186,7 +175,7 @@ For example:
     SEEK_FORWARD_SMALL:hex 0x4f43
     EXIT:q
 
-## DBUS Control
+## DBUS CONTROL
 
 `omxplayer` can be controlled via DBUS.  There are three interfaces, all of
 which present a different set of commands.  For examples on working with DBUS
@@ -550,5 +539,3 @@ Execute a "keyboard" command.  For available codes, see
 :-------------: | ----------| ------------------
  1              | `int32`   | Command to execute
  Return         | `null`    | 
-
-
