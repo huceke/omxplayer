@@ -243,6 +243,7 @@ configure:
 			--disable-decoder=bintext \
 			--disable-decoder=xbin \
 			--disable-decoder=idf \
+			--enable-decoder=opus \
 			--cross-prefix=$(HOST)-
 
 .PHONY : clean
