@@ -39,11 +39,13 @@ SRC=linux/XMemUtils.cpp \
 
 OBJS+=$(filter %.o,$(SRC:.cpp=.o))
 
-all: omxplayer.bin
+all: dist
 
 %.o: %.cpp
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -c $< -o $@ -Wno-deprecated-declarations
+
+omxplayer.o: help.h keys.h
 
 version:
 	bash gen_version.sh > version.h 
@@ -51,6 +53,19 @@ version:
 omxplayer.bin: version $(OBJS)
 	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS) -lvchiq_arm -lvcos -ldbus-1 -lrt -lpthread -lavutil -lavcodec -lavformat -lswscale -lswresample -lpcre
 	$(STRIP) omxplayer.bin
+
+help.h: README.md Makefile
+	awk '/SYNOPSIS/{p=1;print;next} p&&/KEY BINDINGS/{p=0};p' $< \
+	| sed -e '1,3 d' -e 's/^/"/' -e 's/$$/\\n"/' \
+	> $@
+keys.h: README.md Makefile
+	awk '/KEY BINDINGS/{p=1;print;next} p&&/KEY CONFIG/{p=0};p' $< \
+	| sed -e '1,3 d' -e 's/^/"/' -e 's/$$/\\n"/' \
+	> $@
+
+omxplayer.1: README.md
+	sed -e '/DOWNLOADING/,/omxplayer-dist/ d; /DBUS/,$$ d' $< >MAN
+	curl -F page=@MAN http://mantastic.herokuapp.com 2>/dev/null >$@
 
 clean:
 	for i in $(OBJS); do (if test -e "$$i"; then ( rm $$i ); fi ); done
@@ -64,12 +79,14 @@ ffmpeg:
 	make -f Makefile.ffmpeg
 	make -f Makefile.ffmpeg install
 
-dist: omxplayer.bin
+dist: omxplayer.bin omxplayer.1
 	mkdir -p $(DIST)/usr/lib/omxplayer
 	mkdir -p $(DIST)/usr/bin
 	mkdir -p $(DIST)/usr/share/doc/omxplayer
+	mkdir -p $(DIST)/usr/share/man/man1
 	cp omxplayer omxplayer.bin $(DIST)/usr/bin
 	cp COPYING $(DIST)/usr/share/doc/omxplayer
 	cp README.md $(DIST)/usr/share/doc/omxplayer/README
+	cp omxplayer.1 $(DIST)/usr/share/man/man1
 	cp -a ffmpeg_compiled/usr/local/lib/*.so* $(DIST)/usr/lib/omxplayer/
 	cd $(DIST); tar -czf ../$(DIST).tgz *

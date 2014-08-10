@@ -150,89 +150,16 @@ void sig_handler(int s)
 
 void print_usage()
 {
-  printf("Usage: omxplayer [OPTIONS] [FILE]\n");
-  printf("Options :\n");
-  printf("         -h / --help                    print this help\n");
-  printf("         -v / --version                 print version info\n");
-  printf("         -k / --keys                    print key bindings\n");
-//  printf("         -a / --alang language          audio language        : e.g. ger\n");
-  printf("         -n / --aidx  index             audio stream index    : e.g. 1\n");
-  printf("         -o / --adev  device            audio out device      : e.g. hdmi/local/both\n");
-  printf("         -i / --info                    dump stream format and exit\n");
-  printf("         -I / --with-info               dump stream format before playback\n");
-  printf("         -s / --stats                   pts and buffer stats\n");
-  printf("         -p / --passthrough             audio passthrough\n");
-  printf("         -d / --deinterlace             force deinterlacing\n");
-  printf("              --nodeinterlace           force no deinterlacing\n");
-  printf("              --nativedeinterlace       Let display handle interlace\n");
-  printf("              --anaglyph type           Convert 3d to anaglyph\n");
-  printf("         -w / --hw                      hw audio decoding\n");
-  printf("         -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)\n");
-  printf("         -y / --hdmiclocksync           adjust display refresh rate to match video (default)\n");
-  printf("         -z / --nohdmiclocksync         do not adjust display refresh rate to match video\n");
-  printf("         -t / --sid index               show subtitle with index\n");
-  printf("         -r / --refresh                 adjust framerate/resolution to video\n");
-  printf("         -g / --genlog                  generate log file\n");
-  printf("         -l / --pos n                   start position (hh:mm:ss)\n");
-  printf("         -b / --blank                   set background to black\n");
-  printf("              --loop                    loop file. Ignored if file is not seekable, start position applied if given\n");
-  printf("              --no-boost-on-downmix     don't boost volume when downmixing\n");
-  printf("              --vol n                   Set initial volume in millibels (default 0)\n");
-  printf("              --amp n                   Set initial amplification in millibels (default 0)\n");
-  printf("              --no-osd                  do not display status information on screen\n");
-  printf("              --no-keys                 disable keyboard input (useful to prevent hangs for certain TTYs)\n");
-  printf("              --subtitles path          external subtitles in UTF-8 srt format\n");
-  printf("              --font path               subtitle font\n");
-  printf("                                        (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)\n");
-  printf("              --italic-font path        (default: /usr/share/fonts/truetype/freefont/FreeSansOblique.ttf)\n");
-  printf("              --font-size size          font size as thousandths of screen height\n");
-  printf("                                        (default: 55)\n");
-  printf("              --align left/center       subtitle alignment (default: left)\n");
-  printf("              --no-ghost-box            no semitransparent boxes behind subtitles\n");
-  printf("              --lines n                 number of lines to accommodate in the subtitle buffer\n");
-  printf("                                        (default: 3)\n");
-  printf("              --win \"x1 y1 x2 y2\"       Set position of video window\n");
-  printf("              --audio_fifo  n           Size of audio output fifo in seconds\n");
-  printf("              --video_fifo  n           Size of video output fifo in MB\n");
-  printf("              --audio_queue n           Size of audio input queue in MB\n");
-  printf("              --video_queue n           Size of video input queue in MB\n");
-  printf("              --threshold   n           Amount of buffered data required to come out of buffering in seconds\n");
-  printf("              --timeout     n           Amount of time a file/network operation can stall for before timing out (default 10s)\n");
-  printf("              --orientation n           Set orientation of video (0, 90, 180 or 270)\n");
-  printf("              --fps n                   Set fps of video where timestamps are not present\n");
-  printf("              --live                    Set for live tv or vod type stream\n");
-  printf("              --layout                  Set output speaker layout (e.g. 5.1)\n");
-  printf("              --dbus_name name          Set D-Bus bus name\n");
-  printf("                                        (default: org.mpris.MediaPlayer2.omxplayer)\n");
-  printf("              --key-config <file>       Uses key bindings specified in <file> instead of the default\n");
-  printf("              --layer n                 Set the video render layer number (higher numbers are on top)\n");
+  printf(
+#include "help.h"
+  );
 }
 
 void print_keybindings()
 {
-  printf("Key bindings :\n");
-  printf("        1                  decrease speed\n");
-  printf("        2                  increase speed\n");
-  printf("        <                  rewind\n");
-  printf("        >                  fast forward\n");
-  printf("        z                  show info\n");
-  printf("        j                  previous audio stream\n");
-  printf("        k                  next audio stream\n");
-  printf("        i                  previous chapter\n");
-  printf("        o                  next chapter\n");
-  printf("        n                  previous subtitle stream\n");
-  printf("        m                  next subtitle stream\n");
-  printf("        s                  toggle subtitles\n");
-  printf("        d                  decrease subtitle delay (- 250 ms)\n");
-  printf("        f                  increase subtitle delay (+ 250 ms)\n");
-  printf("        q                  exit omxplayer\n");
-  printf("        p / space          pause/resume\n");
-  printf("        -                  decrease volume\n");
-  printf("        + / =              increase volume\n");
-  printf("        left arrow         seek -30 seconds\n");
-  printf("        right arrow        seek +30 seconds\n");
-  printf("        down arrow         seek -600 seconds\n");
-  printf("        up arrow           seek +600 seconds\n");
+  printf(
+#include "keys.h"
+  );
 }
 
 void print_version()
