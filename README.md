@@ -330,7 +330,8 @@ The current state of the player, either "Paused" or "Playing".
 When called with an argument it will set the volume and return the current
 volume.  When called without an argument it will simply return the current
 volume.  As defined by the [MPRIS][MPRIS_volume] specifications, this value
-should be greater than or equal to 0 and no larger than about 1.
+should be greater than or equal to 0. 1 is the normal volume.
+Everything below is quieter than normal, everything above is louder.
 
 Millibels can be converted to/from acceptable values using the following:
 
@@ -500,6 +501,10 @@ example of a possible string is:
 
     0:eng:x264:h264:active
 
+   Params       |   Type
+:-------------: | ----------
+ Return         | `string[]` 
+
 #### SelectSubtitle
 
 Selects the subtitle at a given index.
@@ -538,7 +543,7 @@ Turns off subtitles.
 #### Action
 
 Execute a "keyboard" command.  For available codes, see
-[KeyConfig.h](blob/master/KeyConfig.h).
+[KeyConfig.h](KeyConfig.h).
 
 
    Params       |   Type    | Description
