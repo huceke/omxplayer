@@ -344,6 +344,8 @@ void OMXPlayerAudio::Flush()
   m_flush_requested = true;
   Lock();
   LockDecoder();
+  if(m_pAudioCodec)
+    m_pAudioCodec->Reset();
   m_flush_requested = false;
   m_flush = true;
   while (!m_packets.empty())
