@@ -44,8 +44,8 @@ if [ -z $NOREFRESH ] || [ "$NOREFRESH" == "0" ]; then
 fi
 
 DBUS_CMD="dbus-daemon --fork --print-address 5 --print-pid 6 --session"
-OMXPLAYER_DBUS_ADDR="/tmp/omxplayerdbus"
-OMXPLAYER_DBUS_PID="/tmp/omxplayerdbus.pid"
+OMXPLAYER_DBUS_ADDR="/tmp/omxplayerdbus.${USER}"
+OMXPLAYER_DBUS_PID="/tmp/omxplayerdbus.${USER}.pid"
 
 if [ ! -s "$OMXPLAYER_DBUS_PID" ] || ! pgrep -f "$DBUS_CMD" -F "$OMXPLAYER_DBUS_PID" >/dev/null; then
 	#echo "starting dbus for the first time" >&2
