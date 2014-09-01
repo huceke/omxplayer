@@ -333,6 +333,34 @@ OMXControlResult OMXControl::getEvent()
     dbus_respond_int64(m, pos);
     return KeyConfig::ACTION_BLANK;
   }
+  else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "Aspect"))
+  {
+    // Returns aspect ratio
+    double ratio = reader->GetAspectRatio();
+    dbus_respond_double(m, ratio);
+    return KeyConfig::ACTION_BLANK;
+  }
+  else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "VideoStreamCount"))
+  {
+    // Returns number of video streams
+    int64_t vcount = reader->VideoStreamCount();
+    dbus_respond_int64(m, vcount);
+    return KeyConfig::ACTION_BLANK;
+  }
+  else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "ResWidth"))
+  {
+    // Returns width of video
+    int64_t width = reader->GetWidth();
+    dbus_respond_int64(m, width);
+    return KeyConfig::ACTION_BLANK;
+  }
+  else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "ResHeight"))
+  {
+    // Returns height of video
+    int64_t height = reader->GetHeight();
+    dbus_respond_int64(m, height);
+    return KeyConfig::ACTION_BLANK;
+  }
   else if (dbus_message_is_method_call(m, DBUS_INTERFACE_PROPERTIES, "Duration"))
   {
     // Returns the duration in microseconds

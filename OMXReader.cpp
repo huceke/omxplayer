@@ -888,6 +888,9 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
     AVDictionaryEntry *rtag = m_dllAvUtil.av_dict_get(stream->metadata, "rotate", NULL, 0);
     if (rtag)
       hints->orientation = atoi(rtag->value);
+    m_aspect = hints->aspect;
+    m_width = hints->width;
+    m_height = hints->height;
   }
 
   return true;
