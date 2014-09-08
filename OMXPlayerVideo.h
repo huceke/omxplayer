@@ -75,6 +75,7 @@ protected:
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
   uint32_t                  m_history_valid_pts;
+  int                       m_display;
   int                       m_layer;
 
   void Lock();
@@ -86,7 +87,7 @@ public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, bool use_thread,
-                   float display_aspect, int layer, float queue_size, float fifo_size);
+                   float display_aspect, int display, int layer, float queue_size, float fifo_size);
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();

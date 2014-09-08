@@ -127,6 +127,7 @@ bool              m_boost_on_downmix    = true;
 bool              m_gen_log             = false;
 bool              m_loop                = false;
 int               m_layer               = 0;
+int               m_display             = 0;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -471,7 +472,7 @@ static void blank_background(bool enable)
 
   VC_RECT_T dst_rect, src_rect;
 
-  display = vc_dispmanx_display_open(0);
+  display = vc_dispmanx_display_open(m_display);
   assert(display);
 
   resource = vc_dispmanx_resource_create( type, 1 /*width*/, 1 /*height*/, &vc_image_ptr );
@@ -566,6 +567,7 @@ int main(int argc, char *argv[])
   const int no_keys_opt     = 0x20c;
   const int anaglyph_opt    = 0x20d;
   const int native_deinterlace_opt = 0x20e;
+  const int display_opt     = 0x20f;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -618,6 +620,7 @@ int main(int argc, char *argv[])
     { "dbus_name",    required_argument,  NULL,          dbus_name_opt },
     { "loop",         no_argument,        NULL,          loop_opt },
     { "layer",        required_argument,  NULL,          layer_opt },
+    { "display",      required_argument,  NULL,          display_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -833,6 +836,9 @@ int main(int argc, char *argv[])
       case layer_opt:
         m_layer = atoi(optarg);
         break;
+      case display_opt:
+        m_display = atoi(optarg);
+        break;
       case 0:
         break;
       case 'h':
@@ -1027,7 +1033,7 @@ int main(int argc, char *argv[])
   if (m_orientation >= 0)
     m_hints_video.orientation = m_orientation;
   if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
+                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_display, m_layer, video_queue_size, video_fifo_size))
     goto do_exit;
 
   if(m_has_subtitle || m_osd)
@@ -1048,7 +1054,7 @@ int main(int argc, char *argv[])
                                 m_centered,
                                 m_ghost_box,
                                 m_subtitle_lines,
-                                m_layer + 1,
+                                m_display, m_layer + 1,
                                 m_av_clock))
       goto do_exit;
   }
@@ -1462,7 +1468,7 @@ int main(int argc, char *argv[])
       sentStarted = false;
 
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_layer, video_queue_size, video_fifo_size))
+                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_display, m_layer, video_queue_size, video_fifo_size))
         goto do_exit;
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());

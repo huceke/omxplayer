@@ -85,7 +85,7 @@ class SubtitleRenderer {
 public:
   SubtitleRenderer(const SubtitleRenderer&) = delete;
   SubtitleRenderer& operator=(const SubtitleRenderer&) = delete;
-  SubtitleRenderer(int level,
+  SubtitleRenderer(int display, int layer,
                    const std::string& font_path,
                    const std::string& italic_font_path,
                    float font_size,
@@ -157,7 +157,7 @@ private:
   void destroy_fonts();
   void initialize_vg();
   void destroy_vg();
-  void initialize_window(int layer,
+  void initialize_window(int display, int layer,
                          unsigned int x,
                          unsigned int y,
                          unsigned int width,

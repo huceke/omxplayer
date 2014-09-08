@@ -77,6 +77,7 @@ COMXVideo::COMXVideo() : m_video_codec_name("")
   m_setStartTime      = false;
   m_transform         = OMX_DISPLAY_ROT0;
   m_pixel_aspect      = 1.0f;
+  m_display           = 0;
   m_layer             = 0;
 }
 
@@ -174,13 +175,13 @@ bool COMXVideo::PortSettingsChanged()
 
   if (m_settings_changed)
   {
-    CLog::Log(LOGDEBUG, "%s::%s - %dx%d@%.2f interlace:%d deinterlace:%d anaglyph:%d par:%.2f layer:%d", CLASSNAME, __func__,
+    CLog::Log(LOGDEBUG, "%s::%s - %dx%d@%.2f interlace:%d deinterlace:%d anaglyph:%d par:%.2f display:%d layer:%d", CLASSNAME, __func__,
         port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
-        port_image.format.video.xFramerate / (float)(1<<16), 0, m_deinterlace, m_anaglyph, m_pixel_aspect, m_layer);
+        port_image.format.video.xFramerate / (float)(1<<16), 0, m_deinterlace, m_anaglyph, m_pixel_aspect, m_display, m_layer);
 
-    printf("V:PortSettingsChanged: %dx%d@%.2f interlace:%d deinterlace:%d anaglyph:%d par:%.2f layer:%d\n",
+    printf("V:PortSettingsChanged: %dx%d@%.2f interlace:%d deinterlace:%d anaglyph:%d par:%.2f display:%d layer:%d\n",
         port_image.format.video.nFrameWidth, port_image.format.video.nFrameHeight,
-        port_image.format.video.xFramerate / (float)(1<<16), 0, m_deinterlace, m_anaglyph, m_pixel_aspect, m_layer);
+        port_image.format.video.xFramerate / (float)(1<<16), 0, m_deinterlace, m_anaglyph, m_pixel_aspect, m_display, m_layer);
 
     SetVideoRect(m_src_rect, m_dst_rect);
     m_omx_decoder.EnablePort(m_omx_decoder.GetOutputPort(), true);
@@ -225,7 +226,8 @@ bool COMXVideo::PortSettingsChanged()
   OMX_INIT_STRUCTURE(configDisplay);
   configDisplay.nPortIndex = m_omx_render.GetInputPort();
 
-  configDisplay.set = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_TRANSFORM | OMX_DISPLAY_SET_LAYER);
+  configDisplay.set = (OMX_DISPLAYSETTYPE)(OMX_DISPLAY_SET_TRANSFORM | OMX_DISPLAY_SET_LAYER | OMX_DISPLAY_SET_NUM);
+  configDisplay.num = m_display;
   configDisplay.layer = m_layer;
   configDisplay.transform = m_transform;
   omx_err = m_omx_render.SetConfig(OMX_IndexConfigDisplayRegion, &configDisplay);
@@ -373,7 +375,7 @@ bool COMXVideo::PortSettingsChanged()
 }
 
 bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRect, float display_aspect, EDEINTERLACEMODE deinterlace,
-                     OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, int layer, float fifo_size)
+                     OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, int display, int layer, float fifo_size)
 {
   CSingleLock lock (m_critSection);
   bool vflip = false;
@@ -397,6 +399,7 @@ bool COMXVideo::Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &DestRe
   m_submitted_eos = false;
   m_failed_eos    = false;
   
+  m_display = display;
   m_layer = layer;
 
   if(!m_decoded_width || !m_decoded_height)

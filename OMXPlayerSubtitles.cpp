@@ -62,7 +62,7 @@ bool OMXPlayerSubtitles::Open(size_t stream_count,
                               bool centered,
                               bool ghost_box,
                               unsigned int lines,
-                              int layer,
+                              int display, int layer,
                               OMXClock* clock) BOOST_NOEXCEPT
 {
   assert(!m_open);
@@ -83,6 +83,7 @@ bool OMXPlayerSubtitles::Open(size_t stream_count,
   m_ghost_box = ghost_box;
   m_lines = lines;
   m_av_clock = clock;
+  m_display = display;
   m_layer = layer;
 
   if(!Create())
@@ -151,7 +152,7 @@ RenderLoop(const string& font_path,
            unsigned int lines,
            OMXClock* clock)
 {
-  SubtitleRenderer renderer(m_layer,
+  SubtitleRenderer renderer(m_display, m_layer,
                             font_path,
                             italic_font_path,
                             font_size,

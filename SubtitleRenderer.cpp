@@ -261,7 +261,7 @@ SubtitleRenderer::~SubtitleRenderer() BOOST_NOEXCEPT {
 }
 
 SubtitleRenderer::
-SubtitleRenderer(int layer,
+SubtitleRenderer(int display, int layer,
                  const std::string& font_path,
                  const std::string& italic_font_path,
                  float font_size,
@@ -296,7 +296,7 @@ SubtitleRenderer(int layer,
 {
   try {
     uint32_t screen_width, screen_height;
-    ENFORCE(graphics_get_display_size(0, &screen_width, &screen_height) >= 0);
+    ENFORCE(graphics_get_display_size(display, &screen_width, &screen_height) >= 0);
 
     initialize_fonts(font_path, italic_font_path, font_size*screen_height);
 
@@ -315,7 +315,7 @@ SubtitleRenderer(int layer,
                    static_cast<int>(margin_left * screen_height + 0.5f); 
     margin_bottom_ = abs_margin_bottom - buffer_bottom; 
 
-    initialize_window(layer,
+    initialize_window(display, layer,
                       0,
                       screen_height - buffer_top - 1,
                       screen_width,
@@ -388,7 +388,7 @@ void SubtitleRenderer::destroy_fonts() {
   }
 } 
 
-void SubtitleRenderer::initialize_window(int layer,
+void SubtitleRenderer::initialize_window(int display, int layer,
                                          unsigned int x,
                                          unsigned int y,
                                          unsigned int width,
@@ -405,7 +405,7 @@ void SubtitleRenderer::initialize_window(int layer,
   src_rect.width = dst_rect.width << 16;
   src_rect.height = dst_rect.height << 16;        
 
-  dispman_display_ = vc_dispmanx_display_open(0 /* LCD */);
+  dispman_display_ = vc_dispmanx_display_open(display);
   ENFORCE(dispman_display_);
 
   {

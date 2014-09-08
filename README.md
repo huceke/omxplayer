@@ -100,6 +100,7 @@ Usage: omxplayer [OPTIONS] [FILE]
         --dbus_name name        default: org.mpris.MediaPlayer2.omxplayer
         --key-config <file>     Uses key bindings in <file> instead of the default
         --layer n               Set video render layer number (higher numbers are on top)
+        --display n             Set display to output to
 
 For example:
 
