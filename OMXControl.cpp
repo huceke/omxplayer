@@ -542,13 +542,13 @@ OMXControlResult OMXControl::getEvent()
   {
     subtitles->SetVisible(true);
     dbus_respond_ok(m);
-    return KeyConfig::ACTION_BLANK;
+    return KeyConfig::ACTION_SHOW_SUBTITLES;
   }
   else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "HideSubtitles"))
   {
     subtitles->SetVisible(false);
     dbus_respond_ok(m);
-    return KeyConfig::ACTION_BLANK;
+    return KeyConfig::ACTION_HIDE_SUBTITLES;
   }
   else if (dbus_message_is_method_call(m, OMXPLAYER_DBUS_INTERFACE_PLAYER, "Action"))
   {

@@ -122,6 +122,8 @@ Key bindings to control omxplayer while playing:
     n           previous subtitle stream
     m           next subtitle stream
     s           toggle subtitles
+    w           show subtitles
+    x           hide subtitles
     d           decrease subtitle delay (- 250 ms)
     f           increase subtitle delay (+ 250 ms)
     q           exit omxplayer

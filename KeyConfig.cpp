@@ -58,6 +58,10 @@ int convertStringToAction(string str_action)
         return KeyConfig::ACTION_SEEK_FORWARD_LARGE;
     if(str_action == "STEP")
         return KeyConfig::ACTION_STEP;
+    if(str_action == "SHOW_SUBTITLES")
+        return KeyConfig::ACTION_SHOW_SUBTITLES;
+    if(str_action == "HIDE_SUBTITLES")
+        return KeyConfig::ACTION_HIDE_SUBTITLES;
             
     return -1;
 }
@@ -122,6 +126,8 @@ map<int, int> KeyConfig::buildDefaultKeymap()
     keymap[KEY_DOWN] = ACTION_SEEK_BACK_LARGE;
     keymap[KEY_UP] = ACTION_SEEK_FORWARD_LARGE;
     keymap['v'] = ACTION_STEP;
+    keymap['w'] = ACTION_SHOW_SUBTITLES;
+    keymap['x'] = ACTION_HIDE_SUBTITLES;
 
     return keymap;
 }
