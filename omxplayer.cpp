@@ -1304,6 +1304,20 @@ int main(int argc, char *argv[])
           PrintSubtitleInfo();
         }
         break;
+      case KeyConfig::ACTION_HIDE_SUBTITLES:
+        if(m_has_subtitle)
+        {
+          m_player_subtitles.SetVisible(false);
+          PrintSubtitleInfo();
+        }
+        break;
+      case KeyConfig::ACTION_SHOW_SUBTITLES:
+        if(m_has_subtitle)
+        {
+          m_player_subtitles.SetVisible(true);
+          PrintSubtitleInfo();
+        }
+        break;
       case KeyConfig::ACTION_DECREASE_SUBTITLE_DELAY:
         if(m_has_subtitle && m_player_subtitles.GetVisible())
         {

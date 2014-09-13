@@ -35,7 +35,9 @@ class KeyConfig
         ACTION_BLANK = 24,
         ACTION_MOVE_VIDEO = 27,
         ACTION_HIDE_VIDEO = 28,
-        ACTION_UNHIDE_VIDEO = 29
+        ACTION_UNHIDE_VIDEO = 29,
+        ACTION_HIDE_SUBTITLES = 30,
+	 ACTION_SHOW_SUBTITLES = 31
     };
 
     #define KEY_LEFT 0x5b44
