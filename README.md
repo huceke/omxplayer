@@ -235,7 +235,7 @@ Whether or not the player can set fullscreen.
 
 #### CanRaise
 
-Not sure what this means.
+Whether the display window can be brought to the top of all the window.
 
    Params       |   Type   
 :-------------: | ---------
