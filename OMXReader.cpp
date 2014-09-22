@@ -182,7 +182,7 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
 
     AVDictionary *d = NULL;
     // Enable seeking if http
-    if(m_filename.substr(0,7) == "http://")
+    if(!live && m_filename.substr(0,7) == "http://")
     {
        av_dict_set(&d, "seekable", "1", 0);
     }
