@@ -24,7 +24,6 @@
 
 #include "DllAvUtil.h"
 #include "DllAvFormat.h"
-#include "DllAvFilter.h"
 #include "DllAvCodec.h"
 
 #include "utils/PCMRemap.h"

@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include "DllAvUtil.h"
 #include "DllAvFormat.h"
-#include "DllAvFilter.h"
 #include "DllAvCodec.h"
 
 typedef struct {

@@ -41,7 +41,6 @@ extern "C" {
 
 #include "DllAvUtil.h"
 #include "DllAvFormat.h"
-#include "DllAvFilter.h"
 #include "DllAvCodec.h"
 #include "linux/RBP.h"
 
