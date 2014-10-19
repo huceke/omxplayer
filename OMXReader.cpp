@@ -173,7 +173,8 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
       m_filename.substr(0,7) == "http://" || m_filename.substr(0,8) == "https://" ||
       m_filename.substr(0,7) == "rtmp://" || m_filename.substr(0,6) == "udp://" ||
       m_filename.substr(0,7) == "rtsp://" || m_filename.substr(0,6) == "rtp://" ||
-      m_filename.substr(0,6) == "ftp://")
+      m_filename.substr(0,6) == "ftp://" || m_filename.substr(0,7) == "sftp://" ||
+      m_filename.substr(0,6) == "smb://")
   {
     // ffmpeg dislikes the useragent from AirPlay urls
     //int idx = m_filename.Find("|User-Agent=AppleCoreMedia");
@@ -183,7 +184,8 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
 
     AVDictionary *d = NULL;
     // Enable seeking if http, ftp
-    if(!live && (m_filename.substr(0,7) == "http://" || m_filename.substr(0,6) == "ftp://"))
+    if(!live && (m_filename.substr(0,7) == "http://" || m_filename.substr(0,6) == "ftp://" ||
+       m_filename.substr(0,7) == "sftp://" || m_filename.substr(0,6) == "smb://"))
     {
        av_dict_set(&d, "seekable", "1", 0);
     }
