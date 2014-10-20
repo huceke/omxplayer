@@ -35,15 +35,15 @@ configure:
 			--disable-filters \
 			--disable-encoders \
 			--disable-devices \
-			--disable-ffprobe \
-			--disable-ffplay \
-			--disable-ffserver \
-			--disable-ffmpeg \
+			--disable-programs \
 			--enable-shared \
 			--disable-doc \
 			--disable-postproc \
 			--enable-gpl \
+			--enable-version3 \
 			--enable-protocols \
+			--enable-libsmbclient \
+			--enable-libssh \
 			--enable-nonfree \
 			--enable-openssl \
 			--enable-pthreads \
