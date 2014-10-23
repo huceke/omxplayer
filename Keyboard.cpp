@@ -54,12 +54,12 @@ Keyboard::~Keyboard()
 
 void Keyboard::Close()
 {
-  restore_term();
-  dbus_disconnect();
   if (ThreadHandle()) 
   {
     StopThread();
   }
+  dbus_disconnect();
+  restore_term();
 }
 
 void Keyboard::restore_term() 
