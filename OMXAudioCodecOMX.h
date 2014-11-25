@@ -35,7 +35,7 @@ class COMXAudioCodecOMX
 public:
   COMXAudioCodecOMX();
   ~COMXAudioCodecOMX();
-  bool Open(COMXStreamInfo &hints);
+  bool Open(COMXStreamInfo &hints, enum PCMLayout layout);
   void Dispose();
   int Decode(BYTE* pData, int iSize, double dts, double pts);
   int GetData(BYTE** dst, double &dts, double &pts);

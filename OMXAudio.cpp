@@ -386,7 +386,15 @@ bool COMXAudio::PortSettingsChanged()
   return true;
 }
 
-bool COMXAudio::Initialize(const CStdString& device, int iChannels, uint64_t channelMap,
+static unsigned count_bits(uint64_t value)
+{
+  unsigned bits = 0;
+  for(;value;++bits)
+    value &= value - 1;
+  return bits;
+}
+
+bool COMXAudio::Initialize(const CStdString& device, uint64_t channelMap,
                            COMXStreamInfo &hints, enum PCMLayout layout, unsigned int uiSampleRate, unsigned int uiBitsPerSample, bool boostOnDownmix,
                            OMXClock *clock, bool bUsePassthrough, bool bUseHWDecode, bool is_live, float fifo_size)
 {
@@ -401,7 +409,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, uint64_t cha
   m_deviceuse   = device;
   m_HWDecode    = bUseHWDecode;
   m_Passthrough = bUsePassthrough;
-  m_InputChannels = iChannels;
+  m_InputChannels = count_bits(channelMap);
   m_fifo_size = fifo_size;
   m_normalize_downmix = !boostOnDownmix;
   m_live = is_live;
@@ -463,7 +471,7 @@ bool COMXAudio::Initialize(const CStdString& device, int iChannels, uint64_t cha
     m_OutputChannels = BuildChannelMapCEA(outLayout, GetChannelLayout(layout));
     CPCMRemap m_remap;
     m_remap.Reset();
-    /*outLayout = */m_remap.SetInputFormat (iChannels, inLayout, uiBitsPerSample / 8, uiSampleRate, layout, boostOnDownmix);
+    /*outLayout = */m_remap.SetInputFormat (m_InputChannels, inLayout, uiBitsPerSample / 8, uiSampleRate, layout, boostOnDownmix);
     m_remap.SetOutputFormat(m_OutputChannels, outLayout);
     m_remap.GetDownmixMatrix(m_downmix_matrix);
     m_wave_header.dwChannelMask = channelMap;

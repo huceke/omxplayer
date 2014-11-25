@@ -59,7 +59,7 @@ public:
   unsigned int GetAudioRenderingLatency();
   float GetMaxLevel(double &pts);
   COMXAudio();
-  bool Initialize(const CStdString& device, int iChannels, uint64_t channelMap,
+  bool Initialize(const CStdString& device, uint64_t channelMap,
                            COMXStreamInfo &hints, enum PCMLayout layout, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
                            OMXClock *clock, bool bUsePassthrough = false, bool bUseHWDecode = false, bool is_live = false, float fifo_size = 0);
   ~COMXAudio();

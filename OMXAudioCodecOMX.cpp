@@ -59,7 +59,7 @@ COMXAudioCodecOMX::~COMXAudioCodecOMX()
   Dispose();
 }
 
-bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints)
+bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints, enum PCMLayout layout)
 {
   AVCodec* pCodec;
   m_bOpenedCodec = false;
@@ -91,21 +91,27 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints)
   m_pCodecContext->block_align = hints.blockalign;
   m_pCodecContext->bit_rate = hints.bitrate;
   m_pCodecContext->bits_per_coded_sample = hints.bitspersample;
+  if (hints.codec == AV_CODEC_ID_TRUEHD)
+  {
+    if (layout == PCM_LAYOUT_2_0)
+    {
+      m_pCodecContext->request_channel_layout = AV_CH_LAYOUT_STEREO;
+      m_pCodecContext->channels = 2;
+      m_pCodecContext->channel_layout = m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels);
+    }
+    else if (layout <= PCM_LAYOUT_5_1)
+    {
+      m_pCodecContext->request_channel_layout = AV_CH_LAYOUT_5POINT1;
+      m_pCodecContext->channels = 6;
+      m_pCodecContext->channel_layout = m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels);
+    }
+  }
+  if (m_pCodecContext->request_channel_layout)
+    CLog::Log(LOGNOTICE,"COMXAudioCodecOMX::Open() Requesting channel layout of %x", (unsigned)m_pCodecContext->request_channel_layout);
 
   // vorbis has variable sized planar output, so skip concatenation
   if (hints.codec == AV_CODEC_ID_VORBIS)
     m_bNoConcatenate = true;
-
-  enum PCMLayout layout = PCM_LAYOUT_2_0;// todo: fill in
-  if (hints.codec == AV_CODEC_ID_TRUEHD)
-  {
-    if (layout == PCM_LAYOUT_2_0)
-      m_pCodecContext->request_channel_layout = AV_CH_LAYOUT_STEREO;
-    else if (layout <= PCM_LAYOUT_5_1)
-      m_pCodecContext->request_channel_layout = AV_CH_LAYOUT_5POINT1;
-  }
-  if (m_pCodecContext->request_channel_layout)
-    CLog::Log(LOGNOTICE,"COMXAudioCodecOMX::Open() Requesting channel layout of %d", (unsigned)m_pCodecContext->request_channel_layout);
 
   if(m_pCodecContext->bits_per_coded_sample == 0)
     m_pCodecContext->bits_per_coded_sample = 16;
