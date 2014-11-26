@@ -1480,6 +1480,9 @@ int main(int argc, char *argv[])
 
       sentStarted = false;
 
+      if (m_omx_reader.IsEof())
+        goto do_exit;
+
       if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
                                          m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_display, m_layer, video_queue_size, video_fifo_size))
         goto do_exit;
