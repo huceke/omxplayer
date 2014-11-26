@@ -87,7 +87,6 @@ void Keyboard::Process()
 {
   while(!m_bStop)
   {
-    CLog::Log(LOGDEBUG, "Keyboard: Process() m_bStop %d", m_bStop);
     if (conn)
       dbus_connection_read_write_dispatch(conn, 0);
     int ch[8];
