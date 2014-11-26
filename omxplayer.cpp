@@ -249,7 +249,7 @@ static void FlushStreams(double pts)
     m_player_audio.Flush();
 
   if(pts != DVD_NOPTS_VALUE)
-    m_av_clock->OMXMediaTime(0.0);
+    m_av_clock->OMXMediaTime(pts);
 
   if(m_has_subtitle)
     m_player_subtitles.Flush();
@@ -1227,6 +1227,8 @@ int main(int argc, char *argv[])
           m_omx_reader.SeekChapter(m_omx_reader.GetChapter() - 1, &startpts);
           DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
           FlushStreams(startpts);
+          m_seek_flush = true;
+          m_new_win_pos = true;
         }
         else
         {
@@ -1239,6 +1241,8 @@ int main(int argc, char *argv[])
           m_omx_reader.SeekChapter(m_omx_reader.GetChapter() + 1, &startpts);
           DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
           FlushStreams(startpts);
+          m_seek_flush = true;
+          m_new_win_pos = true;
         }
         else
         {
@@ -1448,32 +1452,25 @@ int main(int argc, char *argv[])
       if(m_has_subtitle)
         m_player_subtitles.Pause();
 
-      pts = m_av_clock->OMXMediaTime();
-
-      seek_pos = (pts ? pts / DVD_TIME_BASE : last_seek_pos) + m_incr;
-      last_seek_pos = seek_pos;
-
-      seek_pos *= 1000.0;
-
-      m_incr = 0;
-
-      if(m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts))
+      if (!m_new_win_pos)
       {
-        unsigned t = (unsigned)(startpts*1e-6);
-        auto dur = m_omx_reader.GetStreamLength() / 1000;
+        pts = m_av_clock->OMXMediaTime();
 
-        if (!m_new_win_pos)
+        seek_pos = (pts ? pts / DVD_TIME_BASE : last_seek_pos) + m_incr;
+        last_seek_pos = seek_pos;
+
+        seek_pos *= 1000.0;
+
+        if(m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts))
         {
+          unsigned t = (unsigned)(startpts*1e-6);
+          auto dur = m_omx_reader.GetStreamLength() / 1000;
+
           DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
               (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
           printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+          FlushStreams(startpts);
         }
-        else
-        {
-          m_new_win_pos = false;
-        }
-
-        FlushStreams(startpts);
       }
 
       m_player_video.Close();
@@ -1495,6 +1492,8 @@ int main(int argc, char *argv[])
         m_player_subtitles.Resume();
       m_packet_after_seek = false;
       m_seek_flush = false;
+      m_new_win_pos= false;
+      m_incr = 0;
     }
     else if(m_packet_after_seek && TRICKPLAY(m_av_clock->OMXPlaySpeed()))
     {
