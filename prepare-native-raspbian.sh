@@ -27,7 +27,6 @@ INCLUDES	+= -I/opt/vc/include/interface/vcos/pthreads \
 
 sed -i '/--enable-cross-compile \\/d;' Makefile.ffmpeg
 sed -i 's/			--cross-prefix=$(HOST)-//g;' Makefile.ffmpeg
-sed -i 's/			--disable-debug \\/			--disable-debug /g;' Makefile.ffmpeg
 
 sed -i 's/$(HOST)-//g;' Makefile.*
 sed -i 's/ -j9//g;' Makefile.*
