@@ -507,6 +507,7 @@ int main(int argc, char *argv[])
   bool                  m_packet_after_seek   = false;
   bool                  m_seek_flush          = false;
   bool                  m_new_win_pos         = false;
+  bool                  m_chapter_seek        = false;
   std::string           m_filename;
   double                m_incr                = 0;
   double                m_loop_from           = 0;
@@ -1240,7 +1241,7 @@ int main(int argc, char *argv[])
           DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
           FlushStreams(startpts);
           m_seek_flush = true;
-          m_new_win_pos = true;
+          m_chapter_seek = true;
         }
         else
         {
@@ -1254,7 +1255,7 @@ int main(int argc, char *argv[])
           DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
           FlushStreams(startpts);
           m_seek_flush = true;
-          m_new_win_pos = true;
+          m_chapter_seek = true;
         }
         else
         {
@@ -1464,7 +1465,7 @@ int main(int argc, char *argv[])
       if(m_has_subtitle)
         m_player_subtitles.Pause();
 
-      if (!m_new_win_pos)
+      if (!m_chapter_seek)
       {
         pts = m_av_clock->OMXMediaTime();
 
@@ -1475,12 +1476,14 @@ int main(int argc, char *argv[])
 
         if(m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts))
         {
-          unsigned t = (unsigned)(startpts*1e-6);
-          auto dur = m_omx_reader.GetStreamLength() / 1000;
-
-          DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
-              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-          printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+          if (!m_new_win_pos)
+          {
+            unsigned t = (unsigned)(startpts*1e-6);
+            auto dur = m_omx_reader.GetStreamLength() / 1000;
+            DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
+                (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+            printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+          }
           FlushStreams(startpts);
         }
       }
