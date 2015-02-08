@@ -87,6 +87,7 @@ Usage: omxplayer [OPTIONS] [FILE]
         --no-ghost-box          No semitransparent boxes behind subtitles
         --lines n               Number of lines in the subtitle buffer (default: 3)
         --win 'x1 y1 x2 y2'     Set position of video window
+        --win x1,y1,x2,y2       Set position of video window
         --audio_fifo  n         Size of audio output fifo in seconds
         --video_fifo  n         Size of video output fifo in MB
         --audio_queue n         Size of audio input queue in MB

@@ -766,7 +766,8 @@ int main(int argc, char *argv[])
         m_subtitle_lines = std::max(atoi(optarg), 1);
         break;
       case pos_opt:
-  sscanf(optarg, "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
+  sscanf(optarg, "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2) == 4 ||
+  sscanf(optarg, "%f,%f,%f,%f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
         break;
       case vol_opt:
 	m_Volume = atoi(optarg);
