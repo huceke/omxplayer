@@ -88,6 +88,7 @@ public:
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, bool use_thread,
                    float display_aspect, int display, int layer, float queue_size, float fifo_size);
   bool Close();
+  bool Reset();
   bool Decode(OMXPacket *pkt);
   void Process();
   void Flush();
