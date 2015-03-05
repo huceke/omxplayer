@@ -54,6 +54,7 @@ public:
   EDEINTERLACEMODE deinterlace;
   OMX_IMAGEFILTERANAGLYPHTYPE anaglyph;
   bool hdmi_clock_sync;
+  bool allow_mvc;
   int alpha;
   int display;
   int layer;
@@ -68,6 +69,7 @@ public:
     deinterlace = VS_DEINTERLACEMODE_AUTO;
     anaglyph = OMX_ImageFilterAnaglyphNone;
     hdmi_clock_sync = false;
+    allow_mvc = false;
     alpha = 255;
     display = 0;
     layer = 0;

@@ -428,8 +428,11 @@ bool COMXVideo::Open(OMXClock *clock, const OMXVideoConfig &config)
           break;
       }
     }
-    m_codingType = OMX_VIDEO_CodingMVC;
-    m_video_codec_name = "omx-mvc";
+    if (m_config.allow_mvc && m_codingType == OMX_VIDEO_CodingAVC)
+    {
+       m_codingType = OMX_VIDEO_CodingMVC;
+       m_video_codec_name = "omx-mvc";
+    }
     break;
     case AV_CODEC_ID_MPEG4:
       // (role name) video_decoder.mpeg4

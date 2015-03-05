@@ -583,6 +583,7 @@ int main(int argc, char *argv[])
     { "anaglyph",     required_argument,  NULL,          anaglyph_opt },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
+    { "allow-mvc",    no_argument,        NULL,          'M' },
     { "hdmiclocksync", no_argument,       NULL,          'y' },
     { "nohdmiclocksync", no_argument,     NULL,          'z' },
     { "refresh",      no_argument,        NULL,          'r' },
@@ -635,7 +636,7 @@ int main(int argc, char *argv[])
   //Build default keymap just in case the --key-config option isn't used
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
 
-  while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslbpd3:yzt:rg", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslbpd3:Myzt:rg", longopts, NULL)) != -1)
   {
     switch (c) 
     {
@@ -664,6 +665,10 @@ int main(int argc, char *argv[])
           m_3d = CONF_FLAGS_FORMAT_FP;
         else
           m_3d = CONF_FLAGS_FORMAT_SBS;
+        m_config_video.allow_mvc = true;
+        break;
+      case 'M':
+        m_config_video.allow_mvc = true;
         break;
       case 'd':
         m_config_video.deinterlace = VS_DEINTERLACEMODE_FORCE;
