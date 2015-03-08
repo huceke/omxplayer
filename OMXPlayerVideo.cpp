@@ -140,6 +140,31 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
   return true;
 }
 
+bool OMXPlayerVideo::Reset()
+{
+  // Quick reset of internal state back to a default that is ready to play from
+  // the start or a new position.  This replaces a combination of Close and then
+  // Open calls but does away with the DLL unloading/loading, decoder reset, and
+  // thread reset.
+  Flush();   
+  m_stream_id         = -1;
+  m_pStream           = NULL;
+  m_iCurrentPts       = DVD_NOPTS_VALUE;
+  m_frametime         = 0;
+  m_bAbort            = false;
+  m_flush             = false;
+  m_flush_requested   = false;
+  m_cached_size       = 0;
+  m_iVideoDelay       = 0;
+  m_history_valid_pts = ~0;  // From OpenDecoder.
+
+  // Keep consistency with old Close/Open logic by continuing to return a bool
+  // with the success/failure of this call.  Although little can go wrong
+  // setting some variables, in the future this could indicate success/failure
+  // of the reset.  For now just return success (true).
+  return true;
+}
+
 bool OMXPlayerVideo::Close()
 {
   m_bAbort  = true;
