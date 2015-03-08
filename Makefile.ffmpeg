@@ -243,6 +243,7 @@ configure:
 			--disable-decoder=bintext \
 			--disable-decoder=xbin \
 			--disable-decoder=idf \
+			--disable-decoder=hevc \
 			--enable-decoder=opus \
 			--cross-prefix=$(HOST)-
 
@@ -252,7 +253,7 @@ clean:
 
 .PHONY : checkout
 checkout:
-	git clone git://source.ffmpeg.org/ffmpeg ffmpeg -b n2.5.3 --depth=1
+	git clone git://source.ffmpeg.org/ffmpeg ffmpeg -b n2.6 --depth=1
 
 .PHONY : install
 install:
