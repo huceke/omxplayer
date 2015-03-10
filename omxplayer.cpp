@@ -73,7 +73,7 @@ extern "C" {
 #define DISPLAY_TEXT_SHORT(text) DISPLAY_TEXT(text, 1000)
 #define DISPLAY_TEXT_LONG(text) DISPLAY_TEXT(text, 2000)
 
-typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB } FORMAT_3D_T;
+typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 bool              m_passthrough         = false;
@@ -360,6 +360,8 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
         score += 1<<18;
       if (is3d == CONF_FLAGS_FORMAT_TB  && !(tv->struct_3d_mask & HDMI_3D_STRUCT_TOP_AND_BOTTOM))
         score += 1<<18;
+      if (is3d == CONF_FLAGS_FORMAT_FP  && !(tv->struct_3d_mask & HDMI_3D_STRUCT_FRAME_PACKING))
+        score += 1<<18;
 
       // prefer square pixels modes
       float par = get_display_aspect_ratio((HDMI_ASPECT_T)tv->aspect_ratio)*(float)tv->height/(float)tv->width;
@@ -404,10 +406,13 @@ void SetVideoMode(int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T 
         property.param1 = HDMI_3D_FORMAT_SBS_HALF;
       else if (is3d == CONF_FLAGS_FORMAT_TB && tv_found->struct_3d_mask & HDMI_3D_STRUCT_TOP_AND_BOTTOM)
         property.param1 = HDMI_3D_FORMAT_TB_HALF;
+      else if (is3d == CONF_FLAGS_FORMAT_FP && tv_found->struct_3d_mask & HDMI_3D_STRUCT_FRAME_PACKING)
+        property.param1 = HDMI_3D_FORMAT_FRAME_PACKING;
       m_BcmHost.vc_tv_hdmi_set_property(&property);
     }
 
-    printf("ntsc_freq:%d %s%s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS":"", property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB":"");
+    printf("ntsc_freq:%d %s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS" :
+            property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB" : property.param1 == HDMI_3D_FORMAT_FRAME_PACKING ? "3DFP":"");
     sem_t tv_synced;
     sem_init(&tv_synced, 0, 0);
     m_BcmHost.vc_tv_register_callback(CallbackTvServiceCallback, &tv_synced);
@@ -664,13 +669,15 @@ int main(int argc, char *argv[])
         break;
       case '3':
         mode = optarg;
-        if(mode != "SBS" && mode != "TB")
+        if(mode != "SBS" && mode != "TB" && mode != "FP")
         {
           print_usage();
           return 0;
         }
         if(mode == "TB")
           m_3d = CONF_FLAGS_FORMAT_TB;
+        else if(mode == "FP")
+          m_3d = CONF_FLAGS_FORMAT_FP;
         else
           m_3d = CONF_FLAGS_FORMAT_SBS;
         break;
