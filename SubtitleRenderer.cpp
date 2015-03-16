@@ -425,7 +425,7 @@ void SubtitleRenderer::initialize_window(int display, int layer,
                                 DISPMANX_PROTECTION_NONE,
                                 0 /*alpha*/,
                                 0 /*clamp*/,
-                                (DISPMANX_TRANSFORM_T) 0 /*transform*/);
+                                DISPMANX_STEREOSCOPIC_MONO);
     ENFORCE(dispman_element_);
   }
 }

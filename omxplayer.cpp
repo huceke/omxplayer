@@ -500,7 +500,7 @@ static void blank_background(bool enable)
   assert(update);
 
   element = vc_dispmanx_element_add(update, display, layer, &dst_rect, resource, &src_rect,
-                                    DISPMANX_PROTECTION_NONE, NULL, NULL, (DISPMANX_TRANSFORM_T)0 );
+                                    DISPMANX_PROTECTION_NONE, NULL, NULL, DISPMANX_STEREOSCOPIC_MONO );
   assert(element);
 
   ret = vc_dispmanx_update_submit_sync( update );
