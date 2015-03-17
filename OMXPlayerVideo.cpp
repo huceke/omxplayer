@@ -201,6 +201,11 @@ void OMXPlayerVideo::SetAlpha(int alpha)
   m_decoder->SetAlpha(alpha);
 }
 
+void OMXPlayerVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
+{
+  m_decoder->SetVideoRect(SrcRect, DestRect);
+}
+
 static unsigned count_bits(int32_t value)
 {
   unsigned bits = 0;
