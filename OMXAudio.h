@@ -40,6 +40,33 @@
 
 #define AUDIO_BUFFER_SECONDS 3
 
+class OMXAudioConfig
+{
+public:
+  COMXStreamInfo hints;
+  bool use_thread;
+  CStdString device;
+  enum PCMLayout layout;
+  bool boostOnDownmix;
+  bool passthrough;
+  bool hwdecode;
+  bool is_live;
+  float queue_size;
+  float fifo_size;
+
+  OMXAudioConfig()
+  {
+    use_thread = true;
+    layout = PCM_LAYOUT_2_0;
+    boostOnDownmix = true;
+    passthrough = false;
+    hwdecode = false;
+    is_live = false;
+    queue_size = 3.0f;
+    fifo_size = 2.0f;
+  }
+};
+
 class COMXAudio
 {
 public:
@@ -59,9 +86,7 @@ public:
   unsigned int GetAudioRenderingLatency();
   float GetMaxLevel(double &pts);
   COMXAudio();
-  bool Initialize(const CStdString& device, uint64_t channelMap,
-                           COMXStreamInfo &hints, enum PCMLayout layout, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool boostOnDownmix,
-                           OMXClock *clock, bool bUsePassthrough = false, bool bUseHWDecode = false, bool is_live = false, float fifo_size = 0);
+  bool Initialize(OMXClock *clock, const OMXAudioConfig &config, uint64_t channelMap, unsigned int uiBitsPerSample);
   ~COMXAudio();
   bool PortSettingsChanged();
 
@@ -101,8 +126,6 @@ private:
   bool          m_Mute;
   long          m_drc;
   bool          m_Passthrough;
-  bool          m_HWDecode;
-  bool          m_normalize_downmix;
   unsigned int  m_BytesPerSec;
   unsigned int  m_InputBytesPerSec;
   unsigned int  m_BufferLen;
@@ -118,16 +141,11 @@ private:
   OMXClock      *m_av_clock;
   bool          m_settings_changed;
   bool          m_setStartTime;
-  int           m_SampleRate;
   OMX_AUDIO_CODINGTYPE m_eEncoding;
-  uint8_t       *m_extradata;
-  int           m_extrasize;
-  std::string   m_deviceuse;
   double        m_last_pts;
   bool          m_submitted_eos;
   bool          m_failed_eos;
-  float         m_fifo_size;
-  bool          m_live;
+  OMXAudioConfig m_config;
 
   OMX_AUDIO_CHANNELTYPE m_input_channels[OMX_AUDIO_MAXCHANNELS];
   OMX_AUDIO_CHANNELTYPE m_output_channels[OMX_AUDIO_MAXCHANNELS];

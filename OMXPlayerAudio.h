@@ -63,20 +63,14 @@ protected:
   COMXAudio                 *m_decoder;
   std::string               m_codec_name;
   std::string               m_device;
-  bool                      m_use_passthrough;
-  bool                      m_use_hw_decode;
   bool                      m_passthrough;
   bool                      m_hw_decode;
   bool                      m_boost_on_downmix;
   bool                      m_bAbort;
-  bool                      m_use_thread; 
   bool                      m_flush;
   std::atomic<bool>         m_flush_requested;
-  bool                      m_live;
-  enum PCMLayout            m_layout;
   unsigned int              m_cached_size;
-  unsigned int              m_max_data_size;
-  float                     m_fifo_size;
+  OMXAudioConfig            m_config;
   COMXAudioCodecOMX         *m_pAudioCodec;
   float                     m_CurrentVolume;
   long                      m_amplification;
@@ -91,9 +85,7 @@ private:
 public:
   OMXPlayerAudio();
   ~OMXPlayerAudio();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-            std::string device, bool passthrough, bool hw_decode,
-            bool boost_on_downmix, bool use_thread, bool is_live, enum PCMLayout layout, float queue_size, float fifo_size);
+  bool Open(OMXClock *av_clock, const OMXAudioConfig &config, OMXReader *omx_reader);
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();
@@ -112,8 +104,8 @@ public:
   bool IsEOS();
   void WaitCompletion();
   unsigned int GetCached() { return m_cached_size; };
-  unsigned int GetMaxCached() { return m_max_data_size; };
-  unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
+  unsigned int GetMaxCached() { return m_config.queue_size * 1024 * 1024; };
+  unsigned int GetLevel() { return m_config.queue_size ? 100 * m_cached_size / (m_config.queue_size * 1024 * 1024) : 0; };
   void SetVolume(float fVolume)                          { m_CurrentVolume = fVolume; if(m_decoder) m_decoder->SetVolume(fVolume); }
   float GetVolume()                                      { return m_CurrentVolume; }
   void SetMute(bool bOnOff)                              { m_mute = bOnOff; if(m_decoder) m_decoder->SetMute(bOnOff); }

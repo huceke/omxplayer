@@ -76,13 +76,10 @@ extern "C" {
 typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
-bool              m_passthrough         = false;
 long              m_Volume              = 0;
 long              m_Amplification       = 0;
 bool              m_NativeDeinterlace   = false;
 bool              m_HWDecode            = false;
-std::string       deviceString          = "";
-int               m_use_hw_audio        = false;
 bool              m_osd                 = true;
 bool              m_no_keys             = false;
 std::string       m_external_subtitles_path;
@@ -102,7 +99,7 @@ int               m_audio_index_use     = 0;
 OMXClock          *m_av_clock           = NULL;
 OMXControl        m_omxcontrol;
 Keyboard          *m_keyboard           = NULL;
-COMXStreamInfo    m_hints_audio;
+OMXAudioConfig    m_config_audio;
 OMXVideoConfig    m_config_video;
 OMXPacket         *m_omx_pkt            = NULL;
 bool              m_no_hdmi_clock_sync  = false;
@@ -116,7 +113,6 @@ int               m_tv_show_info        = 0;
 bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
-bool              m_boost_on_downmix    = true;
 bool              m_gen_log             = false;
 bool              m_loop                = false;
 
@@ -523,14 +519,10 @@ int main(int argc, char *argv[])
   CRect                 SrcRect               = {0,0,0,0};
   bool                  m_blank_background    = false;
   bool sentStarted = false;
-  float audio_fifo_size = 0.0; // zero means use default
-  float audio_queue_size = 0.0;
   float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
   float m_timeout        = 10.0f; // amount of time file/network operation can stall for before timing out
   int m_orientation      = -1; // unset
   float m_fps            = 0.0f; // unset
-  bool m_live            = false; // set to true for live tv or vod for low buffering
-  enum PCMLayout m_layout = PCM_LAYOUT_2_0;
   TV_DISPLAY_STATE_T   tv_state;
   double last_seek_pos = 0;
   bool idle = false;
@@ -687,22 +679,22 @@ int main(int argc, char *argv[])
         m_config_video.anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
         break;
       case 'w':
-        m_use_hw_audio = true;
+        m_config_audio.hwdecode = true;
         break;
       case 'p':
-        m_passthrough = true;
+        m_config_audio.passthrough = true;
         break;
       case 's':
         m_stats = true;
         break;
       case 'o':
-        deviceString = optarg;
-        if(deviceString != "local" && deviceString != "hdmi" && deviceString != "both")
+        m_config_audio.device = optarg;
+        if(m_config_audio.device != "local" && m_config_audio.device != "hdmi" && m_config_audio.device != "both")
         {
           print_usage();
           return 0;
         }
-        deviceString = "omx:" + deviceString;
+        m_config_audio.device = "omx:" + m_config_audio.device;
         break;
       case 'i':
         m_dump_format      = true;
@@ -780,19 +772,19 @@ int main(int argc, char *argv[])
 	m_Amplification = atoi(optarg);
         break;
       case boost_on_downmix_opt:
-        m_boost_on_downmix = true;
+        m_config_audio.boostOnDownmix = true;
         break;
       case no_boost_on_downmix_opt:
-        m_boost_on_downmix = false;
+        m_config_audio.boostOnDownmix = false;
         break;
       case audio_fifo_opt:
-  audio_fifo_size = atof(optarg);
+        m_config_audio.fifo_size = atof(optarg);
         break;
       case video_fifo_opt:
         m_config_video.fifo_size = atof(optarg);
         break;
       case audio_queue_opt:
-  audio_queue_size = atof(optarg);
+        m_config_audio.queue_size = atof(optarg);
         break;
       case video_queue_opt:
         m_config_video.queue_size = atof(optarg);
@@ -810,7 +802,7 @@ int main(int argc, char *argv[])
         m_fps = atof(optarg);
         break;
       case live_opt:
-        m_live = true;
+        m_config_audio.is_live = true;
         break;
       case layout_opt:
       {
@@ -819,7 +811,7 @@ int main(int argc, char *argv[])
         for (i=0; i<sizeof layouts/sizeof *layouts; i++)
           if (strcmp(optarg, layouts[i]) == 0)
           {
-            m_layout = (enum PCMLayout)i;
+            m_config_audio.layout = (enum PCMLayout)i;
             break;
           }
         if (i == sizeof layouts/sizeof *layouts)
@@ -977,7 +969,7 @@ int main(int argc, char *argv[])
     m_keyboard->setDbusName(m_dbus_name);
   }
 
-  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str()))
+  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_config_audio.is_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str()))
     goto do_exit;
 
   if (m_dump_format_exit)
@@ -1018,7 +1010,7 @@ int main(int argc, char *argv[])
   m_av_clock->OMXStop();
   m_av_clock->OMXPause();
 
-  m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
+  m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_config_audio.hints);
   m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_config_video.hints);
 
   if (m_fps > 0.0f)
@@ -1091,26 +1083,24 @@ int main(int argc, char *argv[])
       m_player_subtitles.SetVisible(false);
   }
 
-  m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
+  m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_config_audio.hints);
 
-  if (deviceString == "")
+  if (m_config_audio.device == "")
   {
     if (m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_ePCM, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) == 0)
-      deviceString = "omx:hdmi";
+      m_config_audio.device = "omx:hdmi";
     else
-      deviceString = "omx:local";
+      m_config_audio.device = "omx:local";
   }
 
-  if ((m_hints_audio.codec == CODEC_ID_AC3 || m_hints_audio.codec == CODEC_ID_EAC3) &&
+  if ((m_config_audio.hints.codec == CODEC_ID_AC3 || m_config_audio.hints.codec == CODEC_ID_EAC3) &&
       m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_eAC3, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
-    m_passthrough = false;
-  if (m_hints_audio.codec == CODEC_ID_DTS &&
+    m_config_audio.passthrough = false;
+  if (m_config_audio.hints.codec == CODEC_ID_DTS &&
       m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_eDTS, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
-    m_passthrough = false;
+    m_config_audio.passthrough = false;
 
-  if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
-                                         m_passthrough, m_use_hw_audio,
-                                         m_boost_on_downmix, true, m_live, m_layout, audio_queue_size, audio_fifo_size))
+  if(m_has_audio && !m_player_audio.Open(m_av_clock, m_config_audio, &m_omx_reader))
     goto do_exit;
 
   if(m_has_audio)
@@ -1121,7 +1111,7 @@ int main(int argc, char *argv[])
   }
 
   if (m_threshold < 0.0f)
-    m_threshold = m_live ? 0.7f : 0.2f;
+    m_threshold = m_config_audio.is_live ? 0.7f : 0.2f;
 
   PrintSubtitleInfo();
 
@@ -1599,7 +1589,7 @@ int main(int argc, char *argv[])
         m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
 
       // keep latency under control by adjusting clock (and so resampling audio)
-      if (m_live)
+      if (m_config_audio.is_live)
       {
         float latency = DVD_NOPTS_VALUE;
         if (m_has_audio && audio_pts != DVD_NOPTS_VALUE)

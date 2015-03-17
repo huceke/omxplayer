@@ -45,10 +45,6 @@ OMXPlayerAudio::OMXPlayerAudio()
   m_cached_size   = 0;
   m_pAudioCodec   = NULL;
   m_player_error  = true;
-  m_max_data_size = 3 * 1024 * 1024;
-  m_fifo_size     = 2.0f;
-  m_live          = false;
-  m_layout        = PCM_LAYOUT_2_0;
   m_CurrentVolume = 0.0f;
   m_amplification = 0;
   m_mute          = false;
@@ -71,31 +67,29 @@ OMXPlayerAudio::~OMXPlayerAudio()
 
 void OMXPlayerAudio::Lock()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_lock(&m_lock);
 }
 
 void OMXPlayerAudio::UnLock()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock);
 }
 
 void OMXPlayerAudio::LockDecoder()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_lock(&m_lock_decoder);
 }
 
 void OMXPlayerAudio::UnLockDecoder()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock_decoder);
 }
 
-bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-                          std::string device, bool passthrough, bool hw_decode,
-                          bool boost_on_downmix, bool use_thread, bool is_live, enum PCMLayout layout, float queue_size, float fifo_size)
+bool OMXPlayerAudio::Open(OMXClock *av_clock, const OMXAudioConfig &config, OMXReader *omx_reader)
 {
   if(ThreadHandle())
     Close();
@@ -105,28 +99,17 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
   
   m_dllAvFormat.av_register_all();
 
-  m_hints       = hints;
+  m_config      = config;
   m_av_clock    = av_clock;
   m_omx_reader  = omx_reader;
-  m_device      = device;
   m_passthrough = false;
   m_hw_decode   = false;
-  m_use_passthrough = passthrough;
-  m_use_hw_decode   = hw_decode;
-  m_boost_on_downmix = boost_on_downmix;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
-  m_use_thread  = use_thread;
   m_flush       = false;
   m_flush_requested = false;
-  m_live        = is_live;
-  m_layout      = layout;
   m_cached_size = 0;
   m_pAudioCodec = NULL;
-  if (queue_size != 0.0)
-    m_max_data_size = queue_size * 1024 * 1024;
-  if (fifo_size != 0.0)
-    m_fifo_size = fifo_size;
 
   m_player_error = OpenAudioCodec();
   if(!m_player_error)
@@ -142,7 +125,7 @@ bool OMXPlayerAudio::Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *
     return false;
   }
 
-  if(m_use_thread)
+  if(m_config.use_thread)
     Create();
 
   m_open        = true;
@@ -195,32 +178,32 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
 
   int channels = pkt->hints.channels;
 
-  unsigned int old_bitrate = m_hints.bitrate;
+  unsigned int old_bitrate = m_config.hints.bitrate;
   unsigned int new_bitrate = pkt->hints.bitrate;
 
   /* only check bitrate changes on CODEC_ID_DTS, CODEC_ID_AC3, CODEC_ID_EAC3 */
-  if(m_hints.codec != CODEC_ID_DTS && m_hints.codec != CODEC_ID_AC3 && m_hints.codec != CODEC_ID_EAC3)
+  if(m_config.hints.codec != CODEC_ID_DTS && m_config.hints.codec != CODEC_ID_AC3 && m_config.hints.codec != CODEC_ID_EAC3)
   {
     new_bitrate = old_bitrate = 0;
   }
 
   // for passthrough we only care about the codec and the samplerate
-  bool minor_change = channels                 != m_hints.channels ||
-                      pkt->hints.bitspersample != m_hints.bitspersample ||
+  bool minor_change = channels                 != m_config.hints.channels ||
+                      pkt->hints.bitspersample != m_config.hints.bitspersample ||
                       old_bitrate              != new_bitrate;
 
-  if(pkt->hints.codec          != m_hints.codec ||
-     pkt->hints.samplerate     != m_hints.samplerate ||
+  if(pkt->hints.codec          != m_config.hints.codec ||
+     pkt->hints.samplerate     != m_config.hints.samplerate ||
      (!m_passthrough && minor_change))
   {
-    printf("C : %d %d %d %d %d\n", m_hints.codec, m_hints.channels, m_hints.samplerate, m_hints.bitrate, m_hints.bitspersample);
+    printf("C : %d %d %d %d %d\n", m_config.hints.codec, m_config.hints.channels, m_config.hints.samplerate, m_config.hints.bitrate, m_config.hints.bitspersample);
     printf("N : %d %d %d %d %d\n", pkt->hints.codec, channels, pkt->hints.samplerate, pkt->hints.bitrate, pkt->hints.bitspersample);
 
 
     CloseDecoder();
     CloseAudioCodec();
 
-    m_hints = pkt->hints;
+    m_config.hints = pkt->hints;
 
     m_player_error = OpenAudioCodec();
     if(!m_player_error)
@@ -372,7 +355,7 @@ bool OMXPlayerAudio::AddPacket(OMXPacket *pkt)
   if(m_bStop || m_bAbort)
     return ret;
 
-  if((m_cached_size + pkt->size) < m_max_data_size)
+  if((m_cached_size + pkt->size) < m_config.queue_size * 1024 * 1024)
   {
     Lock();
     m_cached_size += pkt->size;
@@ -389,7 +372,7 @@ bool OMXPlayerAudio::OpenAudioCodec()
 {
   m_pAudioCodec = new COMXAudioCodecOMX();
 
-  if(!m_pAudioCodec->Open(m_hints, m_layout))
+  if(!m_pAudioCodec->Open(m_config.hints, m_config.layout))
   {
     delete m_pAudioCodec; m_pAudioCodec = NULL;
     return false;
@@ -407,7 +390,7 @@ void OMXPlayerAudio::CloseAudioCodec()
 
 bool OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
 {
-  if(m_device == "omx:local")
+  if(m_config.device == "omx:local")
     return false;
 
   bool passthrough = false;
@@ -434,18 +417,16 @@ bool OMXPlayerAudio::OpenDecoder()
 
   m_decoder = new COMXAudio();
 
-  if(m_use_passthrough)
-    m_passthrough = IsPassthrough(m_hints);
+  if(m_config.passthrough)
+    m_passthrough = IsPassthrough(m_config.hints);
 
-  if(!m_passthrough && m_use_hw_decode)
-    m_hw_decode = COMXAudio::HWDecode(m_hints.codec);
+  if(!m_passthrough && m_config.hwdecode)
+    m_hw_decode = COMXAudio::HWDecode(m_config.hints.codec);
 
   if(m_passthrough)
     m_hw_decode = false;
 
-  bAudioRenderOpen = m_decoder->Initialize(m_device, m_pAudioCodec->GetChannelMap(),
-                           m_hints, m_layout, m_hints.samplerate, m_pAudioCodec->GetBitsPerSample(), m_boost_on_downmix,
-                           m_av_clock, m_passthrough, m_hw_decode, m_live, m_fifo_size);
+  bAudioRenderOpen = m_decoder->Initialize(m_av_clock, m_config, m_pAudioCodec->GetChannelMap(), m_pAudioCodec->GetBitsPerSample());
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
   
@@ -460,12 +441,12 @@ bool OMXPlayerAudio::OpenDecoder()
     if(m_passthrough)
     {
       printf("Audio codec %s passthrough channels %d samplerate %d bitspersample %d\n",
-        m_codec_name.c_str(), m_hints.channels, m_hints.samplerate, m_hints.bitspersample);
+        m_codec_name.c_str(), m_config.hints.channels, m_config.hints.samplerate, m_config.hints.bitspersample);
     }
     else
     {
       printf("Audio codec %s channels %d samplerate %d bitspersample %d\n",
-        m_codec_name.c_str(), m_hints.channels, m_hints.samplerate, m_hints.bitspersample);
+        m_codec_name.c_str(), m_config.hints.channels, m_config.hints.samplerate, m_config.hints.bitspersample);
     }
   }
   // setup current volume settings
@@ -524,7 +505,7 @@ void OMXPlayerAudio::WaitCompletion()
   if(!m_decoder)
     return;
 
-  unsigned int nTimeOut = m_fifo_size * 1000;
+  unsigned int nTimeOut = m_config.fifo_size * 1000;
   while(nTimeOut)
   {
     if(IsEOS())
