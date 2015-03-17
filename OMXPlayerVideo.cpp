@@ -44,15 +44,9 @@ OMXPlayerVideo::OMXPlayerVideo()
   m_flush         = false;
   m_flush_requested = false;
   m_cached_size   = 0;
-  m_hdmi_clock_sync = false;
   m_iVideoDelay   = 0;
   m_iCurrentPts   = 0;
-  m_max_data_size = 10 * 1024 * 1024;
-  m_fifo_size     = (float)80*1024*60 / (1024*1024);
   m_history_valid_pts = 0;
-  m_display = 0;
-  m_layer = 0;
-  m_alpha = 255;
 
   pthread_cond_init(&m_packet_cond, NULL);
   pthread_cond_init(&m_picture_cond, NULL);
@@ -72,30 +66,29 @@ OMXPlayerVideo::~OMXPlayerVideo()
 
 void OMXPlayerVideo::Lock()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_lock(&m_lock);
 }
 
 void OMXPlayerVideo::UnLock()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock);
 }
 
 void OMXPlayerVideo::LockDecoder()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_lock(&m_lock_decoder);
 }
 
 void OMXPlayerVideo::UnLockDecoder()
 {
-  if(m_use_thread)
+  if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock_decoder);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, bool use_thread,
-                             float display_aspect, int alpha, int display, int layer, float queue_size, float fifo_size)
+bool OMXPlayerVideo::Open(OMXClock *av_clock, const OMXVideoConfig &config)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
@@ -105,28 +98,15 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
 
   m_dllAvFormat.av_register_all();
 
-  m_hints       = hints;
+  m_config      = config;
   m_av_clock    = av_clock;
   m_fps         = 25.0f;
   m_frametime   = 0;
-  m_Deinterlace = deinterlace;
-  m_anaglyph    = anaglyph;
-  m_display_aspect = display_aspect;
   m_iCurrentPts = DVD_NOPTS_VALUE;
   m_bAbort      = false;
-  m_use_thread  = use_thread;
   m_flush       = false;
   m_cached_size = 0;
   m_iVideoDelay = 0;
-  m_hdmi_clock_sync = hdmi_clock_sync;
-  m_DestRect    = DestRect;
-  m_display     = display;
-  m_layer       = layer;
-  m_alpha       = alpha;
-  if (queue_size != 0.0)
-    m_max_data_size = queue_size * 1024 * 1024;
-  if (fifo_size != 0.0)
-    m_fifo_size = fifo_size;
 
   if(!OpenDecoder())
   {
@@ -134,7 +114,7 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect
     return false;
   }
 
-  if(m_use_thread)
+  if(m_config.use_thread)
     Create();
 
   m_open        = true;
@@ -323,7 +303,7 @@ bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
   if(m_bStop || m_bAbort)
     return ret;
 
-  if((m_cached_size + pkt->size) < m_max_data_size)
+  if((m_cached_size + pkt->size) < m_config.queue_size * 1024 * 1024)
   {
     Lock();
     m_cached_size += pkt->size;
@@ -339,8 +319,8 @@ bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
 
 bool OMXPlayerVideo::OpenDecoder()
 {
-  if (m_hints.fpsrate && m_hints.fpsscale)
-    m_fps = DVD_TIME_BASE / OMXReader::NormalizeFrameduration((double)DVD_TIME_BASE * m_hints.fpsscale / m_hints.fpsrate);
+  if (m_config.hints.fpsrate && m_config.hints.fpsscale)
+    m_fps = DVD_TIME_BASE / OMXReader::NormalizeFrameduration((double)DVD_TIME_BASE * m_config.hints.fpsscale / m_config.hints.fpsrate);
   else
     m_fps = 25;
 
@@ -353,7 +333,7 @@ bool OMXPlayerVideo::OpenDecoder()
   m_frametime = (double)DVD_TIME_BASE / m_fps;
 
   m_decoder = new COMXVideo();
-  if(!m_decoder->Open(m_hints, m_av_clock, m_DestRect, m_display_aspect, m_Deinterlace, m_anaglyph, m_hdmi_clock_sync, m_alpha, m_display, m_layer, m_fifo_size))
+  if(!m_decoder->Open(m_av_clock, m_config))
   {
     CloseDecoder();
     return false;
@@ -361,7 +341,7 @@ bool OMXPlayerVideo::OpenDecoder()
   else
   {
     printf("Video codec %s width %d height %d profile %d fps %f\n",
-        m_decoder->GetDecoderName().c_str() , m_hints.width, m_hints.height, m_hints.profile, m_fps);
+        m_decoder->GetDecoderName().c_str() , m_config.hints.width, m_config.hints.height, m_config.hints.profile, m_fps);
   }
 
   // start from assuming all recent frames had valid pts

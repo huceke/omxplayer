@@ -79,10 +79,7 @@ volatile sig_atomic_t g_abort           = false;
 bool              m_passthrough         = false;
 long              m_Volume              = 0;
 long              m_Amplification       = 0;
-bool              m_Deinterlace         = false;
-bool              m_NoDeinterlace       = false;
 bool              m_NativeDeinterlace   = false;
-OMX_IMAGEFILTERANAGLYPHTYPE m_anaglyph  = OMX_ImageFilterAnaglyphNone;
 bool              m_HWDecode            = false;
 std::string       deviceString          = "";
 int               m_use_hw_audio        = false;
@@ -102,14 +99,12 @@ unsigned int      m_subtitle_lines      = 3;
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = 0;
-bool              m_thread_player       = false;
 OMXClock          *m_av_clock           = NULL;
 OMXControl        m_omxcontrol;
 Keyboard          *m_keyboard           = NULL;
 COMXStreamInfo    m_hints_audio;
-COMXStreamInfo    m_hints_video;
+OMXVideoConfig    m_config_video;
 OMXPacket         *m_omx_pkt            = NULL;
-bool              m_hdmi_clock_sync     = false;
 bool              m_no_hdmi_clock_sync  = false;
 bool              m_stop                = false;
 int               m_subtitle_index      = -1;
@@ -121,14 +116,9 @@ int               m_tv_show_info        = 0;
 bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
-float             m_display_aspect      = 0.0f;
 bool              m_boost_on_downmix    = true;
 bool              m_gen_log             = false;
 bool              m_loop                = false;
-int               m_layer               = 0;
-int               m_display             = 0;
-int               m_alpha               = 255;
-int               newAlpha              = 0;
 
 enum{ERROR=-1,SUCCESS,ONEBYTE};
 
@@ -478,11 +468,11 @@ static void blank_background(bool enable)
   uint32_t vc_image_ptr;
   VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
   uint16_t image = 0x0000; // black
-  int             layer = m_layer - 1;
+  int             layer = m_config_video.layer - 1;
 
   VC_RECT_T dst_rect, src_rect;
 
-  display = vc_dispmanx_display_open(m_display);
+  display = vc_dispmanx_display_open(m_config_video.display);
   assert(display);
 
   resource = vc_dispmanx_resource_create( type, 1 /*width*/, 1 /*height*/, &vc_image_ptr );
@@ -534,9 +524,7 @@ int main(int argc, char *argv[])
   bool                  m_blank_background    = false;
   bool sentStarted = false;
   float audio_fifo_size = 0.0; // zero means use default
-  float video_fifo_size = 0.0;
   float audio_queue_size = 0.0;
-  float video_queue_size = 0.0;
   float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
   float m_timeout        = 10.0f; // amount of time file/network operation can stall for before timing out
   int m_orientation      = -1; // unset
@@ -666,7 +654,7 @@ int main(int argc, char *argv[])
         m_gen_log = true;
         break;
       case 'y':
-        m_hdmi_clock_sync = true;
+        m_config_video.hdmi_clock_sync = true;
         break;
       case 'z':
         m_no_hdmi_clock_sync = true;
@@ -686,17 +674,17 @@ int main(int argc, char *argv[])
           m_3d = CONF_FLAGS_FORMAT_SBS;
         break;
       case 'd':
-        m_Deinterlace = true;
+        m_config_video.deinterlace = VS_DEINTERLACEMODE_FORCE;
         break;
       case no_deinterlace_opt:
-        m_NoDeinterlace = true;
+        m_config_video.deinterlace = VS_DEINTERLACEMODE_OFF;
         break;
       case native_deinterlace_opt:
-        m_NoDeinterlace = true;
+        m_config_video.deinterlace = VS_DEINTERLACEMODE_OFF;
         m_NativeDeinterlace = true;
         break;
       case anaglyph_opt:
-        m_anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
+        m_config_video.anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
         break;
       case 'w':
         m_use_hw_audio = true;
@@ -801,16 +789,16 @@ int main(int argc, char *argv[])
   audio_fifo_size = atof(optarg);
         break;
       case video_fifo_opt:
-  video_fifo_size = atof(optarg);
+        m_config_video.fifo_size = atof(optarg);
         break;
       case audio_queue_opt:
   audio_queue_size = atof(optarg);
         break;
       case video_queue_opt:
-  video_queue_size = atof(optarg);
+        m_config_video.queue_size = atof(optarg);
         break;
       case threshold_opt:
-  m_threshold = atof(optarg);
+        m_threshold = atof(optarg);
         break;
       case timeout_opt:
         m_timeout = atof(optarg);
@@ -856,13 +844,13 @@ int main(int argc, char *argv[])
         keymap = KeyConfig::parseConfigFile(optarg);
         break;
       case layer_opt:
-        m_layer = atoi(optarg);
+        m_config_video.layer = atoi(optarg);
         break;
       case alpha_opt:
-        m_alpha = atoi(optarg);
+        m_config_video.alpha = atoi(optarg);
         break;
       case display_opt:
-        m_display = atoi(optarg);
+        m_config_video.display = atoi(optarg);
         break;
       case http_cookie_opt:
         m_cookie = optarg;
@@ -989,8 +977,6 @@ int main(int argc, char *argv[])
     m_keyboard->setDbusName(m_dbus_name);
   }
 
-  m_thread_player = true;
-
   if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str()))
     goto do_exit;
 
@@ -1020,12 +1006,12 @@ int main(int argc, char *argv[])
 
   // you really don't want want to match refresh rate without hdmi clock sync
   if ((m_refresh || m_NativeDeinterlace) && !m_no_hdmi_clock_sync)
-    m_hdmi_clock_sync = true;
+    m_config_video.hdmi_clock_sync = true;
 
   if(!m_av_clock->OMXInitialize())
     goto do_exit;
 
-  if(m_hdmi_clock_sync && !m_av_clock->HDMIClockSync())
+  if(m_config_video.hdmi_clock_sync && !m_av_clock->HDMIClockSync())
     goto do_exit;
 
   m_av_clock->OMXStateIdle();
@@ -1033,10 +1019,10 @@ int main(int argc, char *argv[])
   m_av_clock->OMXPause();
 
   m_omx_reader.GetHints(OMXSTREAM_AUDIO, m_hints_audio);
-  m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_hints_video);
+  m_omx_reader.GetHints(OMXSTREAM_VIDEO, m_config_video.hints);
 
   if (m_fps > 0.0f)
-    m_hints_video.fpsrate = m_fps * DVD_TIME_BASE, m_hints_video.fpsscale = DVD_TIME_BASE;
+    m_config_video.hints.fpsrate = m_fps * DVD_TIME_BASE, m_config_video.hints.fpsscale = DVD_TIME_BASE;
 
   if(m_audio_index_use > 0)
     m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_audio_index_use-1);
@@ -1046,7 +1032,7 @@ int main(int argc, char *argv[])
     memset(&tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
     m_BcmHost.vc_tv_get_display_state(&tv_state);
 
-    SetVideoMode(m_hints_video.width, m_hints_video.height, m_hints_video.fpsrate, m_hints_video.fpsscale, m_3d);
+    SetVideoMode(m_config_video.hints.width, m_config_video.hints.height, m_config_video.hints.fpsrate, m_config_video.hints.fpsscale, m_3d);
   }
   // get display aspect
   TV_DISPLAY_STATE_T current_tv_state;
@@ -1054,17 +1040,16 @@ int main(int argc, char *argv[])
   m_BcmHost.vc_tv_get_display_state(&current_tv_state);
   if(current_tv_state.state & ( VC_HDMI_HDMI | VC_HDMI_DVI )) {
     //HDMI or DVI on
-    m_display_aspect = get_display_aspect_ratio((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
+    m_config_video.display_aspect = get_display_aspect_ratio((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
   } else {
     //composite on
-    m_display_aspect = get_display_aspect_ratio((SDTV_ASPECT_T)current_tv_state.display.sdtv.display_options.aspect);
+    m_config_video.display_aspect = get_display_aspect_ratio((SDTV_ASPECT_T)current_tv_state.display.sdtv.display_options.aspect);
   }
-  m_display_aspect *= (float)current_tv_state.display.hdmi.height/(float)current_tv_state.display.hdmi.width;
+  m_config_video.display_aspect *= (float)current_tv_state.display.hdmi.height/(float)current_tv_state.display.hdmi.width;
 
   if (m_orientation >= 0)
-    m_hints_video.orientation = m_orientation;
-  if(m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                         m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_alpha, m_display, m_layer, video_queue_size, video_fifo_size))
+    m_config_video.hints.orientation = m_orientation;
+  if(m_has_video && !m_player_video.Open(m_av_clock, m_config_video))
     goto do_exit;
 
   if(m_has_subtitle || m_osd)
@@ -1085,7 +1070,7 @@ int main(int argc, char *argv[])
                                 m_centered,
                                 m_ghost_box,
                                 m_subtitle_lines,
-                                m_display, m_layer + 1,
+                                m_config_video.display, m_config_video.layer + 1,
                                 m_av_clock))
       goto do_exit;
   }
@@ -1125,7 +1110,7 @@ int main(int argc, char *argv[])
 
   if(m_has_audio && !m_player_audio.Open(m_hints_audio, m_av_clock, &m_omx_reader, deviceString, 
                                          m_passthrough, m_use_hw_audio,
-                                         m_boost_on_downmix, m_thread_player, m_live, m_layout, audio_queue_size, audio_fifo_size))
+                                         m_boost_on_downmix, true, m_live, m_layout, audio_queue_size, audio_fifo_size))
     goto do_exit;
 
   if(m_has_audio)
@@ -1396,9 +1381,7 @@ int main(int argc, char *argv[])
           m_incr = newPos - oldPos;
           break;
       case KeyConfig::ACTION_SET_ALPHA:
-          newAlpha = result.getArg();
-          m_player_video.SetAlpha(newAlpha);
-
+          m_player_video.SetAlpha(result.getArg());
           break;
       case KeyConfig::ACTION_PAUSE:
         m_Pause = !m_Pause;

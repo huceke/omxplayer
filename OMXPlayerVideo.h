@@ -50,7 +50,6 @@ protected:
   DllAvCodec                m_dllAvCodec;
   DllAvFormat               m_dllAvFormat;
   bool                      m_open;
-  COMXStreamInfo            m_hints;
   double                    m_iCurrentPts;
   pthread_cond_t            m_packet_cond;
   pthread_cond_t            m_picture_cond;
@@ -60,23 +59,14 @@ protected:
   COMXVideo                 *m_decoder;
   float                     m_fps;
   double                    m_frametime;
-  EDEINTERLACEMODE          m_Deinterlace;
-  OMX_IMAGEFILTERANAGLYPHTYPE m_anaglyph;
   float                     m_display_aspect;
-  CRect                     m_DestRect;
   bool                      m_bAbort;
-  bool                      m_use_thread;
   bool                      m_flush;
   std::atomic<bool>         m_flush_requested;
   unsigned int              m_cached_size;
-  unsigned int              m_max_data_size;
-  float                     m_fifo_size;
-  bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
   uint32_t                  m_history_valid_pts;
-  int                       m_display;
-  int                       m_layer;
-  int                       m_alpha;
+  OMXVideoConfig            m_config;
 
   void Lock();
   void UnLock();
@@ -86,8 +76,7 @@ private:
 public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, EDEINTERLACEMODE deinterlace, OMX_IMAGEFILTERANAGLYPHTYPE anaglyph, bool hdmi_clock_sync, bool use_thread,
-                   float display_aspect, int alpha, int display, int layer, float queue_size, float fifo_size);
+  bool Open(OMXClock *av_clock, const OMXVideoConfig &config);
   bool Close();
   bool Reset();
   bool Decode(OMXPacket *pkt);
@@ -101,8 +90,8 @@ public:
   double GetCurrentPTS() { return m_iCurrentPts; };
   double GetFPS() { return m_fps; };
   unsigned int GetCached() { return m_cached_size; };
-  unsigned int GetMaxCached() { return m_max_data_size; };
-  unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
+  unsigned int GetMaxCached() { return m_config.queue_size * 1024 * 1024; };
+  unsigned int GetLevel() { return m_config.queue_size ? 100 * m_cached_size / (m_config.queue_size * 1024 * 1024) : 0; };
   void SubmitEOS();
   bool IsEOS();
   void SetDelay(double delay) { m_iVideoDelay = delay; }
