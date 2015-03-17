@@ -481,16 +481,6 @@ bool COMXAudio::Initialize(OMXClock *clock, const OMXAudioConfig &config, uint64
   m_wave_header.Format.cbSize               = 0;
   m_wave_header.SubFormat                   = KSDATAFORMAT_SUBTYPE_PCM;
 
-  OMX_INIT_STRUCTURE(m_pcm_input);
-  memcpy(m_pcm_input.eChannelMapping, m_input_channels, sizeof(m_input_channels));
-  m_pcm_input.eNumData              = OMX_NumericalDataSigned;
-  m_pcm_input.eEndian               = OMX_EndianLittle;
-  m_pcm_input.bInterleaved          = OMX_TRUE;
-  m_pcm_input.nBitPerSample         = m_BitsPerSample;
-  m_pcm_input.ePCMMode              = OMX_AUDIO_PCMModeLinear;
-  m_pcm_input.nChannels             = m_InputChannels;
-  m_pcm_input.nSamplingRate         = m_config.hints.samplerate;
-
   if(!m_omx_decoder.Initialize("OMX.broadcom.audio_decode", OMX_IndexParamAudioInit))
     return false;
 
@@ -644,6 +634,17 @@ bool COMXAudio::Initialize(OMXClock *clock, const OMXAudioConfig &config, uint64
   /* return on decoder error so m_Initialized stays false */
   if(m_omx_decoder.BadState())
     return false;
+
+  OMX_INIT_STRUCTURE(m_pcm_input);
+  m_pcm_input.nPortIndex            = m_omx_decoder.GetInputPort();
+  memcpy(m_pcm_input.eChannelMapping, m_input_channels, sizeof(m_input_channels));
+  m_pcm_input.eNumData              = OMX_NumericalDataSigned;
+  m_pcm_input.eEndian               = OMX_EndianLittle;
+  m_pcm_input.bInterleaved          = OMX_TRUE;
+  m_pcm_input.nBitPerSample         = m_BitsPerSample;
+  m_pcm_input.ePCMMode              = OMX_AUDIO_PCMModeLinear;
+  m_pcm_input.nChannels             = m_InputChannels;
+  m_pcm_input.nSamplingRate         = m_config.hints.samplerate;
 
   m_Initialized   = true;
   m_settings_changed = false;
