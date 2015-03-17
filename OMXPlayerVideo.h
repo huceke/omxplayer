@@ -108,6 +108,7 @@ public:
   void SetDelay(double delay) { m_iVideoDelay = delay; }
   double GetDelay() { return m_iVideoDelay; }
   void SetAlpha(int alpha);
+  void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
 
 };
 #endif

@@ -517,7 +517,6 @@ int main(int argc, char *argv[])
   bool                  m_send_eos            = false;
   bool                  m_packet_after_seek   = false;
   bool                  m_seek_flush          = false;
-  bool                  m_new_win_pos         = false;
   bool                  m_chapter_seek        = false;
   std::string           m_filename;
   double                m_incr                = 0;
@@ -531,6 +530,7 @@ int main(int argc, char *argv[])
   bool                  m_refresh             = false;
   double                startpts              = 0;
   CRect                 DestRect              = {0,0,0,0};
+  CRect                 SrcRect               = {0,0,0,0};
   bool                  m_blank_background    = false;
   bool sentStarted = false;
   float audio_fifo_size = 0.0; // zero means use default
@@ -1432,29 +1432,15 @@ int main(int argc, char *argv[])
         break;
       case KeyConfig::ACTION_MOVE_VIDEO:
         sscanf(result.getWinArg(), "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
-        m_has_video = true;
-        m_new_win_pos = true;
-        m_seek_flush = true;
+        m_player_video.SetVideoRect(SrcRect,DestRect);
         break;
       case KeyConfig::ACTION_HIDE_VIDEO:
-        m_has_video = false;
-        m_player_video.Close();
-        if (m_live)
-        {
-          m_omx_reader.Close();
-          idle = true;
-        }
+        // set alpha to minimum
+        m_player_video.SetAlpha(0);
         break;
       case KeyConfig::ACTION_UNHIDE_VIDEO:
-        m_has_video = true;
-        if (m_live)
-        {
-          idle = false;
-          if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, true))
-            goto do_exit;
-        }
-        m_new_win_pos = true;
-        m_seek_flush = true;
+        // set alpha to maximum
+        m_player_video.SetAlpha(255);
         break;
       case KeyConfig::ACTION_DECREASE_VOLUME:
         m_Volume -= 300;
@@ -1500,14 +1486,11 @@ int main(int argc, char *argv[])
 
         if(m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts))
         {
-          if (!m_new_win_pos)
-          {
-            unsigned t = (unsigned)(startpts*1e-6);
-            auto dur = m_omx_reader.GetStreamLength() / 1000;
-            DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
-                (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-            printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
-          }
+          unsigned t = (unsigned)(startpts*1e-6);
+          auto dur = m_omx_reader.GetStreamLength() / 1000;
+          DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
+              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+          printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
           FlushStreams(startpts);
         }
       }
@@ -1517,24 +1500,9 @@ int main(int argc, char *argv[])
       if (m_omx_reader.IsEof())
         goto do_exit;
 
-      // Depending on what caused the seek either do a quick reset or full re-open
-      // of the video player.  When the unhide video action is taken (m_new_win_pos
-      // is true) do a full re-open because the player was already closed.  However
-      // for all other seeks (like looping or an explicit seek), do a quick reset
-      // to reduce stuttering.
-      if (!m_new_win_pos)
-      {
-        // Quick reset to reduce delay during loop & seek.
-        if (m_has_video && !m_player_video.Reset())
-          goto do_exit;
-      }
-      else
-      {
-        // Full re-open because video player was closed.
-        if (m_has_video && !m_player_video.Open(m_hints_video, m_av_clock, DestRect, m_Deinterlace ? VS_DEINTERLACEMODE_FORCE:m_NoDeinterlace ? VS_DEINTERLACEMODE_OFF:VS_DEINTERLACEMODE_AUTO,
-                                           m_anaglyph, m_hdmi_clock_sync, m_thread_player, m_display_aspect, m_alpha, m_display, m_layer, video_queue_size, video_fifo_size))
-          goto do_exit;
-      }
+      // Quick reset to reduce delay during loop & seek.
+      if (m_has_video && !m_player_video.Reset())
+        goto do_exit;
 
       CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
@@ -1544,7 +1512,6 @@ int main(int argc, char *argv[])
         m_player_subtitles.Resume();
       m_packet_after_seek = false;
       m_seek_flush = false;
-      m_new_win_pos= false;
       m_incr = 0;
     }
     else if(m_packet_after_seek && TRICKPLAY(m_av_clock->OMXPlaySpeed()))
