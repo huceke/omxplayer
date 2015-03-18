@@ -585,7 +585,7 @@ bool COMXVideo::Open(OMXClock *clock, const OMXVideoConfig &config)
 
   OMX_PARAM_BRCMVIDEODECODEERRORCONCEALMENTTYPE concanParam;
   OMX_INIT_STRUCTURE(concanParam);
-  if(0)
+  if(1)
     concanParam.bStartWithValidFrame = OMX_TRUE;
   else
     concanParam.bStartWithValidFrame = OMX_FALSE;
