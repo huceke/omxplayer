@@ -515,7 +515,6 @@ int main(int argc, char *argv[])
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
-  CRect                 DestRect              = {0,0,0,0};
   CRect                 SrcRect               = {0,0,0,0};
   bool                  m_blank_background    = false;
   bool sentStarted = false;
@@ -767,8 +766,8 @@ int main(int argc, char *argv[])
         m_subtitle_lines = std::max(atoi(optarg), 1);
         break;
       case pos_opt:
-  sscanf(optarg, "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2) == 4 ||
-  sscanf(optarg, "%f,%f,%f,%f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
+        sscanf(optarg, "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2) == 4 ||
+        sscanf(optarg, "%f,%f,%f,%f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
         break;
       case vol_opt:
 	m_Volume = atoi(optarg);
@@ -1409,8 +1408,8 @@ int main(int argc, char *argv[])
         }
         break;
       case KeyConfig::ACTION_MOVE_VIDEO:
-        sscanf(result.getWinArg(), "%f %f %f %f", &DestRect.x1, &DestRect.y1, &DestRect.x2, &DestRect.y2);
-        m_player_video.SetVideoRect(SrcRect,DestRect);
+        sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
+        m_player_video.SetVideoRect(SrcRect,m_config_video.dst_rect);
         break;
       case KeyConfig::ACTION_HIDE_VIDEO:
         // set alpha to minimum
