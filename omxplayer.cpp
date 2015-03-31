@@ -1779,5 +1779,9 @@ do_exit:
   g_RBP.Deinitialize();
 
   printf("have a nice day ;)\n");
+
+  // normal exit status on user quit or playback end
+  if (m_stop || m_send_eos)
+    return 0;
   return 1;
 }
