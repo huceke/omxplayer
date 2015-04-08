@@ -65,7 +65,6 @@ protected:
   std::atomic<bool>         m_flush_requested;
   unsigned int              m_cached_size;
   double                    m_iVideoDelay;
-  uint32_t                  m_history_valid_pts;
   OMXVideoConfig            m_config;
 
   void Lock();
