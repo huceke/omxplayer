@@ -195,6 +195,7 @@ static void SetSpeed(int iSpeed)
     FlushStreams(DVD_NOPTS_VALUE);
 
   m_av_clock->OMXSetSpeed(iSpeed);
+  m_av_clock->OMXSetSpeed(iSpeed, true, true);
 }
 
 static float get_display_aspect_ratio(HDMI_ASPECT_T aspect)
