@@ -20,7 +20,7 @@ done
 echo ""
 if [ ! -z "$MISSING_PKGS" ]; then
 	echo "You are missing required packages."
-	echo "Run apt-get update && apt-get install $MISSING_PKGS"
+	echo "Run sudo apt-get update && sudo apt-get install $MISSING_PKGS"
 	exit 1
 else
 	echo "All dependencies met"
@@ -89,7 +89,7 @@ done
 echo ""
 if [ ! -z "$MISSING_PKGS" ]; then
 	echo "You are missing required packages."
-	echo "Run apt-get update && apt-get install $MISSING_PKGS"
+	echo "Run sudo apt-get update && sudo apt-get install $MISSING_PKGS"
 	echo "Alternative: install rpi-update with sudo wget http://goo.gl/1BOfJ -O /usr/local/bin/rpi-update && sudo chmod +x /usr/local/bin/rpi-update && sudo rpi-update"
 	exit 1
 else
