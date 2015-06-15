@@ -6,3 +6,4 @@ ffmpeg_compiled
 ffmpeg
 help.h
 keys.h
+patch.flag
