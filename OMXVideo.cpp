@@ -640,6 +640,18 @@ bool COMXVideo::Open(OMXClock *clock, const OMXVideoConfig &config)
     case 270:
       m_transform = OMX_DISPLAY_ROT270;
       break;
+    case 1:
+      m_transform = OMX_DISPLAY_MIRROR_ROT0;
+      break;
+    case 91:
+      m_transform = OMX_DISPLAY_MIRROR_ROT90;
+      break;
+    case 181:
+      m_transform = OMX_DISPLAY_MIRROR_ROT180;
+      break;
+    case 271:
+      m_transform = OMX_DISPLAY_MIRROR_ROT270;
+      break;
     default:
       m_transform = OMX_DISPLAY_ROT0;
       break;
