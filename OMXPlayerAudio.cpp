@@ -278,17 +278,18 @@ void OMXPlayerAudio::Process()
 {
   OMXPacket *omx_pkt = NULL;
 
-  while(!m_bStop && !m_bAbort)
+  while(true)
   {
     Lock();
-    if(m_packets.empty())
+    if(!(m_bStop || m_bAbort) && m_packets.empty())
       pthread_cond_wait(&m_packet_cond, &m_lock);
-    UnLock();
 
-    if(m_bAbort)
+    if (m_bStop || m_bAbort)
+    {
+      UnLock();
       break;
+    }
 
-    Lock();
     if(m_flush && omx_pkt)
     {
       OMXReader::FreePacket(omx_pkt);
