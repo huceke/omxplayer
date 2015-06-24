@@ -44,8 +44,8 @@ if [ -z $NOREFRESH ] || [ "$NOREFRESH" == "0" ]; then
 fi
 
 DBUS_CMD="dbus-daemon --fork --print-address 5 --print-pid 6 --session"
-OMXPLAYER_DBUS_ADDR="/tmp/omxplayerdbus.${USER}"
-OMXPLAYER_DBUS_PID="/tmp/omxplayerdbus.${USER}.pid"
+OMXPLAYER_DBUS_ADDR="/tmp/omxplayerdbus.${USER:-root}"
+OMXPLAYER_DBUS_PID="/tmp/omxplayerdbus.${USER:-root}.pid"
 
 if [ ! -s "$OMXPLAYER_DBUS_PID" ] || ! pgrep -f "$DBUS_CMD" -F "$OMXPLAYER_DBUS_PID" >/dev/null; then
 	#echo "starting dbus for the first time" >&2
@@ -64,14 +64,15 @@ DBUS_SESSION_BUS_PID=`cat $OMXPLAYER_DBUS_PID`
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 
-LD_LIBRARY_PATH="$OMXPLAYER_LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" $OMXPLAYER_BIN "$@"; true
+LD_LIBRARY_PATH="$OMXPLAYER_LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" $OMXPLAYER_BIN "$@"
+RESULT=$?
 
 if [ ! -z $NOREFRESH ] && [ "$NOREFRESH" == "1" ]; then
-    exit 0
+    exit $RESULT
 fi
 
 if [[ $@ =~ $audio_regex ]]; then
-    exit 0
+    exit $RESULT
 fi
 
 if [[ $@ =~ $refresh_regex ]]; then
@@ -102,3 +103,5 @@ if [[ $@ =~ $refresh_regex ]]; then
         fi
     fi
 fi
+
+exit $RESULT
