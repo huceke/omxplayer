@@ -97,7 +97,7 @@ void Keyboard::Process()
     if (chnum > 1) ch[0] = ch[chnum - 1] | (ch[chnum - 2] << 8);
 
     if (chnum > 0)
-      CLog::Log(LOGDEBUG, "Keyboard: character %c", ch[0]);
+      CLog::Log(LOGDEBUG, "Keyboard: character %c (0x%x)", ch[0], ch[0]);
 
     if (m_keymap[ch[0]] != 0)
           send_action(m_keymap[ch[0]]);
