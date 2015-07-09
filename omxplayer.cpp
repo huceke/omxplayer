@@ -1672,11 +1672,6 @@ int main(int argc, char *argv[])
         OMXClock::OMXSleep(10);
         continue;
       }
-      if (m_loop)
-      {
-        m_incr = m_loop_from - (m_av_clock->OMXMediaTime() ? m_av_clock->OMXMediaTime() / DVD_TIME_BASE : last_seek_pos);
-        continue;
-      }
       if (!m_send_eos && m_has_video)
         m_player_video.SubmitEOS();
       if (!m_send_eos && m_has_audio)
@@ -1688,6 +1683,13 @@ int main(int argc, char *argv[])
         OMXClock::OMXSleep(10);
         continue;
       }
+
+      if (m_loop)
+      {
+        m_incr = m_loop_from - (m_av_clock->OMXMediaTime() ? m_av_clock->OMXMediaTime() / DVD_TIME_BASE : last_seek_pos);
+        continue;
+      }
+
       break;
     }
 
