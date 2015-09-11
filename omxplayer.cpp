@@ -562,6 +562,7 @@ int main(int argc, char *argv[])
   const int native_deinterlace_opt = 0x20e;
   const int display_opt     = 0x20f;
   const int alpha_opt       = 0x210;
+  const int advanced_opt    = 0x211;
   const int http_cookie_opt = 0x300;
   const int http_user_agent_opt = 0x301;
 
@@ -581,6 +582,7 @@ int main(int argc, char *argv[])
     { "nodeinterlace",no_argument,        NULL,          no_deinterlace_opt },
     { "nativedeinterlace",no_argument,    NULL,          native_deinterlace_opt },
     { "anaglyph",     required_argument,  NULL,          anaglyph_opt },
+    { "advanced",     no_argument,        NULL,          advanced_opt },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
     { "allow-mvc",    no_argument,        NULL,          'M' },
@@ -682,6 +684,9 @@ int main(int argc, char *argv[])
         break;
       case anaglyph_opt:
         m_config_video.anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
+        break;
+      case advanced_opt:
+        m_config_video.advanced_hd_deinterlace = true;
         break;
       case 'w':
         m_config_audio.hwdecode = true;

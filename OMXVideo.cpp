@@ -251,7 +251,7 @@ bool COMXVideo::PortSettingsChanged()
 
   if(m_deinterlace || m_config.anaglyph)
   {
-    bool advanced_deinterlace = port_image.format.video.nFrameWidth * port_image.format.video.nFrameHeight <= 576 * 720;
+    bool advanced_deinterlace = m_config.advanced_hd_deinterlace || port_image.format.video.nFrameWidth * port_image.format.video.nFrameHeight <= 576 * 720;
 
     if (m_config.anaglyph != OMX_ImageFilterAnaglyphNone || !advanced_deinterlace)
     {
@@ -280,8 +280,11 @@ bool COMXVideo::PortSettingsChanged()
     }
     else
     {
-      image_filter.nNumParams = 1;
+      image_filter.nNumParams = 4;
       image_filter.nParams[0] = 3;
+      image_filter.nParams[1] = 0; // default frame interval
+      image_filter.nParams[2] = 0; // half framerate
+      image_filter.nParams[3] = 1; // use qpus
       if (!advanced_deinterlace)
         image_filter.eImageFilter = OMX_ImageFilterDeInterlaceFast;
       else

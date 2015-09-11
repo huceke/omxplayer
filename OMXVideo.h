@@ -52,6 +52,7 @@ public:
   CRect dst_rect;
   float display_aspect;
   EDEINTERLACEMODE deinterlace;
+  bool advanced_hd_deinterlace;
   OMX_IMAGEFILTERANAGLYPHTYPE anaglyph;
   bool hdmi_clock_sync;
   bool allow_mvc;
@@ -67,6 +68,7 @@ public:
     dst_rect.SetRect(0, 0, 0, 0);
     display_aspect = 0.0f;
     deinterlace = VS_DEINTERLACEMODE_AUTO;
+    advanced_hd_deinterlace = false;
     anaglyph = OMX_ImageFilterAnaglyphNone;
     hdmi_clock_sync = false;
     allow_mvc = false;
