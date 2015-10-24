@@ -97,6 +97,7 @@ public:
   double GetDelay() { return m_iVideoDelay; }
   void SetAlpha(int alpha);
   void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
+  void SetVideoRect(int aspectMode);
 
 };
 #endif
