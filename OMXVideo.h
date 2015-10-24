@@ -50,6 +50,7 @@ public:
   COMXStreamInfo hints;
   bool use_thread;
   CRect dst_rect;
+  CRect src_rect;
   float display_aspect;
   EDEINTERLACEMODE deinterlace;
   bool advanced_hd_deinterlace;
@@ -57,6 +58,7 @@ public:
   bool hdmi_clock_sync;
   bool allow_mvc;
   int alpha;
+  int aspectMode;
   int display;
   int layer;
   float queue_size;
@@ -66,6 +68,7 @@ public:
   {
     use_thread = true;
     dst_rect.SetRect(0, 0, 0, 0);
+    src_rect.SetRect(0, 0, 0, 0);
     display_aspect = 0.0f;
     deinterlace = VS_DEINTERLACEMODE_AUTO;
     advanced_hd_deinterlace = false;
@@ -73,6 +76,7 @@ public:
     hdmi_clock_sync = false;
     allow_mvc = false;
     alpha = 255;
+    aspectMode = 0;
     display = 0;
     layer = 0;
     queue_size = 10.0f;
@@ -93,6 +97,7 @@ public:
   bool NaluFormatStartCodes(enum AVCodecID codec, uint8_t *in_extradata, int in_extrasize);
   bool Open(OMXClock *clock, const OMXVideoConfig &config);
   bool PortSettingsChanged();
+  void PortSettingsChangedLogger(OMX_PARAM_PORTDEFINITIONTYPE port_image, int interlaceEMode);
   void Close(void);
   unsigned int GetFreeSpace();
   unsigned int GetSize();
@@ -101,6 +106,8 @@ public:
   void SetDropState(bool bDrop);
   std::string GetDecoderName() { return m_video_codec_name; };
   void SetVideoRect(const CRect& SrcRect, const CRect& DestRect);
+  void SetVideoRect(int aspectMode);
+  void SetVideoRect();
   void SetAlpha(int alpha);
   int GetInputBufferSize();
   void SubmitEOS();
@@ -131,7 +138,6 @@ protected:
   std::string       m_video_codec_name;
 
   bool              m_deinterlace;
-  CRect             m_src_rect;
   OMXVideoConfig    m_config;
 
   float             m_pixel_aspect;
