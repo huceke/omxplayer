@@ -23,7 +23,6 @@
 #include <stdint.h>
 #include <termios.h>
 #include <sys/mman.h>
-#include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <getopt.h>
 #include <string.h>

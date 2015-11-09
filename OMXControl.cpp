@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/mman.h>
-#include <linux/fb.h>
 #include <string.h>
 #include <dbus/dbus.h>
 
