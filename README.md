@@ -337,6 +337,14 @@ The current state of the player, either "Paused" or "Playing".
 :-------------: | ---------
  Return         | `string` 
 
+#### GetSource
+
+The current file or stream that is being played.
+
+   Params       |   Type
+:-------------: | ---------
+ Return         | `string` 
+
 #### Volume
 
 When called with an argument it will set the volume and return the current
