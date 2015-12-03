@@ -144,6 +144,7 @@ public:
   void AddStream(int id);
   bool IsActive(int stream_index);
   bool IsActive(OMXStreamType type, int stream_index);
+  double SelectAspect(AVStream* st, bool& forced);
   bool GetHints(AVStream *stream, COMXStreamInfo *hints);
   bool GetHints(OMXStreamType type, unsigned int index, COMXStreamInfo &hints);
   bool GetHints(OMXStreamType type, COMXStreamInfo &hints);

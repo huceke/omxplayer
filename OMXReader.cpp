@@ -846,6 +846,31 @@ bool OMXReader::IsActive(OMXStreamType type, int stream_index)
   return false;
 }
 
+double OMXReader::SelectAspect(AVStream* st, bool& forced)
+{
+  // trust matroshka container
+  if (m_bMatroska && st->sample_aspect_ratio.num != 0)
+  {
+    forced = true;
+    return av_q2d(st->sample_aspect_ratio);
+  }
+
+  forced = false;
+  /* if stream aspect is 1:1 or 0:0 use codec aspect */
+  if((st->sample_aspect_ratio.den == 1 || st->sample_aspect_ratio.den == 0) &&
+     (st->sample_aspect_ratio.num == 1 || st->sample_aspect_ratio.num == 0) &&
+      st->codec->sample_aspect_ratio.num != 0)
+  {
+    return av_q2d(st->codec->sample_aspect_ratio);
+  }
+
+  forced = true;
+  if(st->sample_aspect_ratio.num != 0)
+    return av_q2d(st->sample_aspect_ratio);
+
+  return 0.0;
+}
+
 bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
 {
   if(!hints || !stream)
@@ -888,12 +913,8 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->fpsrate      = 0;
     }
 
-    if (stream->sample_aspect_ratio.num != 0)
-      hints->aspect = av_q2d(stream->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
-    else if (stream->codec->sample_aspect_ratio.num != 0)
-      hints->aspect = av_q2d(stream->codec->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
-    else
-      hints->aspect = 0.0f;
+    hints->aspect = SelectAspect(stream, hints->forced_aspect) * stream->codec->width / stream->codec->height;
+
     if (m_bAVI && stream->codec->codec_id == CODEC_ID_H264)
       hints->ptsinvalid = true;
     AVDictionaryEntry *rtag = m_dllAvUtil.av_dict_get(stream->metadata, "rotate", NULL, 0);

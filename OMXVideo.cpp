@@ -166,7 +166,7 @@ bool COMXVideo::PortSettingsChanged()
     CLog::Log(LOGERROR, "%s::%s - error m_omx_decoder.GetParameter(OMX_IndexParamBrcmPixelAspectRatio) omx_err(0x%08x)", CLASSNAME, __func__, omx_err);
   }
 
-  if (pixel_aspect.nX && pixel_aspect.nY)
+  if (pixel_aspect.nX && pixel_aspect.nY && !m_config.hints.forced_aspect)
   {
     float fAspect = (float)pixel_aspect.nX / (float)pixel_aspect.nY;
     m_pixel_aspect = fAspect / m_config.display_aspect;
