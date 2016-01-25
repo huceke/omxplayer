@@ -10,7 +10,7 @@ check_dpkg_installed() {
 
 echo "Modifying for native build on Debian"
 
-if [ -z `which sudo`] ; then
+if [ -z `which sudo` ] ; then
     apt-get install -y sudo
 fi
     
