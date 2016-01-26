@@ -225,6 +225,7 @@ int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
   {
      int ret = m_iBufferOutputUsed;
      m_iBufferOutputUsed = 0;
+     m_bNoConcatenate = false;
      dts = m_dts;
      pts = m_pts;
      *dst = m_pBufferOutput;
