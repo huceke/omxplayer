@@ -221,7 +221,7 @@ int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
 
   // if this buffer won't fit then flush out what we have
   int desired_size = AUDIO_DECODE_OUTPUT_BUFFER * (m_pCodecContext->channels * GetBitsPerSample()) >> (rounded_up_channels_shift[m_pCodecContext->channels] + 4);
-  if (m_iBufferOutputUsed + outputSize > desired_size || (m_bNoConcatenate && m_iBufferOutputUsed))
+  if (m_iBufferOutputUsed && (m_iBufferOutputUsed + outputSize > desired_size || m_bNoConcatenate))
   {
      int ret = m_iBufferOutputUsed;
      m_iBufferOutputUsed = 0;
