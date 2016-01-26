@@ -109,10 +109,6 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints, enum PCMLayout layout)
   if (m_pCodecContext->request_channel_layout)
     CLog::Log(LOGNOTICE,"COMXAudioCodecOMX::Open() Requesting channel layout of %x", (unsigned)m_pCodecContext->request_channel_layout);
 
-  // vorbis has variable sized planar output, so skip concatenation
-  if (hints.codec == AV_CODEC_ID_VORBIS)
-    m_bNoConcatenate = true;
-
   if(m_pCodecContext->bits_per_coded_sample == 0)
     m_pCodecContext->bits_per_coded_sample = 16;
 
@@ -217,6 +213,12 @@ int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
   /* output audio will be packed */
   int outputSize = m_dllAvUtil.av_samples_get_buffer_size(&outLineSize, m_pCodecContext->channels, m_pFrame1->nb_samples, m_desiredSampleFormat, 1);
 
+  if (!m_bNoConcatenate && m_iBufferOutputUsed && (int)m_frameSize != outputSize)
+  {
+    CLog::Log(LOGERROR, "COMXAudioCodecOMX::GetData Unexpected change of size (%d->%d)", m_frameSize, outputSize);
+    m_bNoConcatenate = true;
+  }
+
   // if this buffer won't fit then flush out what we have
   int desired_size = AUDIO_DECODE_OUTPUT_BUFFER * (m_pCodecContext->channels * GetBitsPerSample()) >> (rounded_up_channels_shift[m_pCodecContext->channels] + 4);
   if (m_iBufferOutputUsed + outputSize > desired_size || (m_bNoConcatenate && m_iBufferOutputUsed))
@@ -289,9 +291,6 @@ int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
     m_bFirstFrame = false;
   }
   m_iBufferOutputUsed += outputSize;
-
-  if (!m_bNoConcatenate && m_pCodecContext->sample_fmt == AV_SAMPLE_FMT_FLTP && m_frameSize && (int)m_frameSize != outputSize)
-    CLog::Log(LOGERROR, "COMXAudioCodecOMX::GetData Unexpected change of size (%d->%d)", m_frameSize, outputSize);
   return 0;
 }
 
