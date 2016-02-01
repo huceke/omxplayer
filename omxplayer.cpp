@@ -1122,10 +1122,10 @@ int main(int argc, char *argv[])
       m_config_audio.device = "omx:local";
   }
 
-  if ((m_config_audio.hints.codec == CODEC_ID_AC3 || m_config_audio.hints.codec == CODEC_ID_EAC3) &&
+  if ((m_config_audio.hints.codec == AV_CODEC_ID_AC3 || m_config_audio.hints.codec == AV_CODEC_ID_EAC3) &&
       m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_eAC3, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
     m_config_audio.passthrough = false;
-  if (m_config_audio.hints.codec == CODEC_ID_DTS &&
+  if (m_config_audio.hints.codec == AV_CODEC_ID_DTS &&
       m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_eDTS, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
     m_config_audio.passthrough = false;
 
