@@ -526,6 +526,7 @@ int main(int argc, char *argv[])
   bool idle = false;
   std::string            m_cookie              = "";
   std::string            m_user_agent          = "";
+  std::string            m_lavfdopts           = "";
 
   const int font_opt        = 0x100;
   const int italic_font_opt = 0x201;
@@ -565,6 +566,7 @@ int main(int argc, char *argv[])
   const int crop_opt        = 0x213;
   const int http_cookie_opt = 0x300;
   const int http_user_agent_opt = 0x301;
+  const int lavfdopts_opt   = 0x400;
 
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -625,6 +627,7 @@ int main(int argc, char *argv[])
     { "display",      required_argument,  NULL,          display_opt },
     { "cookie",       required_argument,  NULL,          http_cookie_opt },
     { "user-agent",   required_argument,  NULL,          http_user_agent_opt },
+    { "lavfdopts",    required_argument,  NULL,          lavfdopts_opt },
     { 0, 0, 0, 0 }
   };
 
@@ -879,6 +882,9 @@ int main(int argc, char *argv[])
       case http_user_agent_opt:
         m_user_agent = optarg;
         break;    
+    case lavfdopts_opt:
+        m_lavfdopts = optarg;
+        break;
       case 0:
         break;
       case 'h':
@@ -998,7 +1004,7 @@ int main(int argc, char *argv[])
     m_keyboard->setDbusName(m_dbus_name);
   }
 
-  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_config_audio.is_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str()))
+  if(!m_omx_reader.Open(m_filename.c_str(), m_dump_format, m_config_audio.is_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str(), m_lavfdopts.c_str()))
     goto do_exit;
 
   if (m_dump_format_exit)
