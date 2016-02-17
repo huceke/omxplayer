@@ -134,7 +134,7 @@ static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
     return pFile->Seek(pos, whence & ~AVSEEK_FORCE);
 }
 
-bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */, float timeout /* = 0.0f */, std::string cookie /* = "" */, std::string user_agent /* = "" */)
+bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */, float timeout /* = 0.0f */, std::string cookie /* = "" */, std::string user_agent /* = "" */, std::string lavfdopts /* = "" */)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load())
     return false;
@@ -159,6 +159,15 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
   unsigned int  flags     = READ_TRUNCATED | READ_BITRATE | READ_CHUNKED;
 
   m_pFormatContext     = m_dllAvFormat.avformat_alloc_context();
+
+  result = m_dllAvFormat.av_set_options_string(m_pFormatContext, lavfdopts.c_str(), ":", ",");
+
+  if (result < 0)
+  {
+    CLog::Log(LOGERROR, "COMXPlayer::OpenFile - invalid lavfdopts %s ", lavfdopts.c_str());
+    Close();
+    return false;
+  }
 
   // set the interrupt callback, appeared in libavformat 53.15.0
   m_pFormatContext->interrupt_callback = int_cb;
