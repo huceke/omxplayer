@@ -134,7 +134,7 @@ static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
     return pFile->Seek(pos, whence & ~AVSEEK_FORCE);
 }
 
-bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */, float timeout /* = 0.0f */, std::string cookie /* = "" */, std::string user_agent /* = "" */, std::string lavfdopts /* = "" */)
+bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */, float timeout /* = 0.0f */, std::string cookie /* = "" */, std::string user_agent /* = "" */, std::string lavfdopts /* = "" */, std::string avdict /* = "" */)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load())
     return false;
@@ -169,6 +169,16 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
     return false;
   }
 
+  AVDictionary *d = NULL;
+  result = m_dllAvUtil.av_dict_parse_string(&d, avdict.c_str(), ":", ",", 0);
+
+  if (result < 0)
+  {
+    CLog::Log(LOGERROR, "COMXPlayer::OpenFile - invalid avdict %s ", avdict.c_str());
+    Close();
+    return false;
+  }
+
   // set the interrupt callback, appeared in libavformat 53.15.0
   m_pFormatContext->interrupt_callback = int_cb;
 
@@ -195,7 +205,6 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
     if(idx != string::npos)
       m_filename = m_filename.substr(0, idx);
 
-    AVDictionary *d = NULL;
     // Enable seeking if http, ftp
     if(!live && (m_filename.substr(0,7) == "http://" || m_filename.substr(0,6) == "ftp://" ||
        m_filename.substr(0,7) == "sftp://" || m_filename.substr(0,6) == "smb://"))
@@ -256,7 +265,8 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
     }
 
     m_pFormatContext->pb = m_ioContext;
-    result = m_dllAvFormat.avformat_open_input(&m_pFormatContext, m_filename.c_str(), iformat, NULL);
+    result = m_dllAvFormat.avformat_open_input(&m_pFormatContext, m_filename.c_str(), iformat, &d);
+    av_dict_free(&d);
     if(result < 0)
     {
       Close();

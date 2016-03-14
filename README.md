@@ -111,6 +111,7 @@ Usage: omxplayer [OPTIONS] [FILE]
         --cookie 'cookie'       Send specified cookie as part of HTTP requests
         --user-agent 'ua'       Send specified User-Agent as part of HTTP requests
         --lavfdopts 'opts'      Options passed to libavformat, e.g. 'probesize:250000,...'
+        --avdict 'opts'         Options passed to demuxer, e.g., 'rtsp_transport:tcp,...'
 
 For example:
 
