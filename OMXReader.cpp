@@ -197,6 +197,7 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
       m_filename.substr(0,7) == "rtmp://" || m_filename.substr(0,6) == "udp://" ||
       m_filename.substr(0,7) == "rtsp://" || m_filename.substr(0,6) == "rtp://" ||
       m_filename.substr(0,6) == "ftp://" || m_filename.substr(0,7) == "sftp://" ||
+      m_filename.substr(0,6) == "tcp://" || m_filename.substr(0,7) == "unix://" ||
       m_filename.substr(0,6) == "smb://")
   {
     // ffmpeg dislikes the useragent from AirPlay urls
