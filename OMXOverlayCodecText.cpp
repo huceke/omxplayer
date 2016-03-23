@@ -73,8 +73,8 @@ int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double durati
 
   if (m_bIsSSA)
   {
-    // currently just skip the prefixed ssa fields (8 (9?) fields)
-    int nFieldCount = 9;
+    // currently just skip the prefixed ssa fields (8 fields)
+    int nFieldCount = 8;
     while (nFieldCount > 0 && start < end)
     {
       if (*start == ',')
