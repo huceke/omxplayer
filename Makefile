@@ -51,7 +51,7 @@ version:
 	bash gen_version.sh > version.h 
 
 omxplayer.bin: version $(OBJS)
-	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS) -lvchiq_arm -lvcos -ldbus-1 -lrt -lpthread -lavutil -lavcodec -lavformat -lswscale -lswresample -lpcre
+	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS) -lvchiq_arm -lvchostif -lvcos -ldbus-1 -lrt -lpthread -lavutil -lavcodec -lavformat -lswscale -lswresample -lpcre
 	$(STRIP) omxplayer.bin
 
 help.h: README.md Makefile
