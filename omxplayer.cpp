@@ -451,9 +451,9 @@ static int get_mem_gpu(void)
    return gpu_mem;
 }
 
-static void blank_background(bool enable)
+static void blank_background(uint32_t rgba)
 {
-  if (!enable)
+  if (!rgba)
     return;
   // we create a 1x1 black pixel image that is added to display just behind video
   DISPMANX_DISPLAY_HANDLE_T   display;
@@ -462,7 +462,7 @@ static void blank_background(bool enable)
   DISPMANX_ELEMENT_HANDLE_T   element;
   int             ret;
   uint32_t vc_image_ptr;
-  VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
+  VC_IMAGE_TYPE_T type = VC_IMAGE_ARGB8888;
   uint16_t image = 0x0000; // black
   int             layer = m_config_video.layer - 1;
 
@@ -476,7 +476,7 @@ static void blank_background(bool enable)
 
   vc_dispmanx_rect_set( &dst_rect, 0, 0, 1, 1);
 
-  ret = vc_dispmanx_resource_write_data( resource, type, sizeof(image), &image, &dst_rect );
+  ret = vc_dispmanx_resource_write_data( resource, type, sizeof(rgba), &rgba, &dst_rect );
   assert(ret == 0);
 
   vc_dispmanx_rect_set( &src_rect, 0, 0, 1<<16, 1<<16);
@@ -515,7 +515,7 @@ int main(int argc, char *argv[])
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
-  bool                  m_blank_background    = false;
+  uint32_t              m_blank_background    = 0;
   bool sentStarted = false;
   float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
   float m_timeout        = 10.0f; // amount of time file/network operation can stall for before timing out
@@ -596,7 +596,7 @@ int main(int argc, char *argv[])
     { "genlog",       no_argument,        NULL,          'g' },
     { "sid",          required_argument,  NULL,          't' },
     { "pos",          required_argument,  NULL,          'l' },    
-    { "blank",        no_argument,        NULL,          'b' },
+    { "blank",        optional_argument,  NULL,          'b' },
     { "font",         required_argument,  NULL,          font_opt },
     { "italic-font",  required_argument,  NULL,          italic_font_opt },
     { "font-size",    required_argument,  NULL,          font_size_opt },
@@ -646,7 +646,7 @@ int main(int argc, char *argv[])
   //Build default keymap just in case the --key-config option isn't used
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
 
-  while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslbpd3:Myzt:rg", longopts, NULL)) != -1)
+  while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslb::pd3:Myzt:rg", longopts, NULL)) != -1)
   {
     switch (c) 
     {
@@ -865,7 +865,7 @@ int main(int argc, char *argv[])
         m_loop = true;
         break;
       case 'b':
-        m_blank_background = true;
+        m_blank_background = optarg ? strtoul(optarg, NULL, 0) : 0xff000000;
         break;
       case key_config_opt:
         keymap = KeyConfig::parseConfigFile(optarg);
