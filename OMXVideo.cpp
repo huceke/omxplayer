@@ -808,6 +808,7 @@ void COMXVideo::Reset(void)
   m_omx_decoder.FlushInput();
   if(m_deinterlace || m_config.anaglyph)
     m_omx_image_fx.FlushInput();
+  m_omx_render.ResetEos();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
