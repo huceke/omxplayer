@@ -706,10 +706,24 @@ int main(int argc, char *argv[])
         m_stats = true;
         break;
       case 'o':
-        m_config_audio.device = optarg;
-        if(m_config_audio.device != "local" && m_config_audio.device != "hdmi" && m_config_audio.device != "both")
         {
-          printf("Bad argument for -%c: Output device must be `local', `hdmi' or `both'\n", c);
+          CStdString str = optarg;
+          int colon = str.Find(':');
+          if(colon >= 0)
+          {
+            m_config_audio.device = str.Mid(0, colon);
+            m_config_audio.subdevice = str.Mid(colon + 1, str.GetLength() - colon);
+          }
+          else
+          {
+            m_config_audio.device = str;
+            m_config_audio.subdevice = "";
+          }
+        }
+        if(m_config_audio.device != "local" && m_config_audio.device != "hdmi" && m_config_audio.device != "both" &&
+           m_config_audio.device != "alsa")
+        {
+          printf("Bad argument for -%c: Output device must be `local', `hdmi', `both' or `alsa'\n", c);
           return EXIT_FAILURE;
         }
         m_config_audio.device = "omx:" + m_config_audio.device;
@@ -1133,6 +1147,9 @@ int main(int argc, char *argv[])
     else
       m_config_audio.device = "omx:local";
   }
+
+  if(m_config_audio.device == "omx:alsa" && m_config_audio.subdevice.empty())
+    m_config_audio.subdevice = "default";
 
   if ((m_config_audio.hints.codec == AV_CODEC_ID_AC3 || m_config_audio.hints.codec == AV_CODEC_ID_EAC3) &&
       m_BcmHost.vc_tv_hdmi_audio_supported(EDID_AudioFormat_eAC3, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
