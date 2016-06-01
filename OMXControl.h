@@ -43,6 +43,8 @@ public:
 private:
   int dbus_connect(std::string& dbus_name);
   void dbus_disconnect();
+  OMXControlResult handle_event(DBusMessage *m);
+  DBusHandlerResult dbus_respond_error(DBusMessage *m, const char *name, const char *msg);
   DBusHandlerResult dbus_respond_ok(DBusMessage *m);
   DBusHandlerResult dbus_respond_int64(DBusMessage *m, int64_t i);
   DBusHandlerResult dbus_respond_double(DBusMessage *m, double d);
