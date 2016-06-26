@@ -71,7 +71,7 @@ public:
     src_rect.SetRect(0, 0, 0, 0);
     display_aspect = 0.0f;
     deinterlace = VS_DEINTERLACEMODE_AUTO;
-    advanced_hd_deinterlace = false;
+    advanced_hd_deinterlace = true;
     anaglyph = OMX_ImageFilterAnaglyphNone;
     hdmi_clock_sync = false;
     allow_mvc = false;

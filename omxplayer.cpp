@@ -586,7 +586,7 @@ int main(int argc, char *argv[])
     { "nodeinterlace",no_argument,        NULL,          no_deinterlace_opt },
     { "nativedeinterlace",no_argument,    NULL,          native_deinterlace_opt },
     { "anaglyph",     required_argument,  NULL,          anaglyph_opt },
-    { "advanced",     no_argument,        NULL,          advanced_opt },
+    { "advanced",     optional_argument,  NULL,          advanced_opt },
     { "hw",           no_argument,        NULL,          'w' },
     { "3d",           required_argument,  NULL,          '3' },
     { "allow-mvc",    no_argument,        NULL,          'M' },
@@ -694,7 +694,7 @@ int main(int argc, char *argv[])
         m_config_video.anaglyph = (OMX_IMAGEFILTERANAGLYPHTYPE)atoi(optarg);
         break;
       case advanced_opt:
-        m_config_video.advanced_hd_deinterlace = true;
+        m_config_video.advanced_hd_deinterlace = optarg ? (atoi(optarg) ? true : false): true;
         break;
       case 'w':
         m_config_audio.hwdecode = true;

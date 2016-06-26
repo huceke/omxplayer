@@ -64,7 +64,7 @@ Usage: omxplayer [OPTIONS] [FILE]
         --nodeinterlace         Force no deinterlacing
         --nativedeinterlace     let display handle interlace
         --anaglyph type         convert 3d to anaglyph
-        --advanced              Allow advanced deinterlace for HD videos
+        --advanced[=0]          Enable/disable advanced deinterlace for HD videos (default enabled)
     -w  --hw                    Hw audio decoding
     -3  --3d mode               Switch tv into 3d mode (e.g. SBS/TB)
     -M  --allow-mvc             Allow decoding of both views of MVC stereo stream
