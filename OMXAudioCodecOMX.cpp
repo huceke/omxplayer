@@ -164,6 +164,11 @@ int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize, double dts, double pts)
   if (!m_pCodecContext) return -1;
 
   AVPacket avpkt;
+  if (!m_iBufferOutputUsed)
+  {
+    m_dts = dts;
+    m_pts = pts;
+  }
   if (m_bGotFrame)
     return 0;
 
@@ -193,12 +198,6 @@ int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize, double dts, double pts)
              m_pFrame1->linesize[0],
              m_pFrame1->data[0], m_pFrame1->data[1], m_pFrame1->data[2], m_pFrame1->data[3], m_pFrame1->data[4], m_pFrame1->data[5], m_pFrame1->data[6], m_pFrame1->data[7]
              );
-  }
-
-  if (!m_iBufferOutputUsed)
-  {
-    m_dts = dts;
-    m_pts = pts;
   }
   return iBytesUsed;
 }
