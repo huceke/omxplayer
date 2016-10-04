@@ -207,10 +207,13 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
       m_filename = m_filename.substr(0, idx);
 
     // Enable seeking if http, ftp
-    if(!live && (m_filename.substr(0,7) == "http://" || m_filename.substr(0,6) == "ftp://" ||
-       m_filename.substr(0,7) == "sftp://" || m_filename.substr(0,6) == "smb://"))
+    if(m_filename.substr(0,7) == "http://" || m_filename.substr(0,6) == "ftp://" ||
+       m_filename.substr(0,7) == "sftp://" || m_filename.substr(0,6) == "smb://")
     {
-       av_dict_set(&d, "seekable", "1", 0);
+       if(!live)
+       {
+          av_dict_set(&d, "seekable", "1", 0);
+       }
        if(!cookie.empty())
        {
           av_dict_set(&d, "cookies", cookie.c_str(), 0);
