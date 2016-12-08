@@ -26,6 +26,7 @@
 #endif
 
 #include "OMXClock.h"
+#include <math.h>                               // Modification to include logarithm function
 
 #define OMX_PRE_ROLL 200
 
@@ -41,7 +42,7 @@ OMXClock::OMXClock()
   m_audio_clock = DVD_NOPTS_VALUE;
   m_has_video   = false;
   m_has_audio   = false;
-  m_play_speed  = 1;
+  m_play_speed  = 1 * OMX_SLOMO_MULTIPLIER;     // Adjusting initial speed for normal video playback, so it can accomodate the new slow motion range
   m_pause       = false;
   m_iCurrentPts = DVD_NOPTS_VALUE;
 
@@ -201,7 +202,9 @@ void OMXClock::SetSpeed(int iSpeed)
   }
 
   int64_t current;
-  int64_t newfreq = m_systemFrequency * DVD_PLAYSPEED_NORMAL / iSpeed;
+  
+  // Modification to keep the correct ratio in the formula, after introduction of slow motion multiplier in the video playback speed range
+  int64_t newfreq = m_systemFrequency * (DVD_PLAYSPEED_NORMAL * OMX_SLOMO_MULTIPLIER) / iSpeed;
 
   current = GetTime();
   if( m_pauseClock )
@@ -751,7 +754,13 @@ bool OMXClock::OMXSpeed(int speed, bool lock /* = true */)
   OMX_TIME_CONFIG_SCALETYPE scaleType;
   OMX_INIT_STRUCTURE(scaleType);
 
-  scaleType.xScale = (speed << 16);
+  // Modification to adjust the scale accordingly, depending on video playback speed range being in normal or slow motion speed range.
+  if (speed > OMX_SLOMO_MULTIPLIER)                                   // Normal speed range
+      scaleType.xScale = ((speed / OMX_SLOMO_MULTIPLIER) << 16);      // The number 16 here has nothing to do with OMX_SLOMO_MULTIPLIER
+  else if (speed >= 1)                                                // Slow Motion range
+           scaleType.xScale = (1 << (int64_t)(12 + log2(speed)));     // This avoids "switch/case" statements but only works well for multiples of 2
+       else
+           scaleType.xScale = (speed << 16);                          // Kept like this for history. Same as "sacleType.xScale = 0;"
 
   m_play_speed = speed;
 
