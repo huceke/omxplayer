@@ -35,7 +35,12 @@ if [ -e $FBSET ]; then
   fbset -xres 1 -yres 1
 fi
 
-$OMXPLAYER --font $FONT "$@"
+TV_MODESTRING=`/opt/vc/bin/tvservice -s`
+if [ `echo $TV_MODESTRING | grep -c HDMI` != "0" ]; then
+        AUDIO_DEVICE="--adev hdmi";
+fi
+
+$OMXPLAYER --font $FONT $AUDIO_DEVICE "$@"
 
 if [ -e $FBSET ]; then
   fbset -xres ${XRES} -yres ${YRES}
