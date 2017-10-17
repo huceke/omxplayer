@@ -7,6 +7,7 @@ LDFLAGS+=-L./ -Lffmpeg_compiled/usr/local/lib/ -lc -lbrcmGLESv2 -lbrcmEGL -lbcm_
 INCLUDES+=-I./ -Ilinux -Iffmpeg_compiled/usr/local/include/ -I /usr/include/dbus-1.0 -I /usr/lib/arm-linux-gnueabihf/dbus-1.0/include -I/usr/include/freetype2 -isystem$(SDKSTAGE)/opt/vc/include -isystem$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads
 
 DIST ?= omxplayer-dist
+STRIP ?= strip
 
 SRC=		linux/XMemUtils.cpp \
 		linux/OMXAlsa.cpp \
@@ -91,3 +92,13 @@ dist: omxplayer.bin omxplayer.1
 	cp omxplayer.1 $(DIST)/usr/share/man/man1
 	cp -P ffmpeg_compiled/usr/local/lib/*.so* $(DIST)/usr/lib/omxplayer/
 	cd $(DIST); tar -czf ../$(DIST).tgz *
+
+install:
+	cp -r $(DIST)/* /
+
+uninstall:
+	rm -rf /usr/bin/omxplayer
+	rm -rf /usr/bin/omxplayer.bin
+	rm -rf /usr/lib/omxplayer
+	rm -rf /usr/share/doc/omxplayer
+	rm -rf /usr/share/man/man1/omxplayer.1
