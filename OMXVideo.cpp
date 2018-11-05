@@ -723,8 +723,8 @@ int COMXVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
   if( m_drop_state || !m_is_open )
     return true;
 
-    unsigned int demuxer_bytes = (unsigned int)iSize;
-    uint8_t *demuxer_content = pData;
+  unsigned int demuxer_bytes = (unsigned int)iSize;
+  uint8_t *demuxer_content = pData;
 
   if (demuxer_content && demuxer_bytes > 0)
   {
