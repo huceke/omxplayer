@@ -299,7 +299,15 @@ void OMXPlayerAudio::Process()
     else if(!omx_pkt && !m_packets.empty())
     {
       omx_pkt = m_packets.front();
-      m_cached_size -= omx_pkt->size;
+      if (omx_pkt)
+      {
+        m_cached_size -= omx_pkt->size;
+      }
+      else
+      {
+        assert(m_cached_size == 0);
+        SubmitEOSInternal();
+      }
       m_packets.pop_front();
     }
     UnLock();
@@ -491,6 +499,14 @@ double OMXPlayerAudio::GetCacheTotal()
 }
 
 void OMXPlayerAudio::SubmitEOS()
+{
+  Lock();
+  m_packets.push_back(nullptr);
+  UnLock();
+  pthread_cond_broadcast(&m_packet_cond);
+}
+
+void OMXPlayerAudio::SubmitEOSInternal()
 {
   if(m_decoder)
     m_decoder->SubmitEOS();

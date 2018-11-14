@@ -92,6 +92,7 @@ public:
   unsigned int GetMaxCached() { return m_config.queue_size * 1024 * 1024; };
   unsigned int GetLevel() { return m_config.queue_size ? 100.0f * m_cached_size / (m_config.queue_size * 1024.0f * 1024.0f) : 0; };
   void SubmitEOS();
+  void SubmitEOSInternal();
   bool IsEOS();
   void SetDelay(double delay) { m_iVideoDelay = delay; }
   double GetDelay() { return m_iVideoDelay; }

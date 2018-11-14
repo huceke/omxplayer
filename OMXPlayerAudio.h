@@ -101,6 +101,7 @@ public:
   double GetCacheTotal();
   double GetCurrentPTS() { return m_iCurrentPts; };
   void SubmitEOS();
+  void SubmitEOSInternal();
   bool IsEOS();
   unsigned int GetCached() { return m_cached_size; };
   unsigned int GetMaxCached() { return m_config.queue_size * 1024 * 1024; };
