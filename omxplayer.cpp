@@ -1766,13 +1766,6 @@ int main(int argc, char *argv[])
 
     if(m_omx_reader.IsEof() && !m_omx_pkt)
     {
-      // demuxer EOF, but may have not played out data yet
-      if ( (m_has_video && m_player_video.GetCached()) ||
-           (m_has_audio && m_player_audio.GetCached()) )
-      {
-        OMXClock::OMXSleep(10);
-        continue;
-      }
       if (!m_send_eos && m_has_video)
         m_player_video.SubmitEOS();
       if (!m_send_eos && m_has_audio)
