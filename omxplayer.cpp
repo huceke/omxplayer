@@ -34,6 +34,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 };
 
+#include "revision.h"
 #include "OMXStreamInfo.h"
 
 #include "utils/log.h"
@@ -79,7 +80,7 @@ long              m_Volume              = 0;
 long              m_Amplification       = 0;
 bool              m_NativeDeinterlace   = false;
 bool              m_HWDecode            = false;
-bool              m_osd                 = true;
+bool              m_osd                 = !is_model_pi4() && !is_fkms_active();
 bool              m_no_keys             = false;
 std::string       m_external_subtitles_path;
 bool              m_has_external_subtitles = false;

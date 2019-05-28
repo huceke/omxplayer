@@ -38,6 +38,7 @@ SRC=		linux/XMemUtils.cpp \
 		OMXControl.cpp \
 		Keyboard.cpp \
 		omxplayer.cpp \
+		revision.cpp \
 
 OBJS+=$(filter %.o,$(SRC:.cpp=.o))
 
