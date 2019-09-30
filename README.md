@@ -1,9 +1,18 @@
 omxplayer(1) -- Raspberry Pi command line OMX player
 ====================================================
 
-OMXPlayer is a commandline OMX player for the Raspberry Pi. It was developed as
-a testbed for the XBMC Raspberry PI implementation and is quite handy to use
-standalone. 
+OMXPlayer is a command-line video player for the Raspberry Pi. It can play
+video directly from the command line and **does not require a
+[desktop](https://en.wikipedia.org/wiki/Desktop_environment)**. OMXPlayer
+leverages the [OpenMAX](https://en.wikipedia.org/wiki/OpenMAX)
+[API](https://en.wikipedia.org/wiki/Application_programming_interface) to make
+use of the hardware video decoder in the
+[GPU](https://en.wikipedia.org/wiki/Graphics_processing_unit). Hardware
+acceleration along with direct command-line use on
+[ARM](https://en.wikipedia.org/wiki/ARM_architecture) silicon allows ultra
+low overhead, low power video playback. OMXPlayer was developed as a testbed
+for the [XBMC](https://en.wikipedia.org/wiki/Kodi_(software)) Raspberry Pi
+implementation and is quite handy to use standalone.
 
 ## DOWNLOADING
 
