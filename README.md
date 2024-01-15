@@ -1,17 +1,23 @@
-Note: omxplayer is being deprecated and resources are directed at improving vlc.
-
-This is due to:
-omxplayer uses openvg for OSD and subtitles which isn't supported on Pi4.
-omxplayer uses openmax which has been deprecated for a long time and isn't supported with 64-bit kernels.
-omxplayer does not support software decode
-omxplayer does not support advanced subtitles
-omxplayer does not support playback from ISO files.
-omxplayer does not integrate with the X desktop
-
-Please try using vlc. If there are features of omxplayer that vlc does not handle then try reporting [here](https://github.com/RPi-Distro/vlc/issues).
 
 omxplayer(1) -- Raspberry Pi command line OMX player
 ====================================================
+
+## Deprecation Warning
+
+**Note: omxplayer has been deprecated since 2020; resources are directed at improving vlc.**
+
+This is because omxplayer:
+
+- uses openvg for OSD and subtitles which isn't supported on Pi4.
+- uses openmax which has been deprecated for a long time & isn't supported with 64-bit kernels
+- does not support software decode
+- does not support advanced subtitles
+- does not support playback from ISO files.
+- does not integrate with the X desktop
+
+Please try using vlc. If there are features of omxplayer that vlc does not handle then try reporting [here](https://github.com/RPi-Distro/vlc/issues).
+
+## Description
 
 OMXPlayer is a command-line video player for the Raspberry Pi. It can play
 video directly from the command line and **does not require a
